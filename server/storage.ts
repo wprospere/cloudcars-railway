@@ -1,17 +1,15 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
-
-import { ENV } from './_core/env';
+// Preconfigured storage helpers for Railway deployment
+// Uses environment variables for AWS S3 or compatible storage
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
 function getStorageConfig(): StorageConfig {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
+  const baseUrl = process.env.BUILT_IN_FORGE_API_URL || process.env.STORAGE_API_URL;
+  const apiKey = process.env.BUILT_IN_FORGE_API_KEY || process.env.STORAGE_API_KEY;
 
   if (!baseUrl || !apiKey) {
     throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
+      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY (or STORAGE_API_URL and STORAGE_API_KEY)"
     );
   }
 
