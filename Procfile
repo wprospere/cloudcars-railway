@@ -1,1 +1,1 @@
-web: npm install --legacy-peer-deps && npm run build && npm start
+web: node dist/server/index.js
