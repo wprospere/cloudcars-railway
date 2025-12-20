@@ -1,18 +1,23 @@
 FROM node:20-alpine
+
 WORKDIR /app
 
 # Copy manifests
 COPY package.json pnpm-lock.yaml* ./
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+# pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-# Install prod deps (or all deps if needed)
-RUN pnpm install --prod
+# Install deps (include dev deps because you build in Docker)
+RUN pnpm install
 
-# Copy built output
-COPY dist ./dist
+# Copy the rest
+COPY . .
+
+# Build both frontend + server
+RUN pnpm build
 
 ENV NODE_ENV=production
 EXPOSE 8080
-CMD ["node", "dist/index.js"]
+
+CMD ["node", "dist/railway-server.js"]
