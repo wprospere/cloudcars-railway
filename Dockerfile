@@ -1,15 +1,23 @@
 FROM node:20-alpine
 
 WORKDIR /app
-ARG CACHE_BUST=1
 
-# Copy only what we need to RUN (not build)
-COPY dist ./dist
-COPY package.json ./
+# Copy package manager + manifests first for better caching
+COPY package.json pnpm-lock.yaml* ./
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+# Install deps
+RUN pnpm install --frozen-lockfile=false
+
+# Copy the rest of the repo
+COPY . .
+
+# Build (frontend + server, whatever your pnpm build does)
+RUN pnpm build
 
 ENV NODE_ENV=production
-ENV PORT=3000
-
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "dist/server/railway-server.js"]
