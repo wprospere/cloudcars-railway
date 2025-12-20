@@ -1,23 +1,18 @@
 FROM node:20-alpine
-
 WORKDIR /app
 
-# Copy package manager + manifests first for better caching
+# Copy manifests
 COPY package.json pnpm-lock.yaml* ./
 
-# Install pnpm
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-# Install deps
-RUN pnpm install --frozen-lockfile=false
+# Install prod deps (or all deps if needed)
+RUN pnpm install --prod
 
-# Copy the rest of the repo
-COPY . .
-
-# Build (frontend + server, whatever your pnpm build does)
-RUN pnpm build
+# Copy built output
+COPY dist ./dist
 
 ENV NODE_ENV=production
 EXPOSE 8080
-
 CMD ["node", "dist/index.js"]
