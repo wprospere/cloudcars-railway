@@ -1,1 +1,1 @@
-web: node dist/server/railway-server.js
+web: node dist/index.js
