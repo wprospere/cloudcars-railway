@@ -1,0 +1,1 @@
+ALTER TABLE `bookings` MODIFY COLUMN `serviceType` enum('standard','courier','airport','executive') NOT NULL;
