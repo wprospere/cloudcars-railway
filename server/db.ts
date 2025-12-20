@@ -165,7 +165,17 @@ export async function updateSiteContent(key: string, value: string) {
   }
 }
 
+export async function upsertSiteContent(key: string, value: string) {
+  return updateSiteContent(key, value);
+}
+
 // Site Images (CMS)
+export async function getSiteImage(key: string) {
+  return db.query.siteImages.findFirst({
+    where: (image, { eq }) => eq(image.key, key),
+  });
+}
+
 export async function getAllSiteImages() {
   return db.query.siteImages.findMany();
 }
@@ -179,6 +189,23 @@ export async function updateSiteImage(id: number, data: Partial<typeof schema.si
   await db.update(schema.siteImages)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(schema.siteImages.id, id));
+}
+
+export async function upsertSiteImage(key: string, url: string, alt?: string) {
+  const existing = await getSiteImage(key);
+  if (existing) {
+    await db.update(schema.siteImages)
+      .set({ url, alt: alt || existing.alt, updatedAt: new Date() })
+      .where(eq(schema.siteImages.key, key));
+    return existing.id;
+  } else {
+    const [result] = await db.insert(schema.siteImages).values({ 
+      key, 
+      url, 
+      alt: alt || key 
+    });
+    return result.insertId;
+  }
 }
 
 export async function deleteSiteImage(id: number) {
