@@ -1,6 +1,7 @@
 FROM node:20-alpine
 
 WORKDIR /app
+ARG CACHE_BUST=1
 
 # Copy only what we need to RUN (not build)
 COPY dist ./dist
