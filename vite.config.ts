@@ -8,12 +8,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === "development";
 
   return {
-    plugins: [
-      react(),
-      tailwindcss(),
-      // ✅ DEV ONLY — prevents runtime dependency in production
-      isDev && jsxLocPlugin(),
-    ].filter(Boolean),
+    plugins: [react(), tailwindcss(), isDev && jsxLocPlugin()].filter(Boolean),
 
     resolve: {
       alias: {
@@ -35,9 +30,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 3000,
-      fs: {
-        strict: false,
-      },
+      fs: { strict: false },
     },
   };
 });
