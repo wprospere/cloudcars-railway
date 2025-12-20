@@ -48,7 +48,7 @@ export async function updateDriverApplicationNotes(id: number, notes: string) {
     .where(eq(schema.driverApplications.id, id));
 }
 
-export async function assignDriverApplication(id: number, assignedTo: string | null) {
+export async function updateDriverApplicationAssignment(id: number, assignedTo: string | null) {
   await db.update(schema.driverApplications)
     .set({ assignedTo })
     .where(eq(schema.driverApplications.id, id));
@@ -78,7 +78,7 @@ export async function updateCorporateInquiryNotes(id: number, notes: string) {
     .where(eq(schema.corporateInquiries.id, id));
 }
 
-export async function assignCorporateInquiry(id: number, assignedTo: string | null) {
+export async function updateCorporateInquiryAssignment(id: number, assignedTo: string | null) {
   await db.update(schema.corporateInquiries)
     .set({ assignedTo })
     .where(eq(schema.corporateInquiries.id, id));
@@ -108,7 +108,13 @@ export async function updateContactMessageNotes(id: number, notes: string) {
     .where(eq(schema.contactMessages.id, id));
 }
 
-export async function assignContactMessage(id: number, assignedTo: string | null) {
+export async function markContactMessageAsRead(id: number) {
+  await db.update(schema.contactMessages)
+    .set({ status: 'read' })
+    .where(eq(schema.contactMessages.id, id));
+}
+
+export async function updateContactMessageAssignment(id: number, assignedTo: string | null) {
   await db.update(schema.contactMessages)
     .set({ assignedTo })
     .where(eq(schema.contactMessages.id, id));
@@ -135,4 +141,47 @@ export async function updateTeamMember(id: number, data: Partial<typeof schema.t
 export async function deleteTeamMember(id: number) {
   await db.delete(schema.teamMembers)
     .where(eq(schema.teamMembers.id, id));
+}
+
+// Site Content (CMS)
+export async function getSiteContent(key: string) {
+  return db.query.siteContent.findFirst({
+    where: (content, { eq }) => eq(content.key, key),
+  });
+}
+
+export async function getAllSiteContent() {
+  return db.query.siteContent.findMany();
+}
+
+export async function updateSiteContent(key: string, value: string) {
+  const existing = await getSiteContent(key);
+  if (existing) {
+    await db.update(schema.siteContent)
+      .set({ value, updatedAt: new Date() })
+      .where(eq(schema.siteContent.key, key));
+  } else {
+    await db.insert(schema.siteContent).values({ key, value });
+  }
+}
+
+// Site Images (CMS)
+export async function getAllSiteImages() {
+  return db.query.siteImages.findMany();
+}
+
+export async function createSiteImage(data: typeof schema.siteImages.$inferInsert) {
+  const [result] = await db.insert(schema.siteImages).values(data);
+  return result;
+}
+
+export async function updateSiteImage(id: number, data: Partial<typeof schema.siteImages.$inferInsert>) {
+  await db.update(schema.siteImages)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(schema.siteImages.id, id));
+}
+
+export async function deleteSiteImage(id: number) {
+  await db.delete(schema.siteImages)
+    .where(eq(schema.siteImages.id, id));
 }
