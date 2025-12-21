@@ -70,7 +70,7 @@ export default function About() {
             <div className="space-y-4 text-muted-foreground leading-relaxed mb-8">
               <p>{content.description}</p>
               <p>
-                Fifteen years on, we're still here and still doing things the 
+                Twelve years on, we're still here and still doing things the 
                 same way. Our drivers live in Nottingham, know the streets, and 
                 take pride in getting you where you need to be. No apps that 
                 don't work, no call centres abroad - just a local company doing 
