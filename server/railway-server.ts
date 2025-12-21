@@ -34,17 +34,13 @@ app.use(
 // Don’t let SPA catch unknown API routes
 app.use("/api", (_req, res) => res.status(404).json({ error: "API route not found" }));
 
-// ✅ Frontend is built to dist/public
-const publicPath = path.resolve(process.cwd(), "dist", "public");
+// ✅ Serve frontend built by Vite (dist/public)
+const publicPath = path.resolve(process.cwd(), 'dist', 'public');
 app.use(express.static(publicPath));
 
-app.get("*", (_req, res) => {
-  const indexPath = path.join(publicPath, "index.html");
-  if (!fs.existsSync(indexPath)) {
-    console.error(`❌ Missing ${indexPath}. Did the build run?`);
-    return res.status(500).send("Build output missing: dist/public/index.html not found");
-  }
-  res.sendFile(indexPath);
+// SPA fallback (non-API routes only)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
