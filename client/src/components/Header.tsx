@@ -58,7 +58,13 @@ export default function Header() {
             </a>
 
             {/* Corporate Login */}
-            <Button asChild variant="outline" className="font-semibold px-6">
+            <Button
+              asChild
+              variant="outline"
+              className="font-semibold px-6 border-primary text-primary
+                         hover:bg-primary hover:text-primary-foreground
+                         transition-colors"
+            >
               <a
                 href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
                 target="_blank"
@@ -122,7 +128,13 @@ export default function Header() {
               </a>
 
               {/* Corporate Login */}
-              <Button asChild variant="outline" className="w-full font-semibold">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full font-semibold border-primary text-primary
+                           hover:bg-primary hover:text-primary-foreground
+                           transition-colors"
+              >
                 <a
                   href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
                   target="_blank"
