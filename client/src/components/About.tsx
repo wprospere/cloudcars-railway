@@ -50,7 +50,7 @@ export default function About() {
             </div>
             {/* Floating Badge */}
             <div className="absolute -bottom-6 -right-6 lg:right-8 bg-primary text-primary-foreground rounded-2xl p-6 shadow-xl">
-              <div className="text-4xl font-bold mb-1">15+</div>
+              <div className="text-4xl font-bold mb-1">12+</div>
               <div className="text-sm opacity-90">Years in<br />Nottingham</div>
             </div>
           </div>
