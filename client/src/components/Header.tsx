@@ -27,9 +27,9 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 group">
-            <img 
-              src="/logo.png" 
-              alt="Cloud Cars" 
+            <img
+              src="/logo.png"
+              alt="Cloud Cars"
               className="h-12 lg:h-14 w-auto"
             />
           </a>
@@ -56,11 +56,28 @@ export default function Header() {
               <Phone className="w-4 h-4" />
               <span>0115 8 244 244</span>
             </a>
+
+            {/* Corporate Login */}
+            <Button asChild variant="outline" className="font-semibold px-6">
+              <a
+                href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Corporate Login
+              </a>
+            </Button>
+
+            {/* Book Now */}
             <Button
               asChild
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
             >
-              <a href="https://book.cloudcarsltd.com/portal/#/booking" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://book.cloudcarsltd.com/portal/#/booking"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Book Now
               </a>
             </Button>
@@ -94,6 +111,7 @@ export default function Header() {
                 {link.label}
               </button>
             ))}
+
             <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-3">
               <a
                 href="tel:01158244244"
@@ -102,11 +120,28 @@ export default function Header() {
                 <Phone className="w-4 h-4" />
                 <span>0115 8 244 244</span>
               </a>
+
+              {/* Corporate Login */}
+              <Button asChild variant="outline" className="w-full font-semibold">
+                <a
+                  href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Corporate Login
+                </a>
+              </Button>
+
+              {/* Book Now */}
               <Button
                 asChild
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
-                <a href="https://book.cloudcarsltd.com/portal/#/booking" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://book.cloudcarsltd.com/portal/#/booking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Book Now
                 </a>
               </Button>
