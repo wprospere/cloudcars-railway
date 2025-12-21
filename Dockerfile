@@ -2,19 +2,19 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy manifests
-COPY package.json pnpm-lock.yaml ./
+# Copy package.json only (no lockfile)
+COPY package.json ./
 
-# pnpm via corepack
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-# Reproducible install
-RUN pnpm install --frozen-lockfile
+# Install dependencies
+RUN pnpm install
 
-# Copy the rest
+# Copy the rest of the repo
 COPY . .
 
-# Build both frontend + server
+# Build frontend + server
 RUN pnpm build
 
 ENV NODE_ENV=production
