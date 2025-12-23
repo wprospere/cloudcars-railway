@@ -166,5 +166,4 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
 
 // --- Explicit named exports for server imports ---
-export { adminUsers };
 export const __schemaVersion = "schema-has-adminUsers";
