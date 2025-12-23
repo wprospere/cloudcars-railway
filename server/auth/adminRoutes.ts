@@ -1,7 +1,7 @@
 import express from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db.js";
-import { adminUsers } from "../../drizzle/schema.js";
+import { adminUsers } from "../../drizzle/schema";
 import { verifyPassword } from "./password.js";
 import {
   clearAdminCookie,
