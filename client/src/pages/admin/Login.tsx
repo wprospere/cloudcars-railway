@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 
 export default function AdminLoginPage() {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("wp@cloudcarsltd.com");
-  const [password, setPassword] = useState("Medw@yStreet");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
