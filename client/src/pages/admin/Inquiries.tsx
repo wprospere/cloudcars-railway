@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import DashboardLayout from "@/components/DashboardLayout";
+import AdminLayout from "@/components/AdminLayout";
+import { useAuth } from "@/_core/hooks/useAuth";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Download, Clock, User } from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
@@ -14,13 +22,13 @@ import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 // Simple CSV export function
 function exportToCSV(data: any[], filename: string) {
   if (data.length === 0) return;
-  
+
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(","),
-    ...data.map(row => headers.map(h => JSON.stringify(row[h] || "")).join(","))
+    ...data.map((row) => headers.map((h) => JSON.stringify(row[h] || "")).join(",")),
   ].join("\n");
-  
+
   const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -31,40 +39,44 @@ function exportToCSV(data: any[], filename: string) {
 }
 
 export default function Inquiries() {
+  // ✅ protect this page (incognito will redirect to /admin/login?next=...)
+  useAuth({ redirectOnUnauthenticated: true, redirectPath: "/admin/login" });
+
   const [activeTab, setActiveTab] = useState("drivers");
 
-  // Fetch all inquiries
-  const { data: drivers = [], refetch: refetchDrivers } = trpc.admin.getDriverApplications.useQuery();
-  const { data: corporate = [], refetch: refetchCorporate } = trpc.admin.getCorporateInquiries.useQuery();
-  const { data: messages = [], refetch: refetchMessages } = trpc.admin.getContactMessages.useQuery();
+  // Fetch all inquiries (tRPC)
+  const { data: drivers = [], refetch: refetchDrivers } =
+    trpc.admin.getDriverApplications.useQuery();
+  const { data: corporate = [], refetch: refetchCorporate } =
+    trpc.admin.getCorporateInquiries.useQuery();
+  const { data: messages = [], refetch: refetchMessages } =
+    trpc.admin.getContactMessages.useQuery();
   const { data: teamMembersData = [] } = trpc.admin.getTeamMembers.useQuery();
 
   // Mutations
   const updateDriverStatus = trpc.admin.updateDriverStatus.useMutation();
   const updateDriverNotes = trpc.admin.updateDriverNotes.useMutation();
   const updateDriverAssignment = trpc.admin.updateDriverAssignment.useMutation();
-  
+
   const updateCorporateStatus = trpc.admin.updateCorporateStatus.useMutation();
   const updateCorporateNotes = trpc.admin.updateCorporateNotes.useMutation();
   const updateCorporateAssignment = trpc.admin.updateCorporateAssignment.useMutation();
-  
+
   const markContactRead = trpc.admin.markContactRead.useMutation();
   const updateContactNotes = trpc.admin.updateContactNotes.useMutation();
   const updateContactAssignment = trpc.admin.updateContactAssignment.useMutation();
 
   // Team members for assignment - use dynamic data or fallback
-  const teamMembers = teamMembersData.length > 0 
-    ? teamMembersData.map((m: any) => m.name)
-    : ["John Smith", "Sarah Johnson", "Mike Williams"];
+  const teamMembers =
+    teamMembersData.length > 0
+      ? teamMembersData.map((m: any) => m.name)
+      : ["John Smith", "Sarah Johnson", "Mike Williams"];
 
   const handleExport = () => {
-    if (activeTab === "drivers") {
-      exportToCSV(drivers, "driver-applications");
-    } else if (activeTab === "corporate") {
-      exportToCSV(corporate, "corporate-inquiries");
-    } else {
-      exportToCSV(messages, "contact-messages");
-    }
+    if (activeTab === "drivers") exportToCSV(drivers, "driver-applications");
+    else if (activeTab === "corporate") exportToCSV(corporate, "corporate-inquiries");
+    else exportToCSV(messages, "contact-messages");
+
     alert("Exported successfully!");
   };
 
@@ -74,12 +86,17 @@ export default function Inquiries() {
   const unreadMessages = messages.filter((m) => !m.isRead).length;
 
   return (
-    <DashboardLayout>
+    <AdminLayout
+      title="Inquiries"
+      description="Manage driver applications, corporate leads, and messages"
+    >
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Inquiries</h1>
-            <p className="text-muted-foreground">Manage driver applications, corporate leads, and messages</p>
+            <p className="text-muted-foreground">
+              Manage driver applications, corporate leads, and messages
+            </p>
           </div>
           <Button onClick={handleExport} variant="outline">
             <Download className="h-4 w-4 mr-2" />
@@ -105,15 +122,9 @@ export default function Inquiries() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="drivers">
-              Driver Applications ({drivers.length})
-            </TabsTrigger>
-            <TabsTrigger value="corporate">
-              Corporate Inquiries ({corporate.length})
-            </TabsTrigger>
-            <TabsTrigger value="messages">
-              Contact Messages ({messages.length})
-            </TabsTrigger>
+            <TabsTrigger value="drivers">Driver Applications ({drivers.length})</TabsTrigger>
+            <TabsTrigger value="corporate">Corporate Inquiries ({corporate.length})</TabsTrigger>
+            <TabsTrigger value="messages">Contact Messages ({messages.length})</TabsTrigger>
           </TabsList>
 
           {/* Driver Applications */}
@@ -145,41 +156,44 @@ export default function Inquiries() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Select
-                          value={driver.status}
-                          onValueChange={(value) => {
-                            updateDriverStatus.mutate(
-                              { id: driver.id, status: value as any },
-                              { onSuccess: () => refetchDrivers() }
-                            );
-                          }}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="reviewing">Reviewing</SelectItem>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+
+                      <Select
+                        value={driver.status}
+                        onValueChange={(value) => {
+                          updateDriverStatus.mutate(
+                            { id: driver.id, status: value as any },
+                            { onSuccess: () => refetchDrivers() }
+                          );
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="reviewing">Reviewing</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Licence:</span> {driver.licenseNumber}
+                        <span className="text-muted-foreground">Licence:</span>{" "}
+                        {driver.licenseNumber}
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Experience:</span> {driver.yearsExperience} years
+                        <span className="text-muted-foreground">Experience:</span>{" "}
+                        {driver.yearsExperience} years
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Vehicle Owner:</span> {driver.vehicleOwner ? "Yes" : "No"}
+                        <span className="text-muted-foreground">Vehicle Owner:</span>{" "}
+                        {driver.vehicleOwner ? "Yes" : "No"}
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Availability:</span> {driver.availability}
+                        <span className="text-muted-foreground">Availability:</span>{" "}
+                        {driver.availability}
                       </div>
                     </div>
 
@@ -196,7 +210,10 @@ export default function Inquiries() {
                         value={driver.assignedTo || "unassigned"}
                         onValueChange={(value) => {
                           updateDriverAssignment.mutate(
-                            { id: driver.id, assignedTo: value === "unassigned" ? null : value },
+                            {
+                              id: driver.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
                             { onSuccess: () => refetchDrivers() }
                           );
                         }}
@@ -252,6 +269,7 @@ export default function Inquiries() {
                 </Card>
               );
             })}
+
             {drivers.length === 0 && (
               <Card className="p-12 text-center text-muted-foreground">
                 No driver applications yet
@@ -277,7 +295,9 @@ export default function Inquiries() {
                             {timeAgo(inquiry.createdAt)}
                           </Badge>
                         </div>
-                        <div className="text-sm text-muted-foreground">Contact: {inquiry.contactName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Contact: {inquiry.contactName}
+                        </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Mail className="h-4 w-4" />
@@ -289,6 +309,7 @@ export default function Inquiries() {
                           </span>
                         </div>
                       </div>
+
                       <Select
                         value={inquiry.status}
                         onValueChange={(value) => {
@@ -330,7 +351,10 @@ export default function Inquiries() {
                         value={inquiry.assignedTo || "unassigned"}
                         onValueChange={(value) => {
                           updateCorporateAssignment.mutate(
-                            { id: inquiry.id, assignedTo: value === "unassigned" ? null : value },
+                            {
+                              id: inquiry.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
                             { onSuccess: () => refetchCorporate() }
                           );
                         }}
@@ -386,6 +410,7 @@ export default function Inquiries() {
                 </Card>
               );
             })}
+
             {corporate.length === 0 && (
               <Card className="p-12 text-center text-muted-foreground">
                 No corporate inquiries yet
@@ -426,12 +451,16 @@ export default function Inquiries() {
                           )}
                         </div>
                       </div>
+
                       {!message.isRead && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            markContactRead.mutate({ id: message.id }, { onSuccess: () => refetchMessages() });
+                            markContactRead.mutate(
+                              { id: message.id },
+                              { onSuccess: () => refetchMessages() }
+                            );
                           }}
                         >
                           Mark as Read
@@ -448,7 +477,10 @@ export default function Inquiries() {
                         value={message.assignedTo || "unassigned"}
                         onValueChange={(value) => {
                           updateContactAssignment.mutate(
-                            { id: message.id, assignedTo: value === "unassigned" ? null : value },
+                            {
+                              id: message.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
                             { onSuccess: () => refetchMessages() }
                           );
                         }}
@@ -506,6 +538,7 @@ export default function Inquiries() {
                 </Card>
               );
             })}
+
             {messages.length === 0 && (
               <Card className="p-12 text-center text-muted-foreground">
                 No contact messages yet
@@ -514,6 +547,6 @@ export default function Inquiries() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }

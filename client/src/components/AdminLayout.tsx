@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import {
   LayoutDashboard,
   FileText,
@@ -41,6 +40,7 @@ export default function AdminLayout({ children, title, description }: AdminLayou
     );
   }
 
+  // ✅ If not logged in, send them to your local admin login page
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -49,8 +49,9 @@ export default function AdminLayout({ children, title, description }: AdminLayou
           <p className="text-muted-foreground mb-6">
             Please sign in to access the content management system.
           </p>
+
           <Button asChild className="bg-primary hover:bg-primary/90">
-            <a href={getLoginUrl()}>Sign In</a>
+            <Link href="/admin/login">Sign In</Link>
           </Button>
         </div>
       </div>
@@ -77,10 +78,7 @@ export default function AdminLayout({ children, title, description }: AdminLayou
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border h-16 flex items-center px-4">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 text-foreground"
-        >
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-foreground">
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
         <span className="ml-4 font-semibold text-foreground">Cloud Cars Admin</span>
@@ -160,9 +158,7 @@ export default function AdminLayout({ children, title, description }: AdminLayou
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{title}</h1>
-            {description && (
-              <p className="text-muted-foreground mt-2">{description}</p>
-            )}
+            {description && <p className="text-muted-foreground mt-2">{description}</p>}
           </div>
 
           {/* Page Content */}

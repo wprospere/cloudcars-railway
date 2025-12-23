@@ -4,11 +4,14 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+
 import Home from "./pages/Home";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
+
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminLoginPage from "./pages/admin/Login";
 import ContentEditor from "./pages/admin/ContentEditor";
 import ImageManager from "./pages/admin/ImageManager";
 import AdminSettings from "./pages/admin/Settings";
@@ -18,17 +21,21 @@ import TeamMembers from "./pages/admin/TeamMembers";
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/terms"} component={Terms} />
-      <Route path={"/privacy"} component={Privacy} />
-      <Route path={"/cookies"} component={Cookies} />
+      <Route path="/" component={Home} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/cookies" component={Cookies} />
+
       {/* Admin Routes */}
-      <Route path={"/admin"} component={AdminDashboard} />
-      <Route path={"/admin/content"} component={ContentEditor} />
-      <Route path={"/admin/images"} component={ImageManager} />      <Route path={"/admin/settings"} component={AdminSettings} />
-      <Route path={"/admin/inquiries"} component={Inquiries} />
-      <Route path={"/admin/team-members"} component={TeamMembers} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path="/admin/login" component={AdminLoginPage} />
+      <Route path="/admin/inquiries" component={Inquiries} />
+      <Route path="/admin/team-members" component={TeamMembers} />
+      <Route path="/admin/content" component={ContentEditor} />
+      <Route path="/admin/images" component={ImageManager} />
+      <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin" component={AdminDashboard} />
+
+      <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
