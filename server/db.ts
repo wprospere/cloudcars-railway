@@ -5,18 +5,40 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { eq } from "drizzle-orm";
-import * as schema from "../drizzle/schema";
+import * as schema from "../drizzle/schema.js";
 
-// Create MySQL connection pool
-const connection = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-});
+// --------- Connection (Railway-safe) ---------
+
+function required(name: string, v: string | undefined) {
+  if (!v) throw new Error(`Missing env var: ${name}`);
+  return v;
+}
+
+const DATABASE_URL = process.env.DATABASE_URL;
+
+// If DATABASE_URL exists, use it. Otherwise fall back to Railway MYSQL* vars.
+const pool = DATABASE_URL
+  ? mysql.createPool(DATABASE_URL)
+  : mysql.createPool({
+      host: required("MYSQLHOST", process.env.MYSQLHOST),
+      port: Number(process.env.MYSQLPORT ?? 3306),
+      user: required("MYSQLUSER", process.env.MYSQLUSER),
+      password: required("MYSQLPASSWORD", process.env.MYSQLPASSWORD),
+      database: required("MYSQLDATABASE", process.env.MYSQLDATABASE),
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    });
 
 // Initialize Drizzle ORM
-export const db = drizzle({ client: connection, schema, mode: "default" });
+export const db = drizzle(pool, { schema, mode: "default" });
 
 // Export schema for use in queries
 export { schema };
+
+// --------- Your existing helpers below ---------
 
 // Bookings
 export async function createBooking(data: typeof schema.bookings.$inferInsert) {
@@ -25,7 +47,9 @@ export async function createBooking(data: typeof schema.bookings.$inferInsert) {
 }
 
 // Driver Applications
-export async function createDriverApplication(data: typeof schema.driverApplications.$inferInsert) {
+export async function createDriverApplication(
+  data: typeof schema.driverApplications.$inferInsert
+) {
   const [result] = await db.insert(schema.driverApplications).values(data);
   return result;
 }
@@ -37,25 +61,33 @@ export async function getAllDriverApplications() {
 }
 
 export async function updateDriverApplicationStatus(id: number, status: string) {
-  await db.update(schema.driverApplications)
+  await db
+    .update(schema.driverApplications)
     .set({ status })
     .where(eq(schema.driverApplications.id, id));
 }
 
 export async function updateDriverApplicationNotes(id: number, notes: string) {
-  await db.update(schema.driverApplications)
+  await db
+    .update(schema.driverApplications)
     .set({ notes })
     .where(eq(schema.driverApplications.id, id));
 }
 
-export async function updateDriverApplicationAssignment(id: number, assignedTo: string | null) {
-  await db.update(schema.driverApplications)
+export async function updateDriverApplicationAssignment(
+  id: number,
+  assignedTo: string | null
+) {
+  await db
+    .update(schema.driverApplications)
     .set({ assignedTo })
     .where(eq(schema.driverApplications.id, id));
 }
 
 // Corporate Inquiries
-export async function createCorporateInquiry(data: typeof schema.corporateInquiries.$inferInsert) {
+export async function createCorporateInquiry(
+  data: typeof schema.corporateInquiries.$inferInsert
+) {
   const [result] = await db.insert(schema.corporateInquiries).values(data);
   return result;
 }
@@ -67,25 +99,33 @@ export async function getAllCorporateInquiries() {
 }
 
 export async function updateCorporateInquiryStatus(id: number, status: string) {
-  await db.update(schema.corporateInquiries)
+  await db
+    .update(schema.corporateInquiries)
     .set({ status })
     .where(eq(schema.corporateInquiries.id, id));
 }
 
 export async function updateCorporateInquiryNotes(id: number, notes: string) {
-  await db.update(schema.corporateInquiries)
+  await db
+    .update(schema.corporateInquiries)
     .set({ notes })
     .where(eq(schema.corporateInquiries.id, id));
 }
 
-export async function updateCorporateInquiryAssignment(id: number, assignedTo: string | null) {
-  await db.update(schema.corporateInquiries)
+export async function updateCorporateInquiryAssignment(
+  id: number,
+  assignedTo: string | null
+) {
+  await db
+    .update(schema.corporateInquiries)
     .set({ assignedTo })
     .where(eq(schema.corporateInquiries.id, id));
 }
 
 // Contact Messages
-export async function createContactMessage(data: typeof schema.contactMessages.$inferInsert) {
+export async function createContactMessage(
+  data: typeof schema.contactMessages.$inferInsert
+) {
   const [result] = await db.insert(schema.contactMessages).values(data);
   return result;
 }
@@ -97,25 +137,32 @@ export async function getAllContactMessages() {
 }
 
 export async function updateContactMessageStatus(id: number, status: string) {
-  await db.update(schema.contactMessages)
+  await db
+    .update(schema.contactMessages)
     .set({ status })
     .where(eq(schema.contactMessages.id, id));
 }
 
 export async function updateContactMessageNotes(id: number, notes: string) {
-  await db.update(schema.contactMessages)
+  await db
+    .update(schema.contactMessages)
     .set({ notes })
     .where(eq(schema.contactMessages.id, id));
 }
 
 export async function markContactMessageAsRead(id: number) {
-  await db.update(schema.contactMessages)
-    .set({ status: 'read' })
+  await db
+    .update(schema.contactMessages)
+    .set({ status: "read" })
     .where(eq(schema.contactMessages.id, id));
 }
 
-export async function updateContactMessageAssignment(id: number, assignedTo: string | null) {
-  await db.update(schema.contactMessages)
+export async function updateContactMessageAssignment(
+  id: number,
+  assignedTo: string | null
+) {
+  await db
+    .update(schema.contactMessages)
     .set({ assignedTo })
     .where(eq(schema.contactMessages.id, id));
 }
@@ -132,15 +179,15 @@ export async function createTeamMember(data: typeof schema.teamMembers.$inferIns
   return result;
 }
 
-export async function updateTeamMember(id: number, data: Partial<typeof schema.teamMembers.$inferInsert>) {
-  await db.update(schema.teamMembers)
-    .set(data)
-    .where(eq(schema.teamMembers.id, id));
+export async function updateTeamMember(
+  id: number,
+  data: Partial<typeof schema.teamMembers.$inferInsert>
+) {
+  await db.update(schema.teamMembers).set(data).where(eq(schema.teamMembers.id, id));
 }
 
 export async function deleteTeamMember(id: number) {
-  await db.delete(schema.teamMembers)
-    .where(eq(schema.teamMembers.id, id));
+  await db.delete(schema.teamMembers).where(eq(schema.teamMembers.id, id));
 }
 
 // Site Content (CMS)
@@ -157,7 +204,8 @@ export async function getAllSiteContent() {
 export async function updateSiteContent(key: string, value: string) {
   const existing = await getSiteContent(key);
   if (existing) {
-    await db.update(schema.siteContent)
+    await db
+      .update(schema.siteContent)
       .set({ value, updatedAt: new Date() })
       .where(eq(schema.siteContent.key, key));
   } else {
@@ -185,8 +233,12 @@ export async function createSiteImage(data: typeof schema.siteImages.$inferInser
   return result;
 }
 
-export async function updateSiteImage(id: number, data: Partial<typeof schema.siteImages.$inferInsert>) {
-  await db.update(schema.siteImages)
+export async function updateSiteImage(
+  id: number,
+  data: Partial<typeof schema.siteImages.$inferInsert>
+) {
+  await db
+    .update(schema.siteImages)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(schema.siteImages.id, id));
 }
@@ -194,21 +246,21 @@ export async function updateSiteImage(id: number, data: Partial<typeof schema.si
 export async function upsertSiteImage(key: string, url: string, alt?: string) {
   const existing = await getSiteImage(key);
   if (existing) {
-    await db.update(schema.siteImages)
+    await db
+      .update(schema.siteImages)
       .set({ url, alt: alt || existing.alt, updatedAt: new Date() })
       .where(eq(schema.siteImages.key, key));
     return existing.id;
   } else {
-    const [result] = await db.insert(schema.siteImages).values({ 
-      key, 
-      url, 
-      alt: alt || key 
+    const [result] = await db.insert(schema.siteImages).values({
+      key,
+      url,
+      alt: alt || key,
     });
     return result.insertId;
   }
 }
 
 export async function deleteSiteImage(id: number) {
-  await db.delete(schema.siteImages)
-    .where(eq(schema.siteImages.id, id));
+  await db.delete(schema.siteImages).where(eq(schema.siteImages.id, id));
 }
