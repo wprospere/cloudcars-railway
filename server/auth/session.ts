@@ -9,68 +9,75 @@ const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
  */
 function sign(value: string) {
   const secret = process.env.JWT_SECRET ?? "dev-secret";
-  return createHash("sha256")
-    .update(`${value}.${secret}`)
-    .digest("hex");
+  return createHash("sha256").update(`${value}.${secret}`).digest("hex");
 }
 
 /**
  * Set admin session cookie
- * Works on Railway (HTTPS) and in Incognito
+ * Works on Railway (HTTPS) and locally (HTTP)
  */
 export function setAdminCookie(res: any, adminId: number) {
-  const value = `v2_${adminId}.${sign(String(adminId))}`;
+  const isProd = process.env.NODE_ENV === "production";
+
+  // IMPORTANT: cookie format must match reader
+  // Format: "v2.<id>.<sig>"
+  const idStr = String(adminId);
+  const value = `v2.${idStr}.${sign(idStr)}`;
 
   const cookie = serialize(COOKIE_NAME, value, {
     httpOnly: true,
-    secure: true,        // REQUIRED on Railway
-    sameSite: "lax",     // Correct for same-origin
-    path: "/",           // REQUIRED
+    secure: isProd,     // ✅ true on Railway, false on local http
+    sameSite: "lax",    // ✅ correct for same-origin (www.cloudcarsltd.com)
+    path: "/",          // ✅ required
     maxAge: ONE_WEEK_SECONDS,
   });
 
-  // Do not overwrite other cookies
-  res.append("Set-Cookie", cookie);
+  // Express supports multiple Set-Cookie headers; append is safest
+  if (typeof res.append === "function") res.append("Set-Cookie", cookie);
+  else res.setHeader("Set-Cookie", cookie);
 }
 
 /**
  * Clear admin session cookie
  */
 export function clearAdminCookie(res: any) {
+  const isProd = process.env.NODE_ENV === "production";
+
   const cookie = serialize(COOKIE_NAME, "", {
     httpOnly: true,
-    secure: true,
+    secure: isProd,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
   });
 
-  res.append("Set-Cookie", cookie);
+  if (typeof res.append === "function") res.append("Set-Cookie", cookie);
+  else res.setHeader("Set-Cookie", cookie);
 }
 
 /**
  * Read and verify admin ID from cookie
+ * Requires cookieParser() middleware (which you already use)
  */
 export function readAdminIdFromCookie(req: any): number | null {
-  const raw = req.headers?.cookie ?? "";
+  // Prefer cookie-parser
+  const raw = req.cookies?.[COOKIE_NAME] ?? null;
+  if (!raw || typeof raw !== "string") return null;
 
-  const match = raw
-    .split(";")
-    .map((s: string) => s.trim())
-    .find((s: string) => s.startsWith(`${COOKIE_NAME}=`));
+  // Expected: "v2.<id>.<sig>"
+  const parts = raw.split(".");
+  if (parts.length !== 3) return null;
 
-  if (!match) return null;
+  const [version, idStr, sig] = parts;
+  if (version !== "v2") return null;
 
-  const value = decodeURIComponent(match.split("=")[1] ?? "");
-  const [idStr, sig] = value.split(".");
   const id = Number(idStr);
+  if (!Number.isFinite(id)) return null;
 
-  if (!Number.isFinite(id) || !sig) return null;
+  const expected = sign(idStr);
 
-  const expected = sign(String(id));
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
-
   if (a.length !== b.length) return null;
   if (!timingSafeEqual(a, b)) return null;
 
