@@ -9,7 +9,8 @@ import * as schema from "../drizzle/schema";
 
 /**
  * Prefer DATABASE_URL (Railway standard).
- * Fallback to MYSQL* for other hosts.
+ * Accept common Railway-provided variants.
+ * Fallback to MYSQL* for non-Railway hosts.
  */
 function required(name: string) {
   const v = process.env[name];
@@ -17,8 +18,14 @@ function required(name: string) {
   return v;
 }
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// ✅ Railway-safe DATABASE_URL resolution
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.MYSQL_URL ||
+  process.env.MYSQLDATABASE_URL ||
+  process.env.DATABASE_PRIVATE_URL;
 
+// ✅ Connection pool
 const pool = DATABASE_URL
   ? mysql.createPool({
       uri: DATABASE_URL,
@@ -41,6 +48,7 @@ const pool = DATABASE_URL
       keepAliveInitialDelay: 0,
     });
 
+// ✅ Drizzle instance
 export const db = drizzle(pool, { schema, mode: "default" });
 export { schema };
 
@@ -48,16 +56,14 @@ export { schema };
 
 // Bookings
 export async function createBooking(data: typeof schema.bookings.$inferInsert) {
-  const result = await db.insert(schema.bookings).values(data);
-  return result;
+  return db.insert(schema.bookings).values(data);
 }
 
 // Driver Applications
 export async function createDriverApplication(
   data: typeof schema.driverApplications.$inferInsert
 ) {
-  const result = await db.insert(schema.driverApplications).values(data);
-  return result;
+  return db.insert(schema.driverApplications).values(data);
 }
 
 export async function getAllDriverApplications() {
@@ -94,8 +100,7 @@ export async function updateDriverApplicationAssignment(
 export async function createCorporateInquiry(
   data: typeof schema.corporateInquiries.$inferInsert
 ) {
-  const result = await db.insert(schema.corporateInquiries).values(data);
-  return result;
+  return db.insert(schema.corporateInquiries).values(data);
 }
 
 export async function getAllCorporateInquiries() {
@@ -132,8 +137,7 @@ export async function updateCorporateInquiryAssignment(
 export async function createContactMessage(
   data: typeof schema.contactMessages.$inferInsert
 ) {
-  const result = await db.insert(schema.contactMessages).values(data);
-  return result;
+  return db.insert(schema.contactMessages).values(data);
 }
 
 export async function getAllContactMessages() {
@@ -183,15 +187,17 @@ export async function getAllTeamMembers() {
 export async function createTeamMember(
   data: typeof schema.teamMembers.$inferInsert
 ) {
-  const result = await db.insert(schema.teamMembers).values(data);
-  return result;
+  return db.insert(schema.teamMembers).values(data);
 }
 
 export async function updateTeamMember(
   id: number,
   data: Partial<typeof schema.teamMembers.$inferInsert>
 ) {
-  await db.update(schema.teamMembers).set(data as any).where(eq(schema.teamMembers.id, id));
+  await db
+    .update(schema.teamMembers)
+    .set(data as any)
+    .where(eq(schema.teamMembers.id, id));
 }
 
 export async function deleteTeamMember(id: number) {
@@ -236,9 +242,10 @@ export async function getAllSiteImages() {
   return db.query.siteImages.findMany();
 }
 
-export async function createSiteImage(data: typeof schema.siteImages.$inferInsert) {
-  const result = await db.insert(schema.siteImages).values(data);
-  return result;
+export async function createSiteImage(
+  data: typeof schema.siteImages.$inferInsert
+) {
+  return db.insert(schema.siteImages).values(data);
 }
 
 export async function updateSiteImage(
@@ -259,8 +266,6 @@ export async function upsertSiteImage(key: string, url: string, alt?: string) {
       .update(schema.siteImages)
       .set({ url, alt: alt || existing.alt, updatedAt: new Date() } as any)
       .where(eq(schema.siteImages.key, key));
-
-    // return existing id (no new row)
     return existing.id;
   } else {
     const result: any = await db.insert(schema.siteImages).values({
@@ -269,7 +274,6 @@ export async function upsertSiteImage(key: string, url: string, alt?: string) {
       alt: alt || key,
     } as any);
 
-    // drizzle/mysql2 insert return varies by version; keep it flexible:
     return result?.[0]?.insertId ?? result?.insertId ?? null;
   }
 }
