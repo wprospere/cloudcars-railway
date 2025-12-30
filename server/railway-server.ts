@@ -11,6 +11,10 @@ import { adminRoutes } from "./auth/adminRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
+const isProd = process.env.NODE_ENV === "production";
+
+// ✅ Railway / reverse proxy (important for secure cookies + req.secure)
+app.set("trust proxy", 1);
 
 // --------------------
 // Middleware
@@ -19,22 +23,36 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// CORS (safe for cookies). If frontend + backend are same-origin, this is harmless.
-// If they are cross-origin, this is required for credentials: "include".
+// --------------------
+// CORS (cookie-safe)
+// --------------------
+// If your frontend and backend are SAME origin (recommended), CORS doesn't matter much.
+// If they are DIFFERENT origins, you MUST allow credentials and use a specific origin list.
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use((req, res, next) => {
   const origin = req.headers.origin as string | undefined;
 
-  if (origin) {
+  // If same-origin requests (no Origin header), just continue
+  if (!origin) return next();
+
+  // In dev, allow all origins to make local testing easy.
+  // In prod, allow only explicit origins (recommended).
+  const ok = !isProd || allowedOrigins.includes(origin);
+
+  if (ok) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
 
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") return res.sendStatus(200);
-  next();
+  if (req.method === "OPTIONS") return res.sendStatus(ok ? 200 : 403);
+  return ok ? next() : res.status(403).json({ error: "CORS blocked" });
 });
 
 // --------------------
@@ -94,7 +112,22 @@ app.use(
 // Startup
 // --------------------
 async function start() {
-  await ensureDefaultAdmin();
+  // ✅ Deploy-safe: don't crash the whole server if admin bootstrap fails because table isn't created yet
+  try {
+    await ensureDefaultAdmin();
+  } catch (err: any) {
+    const msg = String(err?.message ?? "");
+    if (msg.includes("admin_users") && msg.includes("doesn't exist")) {
+      console.warn(
+        "⚠️ admin_users table missing. Run `drizzle-kit push/migrate` against Railway DB. Skipping admin bootstrap."
+      );
+    } else {
+      // real error: surface it (but still keep server up to avoid 502 loops if you prefer)
+      console.error("❌ ensureDefaultAdmin failed:", err);
+      // If you WANT to crash on real errors, uncomment next line:
+      // throw err;
+    }
+  }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Cloud Cars server running on port ${PORT}`);
