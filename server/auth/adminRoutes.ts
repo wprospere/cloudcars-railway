@@ -41,7 +41,8 @@ adminRoutes.post("/login", async (req, res) => {
 
 adminRoutes.post("/logout", (_req, res) => {
   clearAdminCookie(res);
-  return res.json({ ok: true });
+  // 204 = success, no body (cleanest for logout)
+  return res.status(204).end();
 });
 
 adminRoutes.get("/me", async (req, res) => {
