@@ -11,7 +11,6 @@ import { adminRoutes } from "./auth/adminRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
-const isProd = process.env.NODE_ENV === "production";
 
 // ✅ Railway / reverse proxy (important for secure cookies + req.secure)
 app.set("trust proxy", 1);
@@ -23,37 +22,9 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// --------------------
-// CORS (cookie-safe)
-// --------------------
-// If your frontend and backend are SAME origin (recommended), CORS doesn't matter much.
-// If they are DIFFERENT origins, you MUST allow credentials and use a specific origin list.
-const allowedOrigins = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin as string | undefined;
-
-  // If same-origin requests (no Origin header), just continue
-  if (!origin) return next();
-
-  // In dev, allow all origins to make local testing easy.
-  // In prod, allow only explicit origins (recommended).
-  const ok = !isProd || allowedOrigins.includes(origin);
-
-  if (ok) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Vary", "Origin");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  }
-
-  if (req.method === "OPTIONS") return res.sendStatus(ok ? 200 : 403);
-  return ok ? next() : res.status(403).json({ error: "CORS blocked" });
-});
+// NOTE: ✅ CORS REMOVED
+// You are serving frontend + backend on the same origin (www.cloudcarsltd.com),
+// so you do NOT need CORS. Your previous CORS middleware was causing 403 on /assets.
 
 // --------------------
 // API routes
@@ -77,7 +48,9 @@ app.use(
 app.use("/api/admin", adminRoutes);
 
 // Don’t let SPA catch unknown API routes
-app.use("/api", (_req, res) => res.status(404).json({ error: "API route not found" }));
+app.use("/api", (_req, res) =>
+  res.status(404).json({ error: "API route not found" })
+);
 
 // --------------------
 // Frontend (Vite build)
@@ -122,7 +95,6 @@ async function start() {
         "⚠️ admin_users table missing. Run `drizzle-kit push/migrate` against Railway DB. Skipping admin bootstrap."
       );
     } else {
-      // real error: surface it (but still keep server up to avoid 502 loops if you prefer)
       console.error("❌ ensureDefaultAdmin failed:", err);
       // If you WANT to crash on real errors, uncomment next line:
       // throw err;
