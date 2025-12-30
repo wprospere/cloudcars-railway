@@ -22,6 +22,18 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
+// ✅ Force lowercase admin URLs (fix /ADMIN/LOGIN etc.)
+// Place BEFORE static + SPA fallback so it always redirects.
+app.use((req, res, next) => {
+  if (/^\/admin/i.test(req.path)) {
+    const lower = req.originalUrl.toLowerCase();
+    if (lower !== req.originalUrl) {
+      return res.redirect(301, lower);
+    }
+  }
+  next();
+});
+
 // NOTE: ✅ CORS REMOVED
 // You are serving frontend + backend on the same origin (www.cloudcarsltd.com),
 // so you do NOT need CORS. Your previous CORS middleware was causing 403 on /assets.
