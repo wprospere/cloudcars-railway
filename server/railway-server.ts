@@ -22,30 +22,50 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ✅ Force lowercase admin URLs (fix /ADMIN/LOGIN etc.)
-// Place BEFORE static + SPA fallback so it always redirects.
+// ✅ Force lowercase admin URLs
+// IMPORTANT: match the paths you actually use.
+// If your frontend uses /admin/* (pages), keep this.
+// If your API uses /api/admin/*, also cover that.
 app.use((req, res, next) => {
-  if (/^\/admin/i.test(req.path)) {
+  if (/^\/admin/i.test(req.path) || /^\/api\/admin/i.test(req.path)) {
     const lower = req.originalUrl.toLowerCase();
-    if (lower !== req.originalUrl) {
-      return res.redirect(301, lower);
-    }
+    if (lower !== req.originalUrl) return res.redirect(301, lower);
   }
   next();
 });
 
-// NOTE: ✅ CORS REMOVED
-// You are serving frontend + backend on the same origin (www.cloudcarsltd.com),
-// so you do NOT need CORS. Your previous CORS middleware was causing 403 on /assets.
+// --------------------
+// Debug (temporary - helpful for incognito cookie issues)
+// --------------------
+// app.get("/debug/cookies", (req, res) => {
+//   res.json({
+//     secure: req.secure,
+//     protocol: req.protocol,
+//     host: req.headers.host,
+//     cookieHeader: req.headers.cookie ?? null,
+//     parsed: req.cookies ?? null,
+//   });
+// });
+
+// app.get("/debug/headers", (req, res) => {
+//   res.json({
+//     "x-forwarded-proto": req.headers["x-forwarded-proto"],
+//     "x-forwarded-host": req.headers["x-forwarded-host"],
+//     host: req.headers.host,
+//   });
+// });
 
 // --------------------
-// API routes
+// API routes (MUST be before static + SPA fallback)
 // --------------------
 
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// ✅ Admin auth routes FIRST
+app.use("/api/admin", adminRoutes);
 
 // tRPC
 app.use(
@@ -56,13 +76,10 @@ app.use(
   })
 );
 
-// Admin auth routes (email/password login)
-app.use("/api/admin", adminRoutes);
-
 // Don’t let SPA catch unknown API routes
-app.use("/api", (_req, res) =>
-  res.status(404).json({ error: "API route not found" })
-);
+app.all("/api/*", (_req, res) => {
+  res.status(404).json({ error: "API route not found" });
+});
 
 // --------------------
 // Frontend (Vite build)
@@ -97,18 +114,16 @@ app.use(
 // Startup
 // --------------------
 async function start() {
-  // ✅ Deploy-safe: don't crash the whole server if admin bootstrap fails because table isn't created yet
   try {
     await ensureDefaultAdmin();
   } catch (err: any) {
     const msg = String(err?.message ?? "");
     if (msg.includes("admin_users") && msg.includes("doesn't exist")) {
       console.warn(
-        "⚠️ admin_users table missing. Run `drizzle-kit push/migrate` against Railway DB. Skipping admin bootstrap."
+        "⚠️ admin_users table missing. Run drizzle migrations against Railway DB. Skipping admin bootstrap."
       );
     } else {
       console.error("❌ ensureDefaultAdmin failed:", err);
-      // If you WANT to crash on real errors, uncomment next line:
       // throw err;
     }
   }
