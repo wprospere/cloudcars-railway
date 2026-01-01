@@ -2,19 +2,6 @@ import { publicProcedure, protectedProcedure, router } from "./railway-trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-// ...
-
-export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const role = ctx.user?.role;
-
-  // ✅ allow both admin + staff
-  if (role !== "admin" && role !== "staff") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-
-  return next({ ctx });
-});
-
 import {
   createBooking,
   createDriverApplication,
@@ -51,22 +38,13 @@ import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 
 /* ----------------------------------------
    Admin-only middleware (FIXED)
+   Allows: admin + staff
 ---------------------------------------- */
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not logged in" });
-  }
-  if (ctx.user.role !== "admin") {
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const role = ctx.user?.role;
+
+  if (role !== "admin" && role !== "staff") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-  return next({ ctx });
-});
-}
- {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Admin access required",
-    });
   }
 
   return next({ ctx });
@@ -129,7 +107,10 @@ export const appRouter = router({
           specialRequests: input.specialRequests ?? null,
           estimatedPrice: input.estimatedPrice ?? null,
         });
-        return { success: true, bookingId: (result as any).id ?? (result as any).insertId };
+        return {
+          success: true,
+          bookingId: (result as any).id ?? (result as any).insertId,
+        };
       }),
 
     getQuote: publicProcedure
@@ -182,7 +163,10 @@ export const appRouter = router({
             content: `${input.fullName} applied. Phone: ${input.phone}`,
           }).catch((err) => console.error("⚠️ notifyOwner failed", err));
 
-          return { success: true, applicationId: (result as any).id ?? (result as any).insertId };
+          return {
+            success: true,
+            applicationId: (result as any).id ?? (result as any).insertId,
+          };
         } catch (err: any) {
           console.error("❌ submitApplication failed", err);
           throw new TRPCError({
@@ -220,7 +204,10 @@ export const appRouter = router({
           content: `${input.companyName} (${input.contactName})`,
         });
 
-        return { success: true, inquiryId: (result as any).id ?? (result as any).insertId };
+        return {
+          success: true,
+          inquiryId: (result as any).id ?? (result as any).insertId,
+        };
       }),
   }),
 
@@ -249,7 +236,10 @@ export const appRouter = router({
           content: `${input.name}: ${input.subject}`,
         });
 
-        return { success: true, messageId: (result as any).id ?? (result as any).insertId };
+        return {
+          success: true,
+          messageId: (result as any).id ?? (result as any).insertId,
+        };
       }),
   }),
 
