@@ -38,20 +38,56 @@ function exportToCSV(data: any[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * ✅ Normalize tRPC responses that might be:
+ * - Array: [...]
+ * - Object: { ok: true, items: [...] } / { data: [...] } / { rows: [...] } etc
+ */
+function normalizeArray<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+
+  if (value && typeof value === "object") {
+    const candidates = [
+      "items",
+      "data",
+      "rows",
+      "results",
+      "inquiries",
+      "messages",
+      "applications",
+    ];
+
+    for (const key of candidates) {
+      const v = (value as any)[key];
+      if (Array.isArray(v)) return v;
+    }
+  }
+
+  return [];
+}
+
 export default function Inquiries() {
   // ✅ protect this page (incognito will redirect to /admin/login?next=...)
   useAuth({ redirectOnUnauthenticated: true, redirectPath: "/admin/login" });
 
   const [activeTab, setActiveTab] = useState("drivers");
 
+  // -------------------------
   // Fetch all inquiries (tRPC)
-  const { data: drivers = [], refetch: refetchDrivers } =
-    trpc.admin.getDriverApplications.useQuery();
-  const { data: corporate = [], refetch: refetchCorporate } =
-    trpc.admin.getCorporateInquiries.useQuery();
-  const { data: messages = [], refetch: refetchMessages } =
-    trpc.admin.getContactMessages.useQuery();
-  const { data: teamMembersData = [] } = trpc.admin.getTeamMembers.useQuery();
+  // -------------------------
+  const driversQuery = trpc.admin.getDriverApplications.useQuery();
+  const corporateQuery = trpc.admin.getCorporateInquiries.useQuery();
+  const messagesQuery = trpc.admin.getContactMessages.useQuery();
+  const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
+
+  const drivers = normalizeArray<any>(driversQuery.data);
+  const corporate = normalizeArray<any>(corporateQuery.data);
+  const messages = normalizeArray<any>(messagesQuery.data);
+  const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
+
+  const refetchDrivers = driversQuery.refetch;
+  const refetchCorporate = corporateQuery.refetch;
+  const refetchMessages = messagesQuery.refetch;
 
   // Mutations
   const updateDriverStatus = trpc.admin.updateDriverStatus.useMutation();
@@ -234,7 +270,9 @@ export default function Inquiries() {
 
                     {/* Internal Notes */}
                     <div>
-                      <Label className="text-xs text-muted-foreground">Internal Notes (Private)</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        Internal Notes (Private)
+                      </Label>
                       <Textarea
                         placeholder="Add notes about this application..."
                         defaultValue={driver.internalNotes || ""}
@@ -375,7 +413,9 @@ export default function Inquiries() {
 
                     {/* Internal Notes */}
                     <div>
-                      <Label className="text-xs text-muted-foreground">Internal Notes (Private)</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        Internal Notes (Private)
+                      </Label>
                       <Textarea
                         placeholder="Add notes about this inquiry..."
                         defaultValue={inquiry.internalNotes || ""}
@@ -501,7 +541,9 @@ export default function Inquiries() {
 
                     {/* Internal Notes */}
                     <div>
-                      <Label className="text-xs text-muted-foreground">Internal Notes (Private)</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        Internal Notes (Private)
+                      </Label>
                       <Textarea
                         placeholder="Add notes about this message..."
                         defaultValue={message.internalNotes || ""}
