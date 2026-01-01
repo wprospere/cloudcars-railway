@@ -1,4 +1,12 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  boolean,
+} from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -35,7 +43,12 @@ export const bookings = mysqlTable("bookings", {
   customerName: varchar("customerName", { length: 255 }).notNull(),
   customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
   customerPhone: varchar("customerPhone", { length: 32 }).notNull(),
-  serviceType: mysqlEnum("serviceType", ["standard", "courier", "airport", "executive"]).notNull(),
+  serviceType: mysqlEnum("serviceType", [
+    "standard",
+    "courier",
+    "airport",
+    "executive",
+  ]).notNull(),
   pickupAddress: text("pickupAddress").notNull(),
   destinationAddress: text("destinationAddress").notNull(),
   pickupDate: varchar("pickupDate", { length: 32 }).notNull(),
@@ -43,7 +56,14 @@ export const bookings = mysqlTable("bookings", {
   passengers: int("passengers").default(1).notNull(),
   specialRequests: text("specialRequests"),
   estimatedPrice: int("estimatedPrice"),
-  status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled"]).default("pending").notNull(),
+  status: mysqlEnum("status", [
+    "pending",
+    "confirmed",
+    "completed",
+    "cancelled",
+  ])
+    .default("pending")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -63,11 +83,14 @@ export const driverApplications = mysqlTable("driver_applications", {
   yearsExperience: int("yearsExperience").notNull(),
   vehicleOwner: boolean("vehicleOwner").default(false).notNull(),
   vehicleType: varchar("vehicleType", { length: 128 }),
-  availability: mysqlEnum("availability", ["fulltime", "parttime", "weekends"]).notNull(),
+  availability: mysqlEnum("availability", ["fulltime", "parttime", "weekends"])
+    .notNull(),
   message: text("message"),
   internalNotes: text("internalNotes"),
   assignedTo: varchar("assignedTo", { length: 255 }),
-  status: mysqlEnum("status", ["pending", "reviewing", "approved", "rejected"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "reviewing", "approved", "rejected"])
+    .default("pending")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -88,7 +111,9 @@ export const corporateInquiries = mysqlTable("corporate_inquiries", {
   requirements: text("requirements"),
   internalNotes: text("internalNotes"),
   assignedTo: varchar("assignedTo", { length: 255 }),
-  status: mysqlEnum("status", ["pending", "contacted", "converted", "declined"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "contacted", "converted", "declined"])
+    .default("pending")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -117,17 +142,25 @@ export type InsertContactMessage = typeof contactMessages.$inferInsert;
 
 /**
  * Site content for CMS - editable text sections
+ * IMPORTANT: map JS camelCase -> DB snake_case columns
  */
 export const siteContent = mysqlTable("site_content", {
   id: int("id").autoincrement().primaryKey(),
-  sectionKey: varchar("sectionKey", { length: 128 }).notNull().unique(),
+
+  // DB: section_key
+  sectionKey: varchar("section_key", { length: 128 }).notNull().unique(),
+
   title: text("title"),
   subtitle: text("subtitle"),
   description: text("description"),
-  buttonText: varchar("buttonText", { length: 128 }),
-  buttonLink: varchar("buttonLink", { length: 255 }),
-  extraData: text("extraData"), // JSON string for additional flexible content
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+
+  // DB: button_text, button_link, extra_data
+  buttonText: varchar("button_text", { length: 128 }),
+  buttonLink: varchar("button_link", { length: 255 }),
+  extraData: text("extra_data"), // JSON string for additional flexible content
+
+  // DB: updated_at
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type SiteContent = typeof siteContent.$inferSelect;
@@ -135,14 +168,22 @@ export type InsertSiteContent = typeof siteContent.$inferInsert;
 
 /**
  * Site images for CMS - uploadable images
+ * IMPORTANT: map JS camelCase -> DB snake_case columns
  */
 export const siteImages = mysqlTable("site_images", {
   id: int("id").autoincrement().primaryKey(),
-  imageKey: varchar("imageKey", { length: 128 }).notNull().unique(),
+
+  // DB: image_key
+  imageKey: varchar("image_key", { length: 128 }).notNull().unique(),
+
   url: text("url").notNull(),
-  altText: varchar("altText", { length: 255 }),
+
+  // DB: alt_text
+  altText: varchar("alt_text", { length: 255 }),
   caption: text("caption"),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+
+  // DB: updated_at
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type SiteImage = typeof siteImages.$inferSelect;
@@ -161,9 +202,6 @@ export const adminUsers = mysqlTable("admin_users", {
 
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
-// --- Explicit named exports for server imports ---
-export type AdminUser = typeof adminUsers.$inferSelect;
-export type InsertAdminUser = typeof adminUsers.$inferInsert;
 
-// --- Explicit named exports for server imports ---
+// Keep one marker export if you want it
 export const __schemaVersion = "schema-has-adminUsers";
