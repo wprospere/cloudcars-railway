@@ -9,6 +9,9 @@ import { createContext } from "./railway-trpc.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
+// ✅ DB helper to save corporate enquiries (adjust path if needed)
+import { createCorporateInquiry } from "./db/db.js";
+
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
@@ -62,7 +65,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// ✅ Public corporate enquiry (NO tRPC required)
+// ✅ Public corporate enquiry (SAVES TO DB so it appears in /admin/inquiries)
 app.post("/api/corporate-inquiry", async (req, res) => {
   try {
     const {
@@ -79,17 +82,19 @@ app.post("/api/corporate-inquiry", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
-    // TODO: Save to DB / email / CRM.
-    // For now, log it so you can confirm it works in Railway logs.
-    console.log("✅ Corporate inquiry received:", {
+    await createCorporateInquiry({
       companyName,
       contactName,
       email,
       phone,
-      estimatedMonthlyTrips,
-      requirements,
-      createdAt: new Date().toISOString(),
-    });
+      estimatedMonthlyTrips: estimatedMonthlyTrips || null,
+      requirements: requirements || null,
+      status: "pending",
+      internalNotes: null,
+      assignedTo: null,
+      // createdAt is usually defaulted by DB/schema. If yours requires it, uncomment:
+      // createdAt: new Date(),
+    } as any);
 
     return res.json({ ok: true });
   } catch (err) {
