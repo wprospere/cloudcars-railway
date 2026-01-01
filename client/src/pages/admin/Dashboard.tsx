@@ -1,4 +1,4 @@
-import AdminLayout from "@/components/AdminLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import {
   Card,
   CardContent,
