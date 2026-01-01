@@ -45,6 +45,7 @@ const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
+      maxURLLength: 0, // ✅ force POST so input isn't lost/undefined
       fetch(input, init) {
         return fetch(input, {
           ...(init ?? {}),
