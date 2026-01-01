@@ -24,18 +24,19 @@ export function setAdminCookie(res: Response, adminId: number) {
   const value = `${adminId}.${sign(String(adminId))}`;
   const isProd = process.env.NODE_ENV === "production";
 
-  // share across www + non-www
+  // ✅ share across www + non-www
   const domain = isProd ? ".cloudcarsltd.com" : undefined;
 
   res.setHeader("Set-Cookie", [
-    // clear any duplicates that may exist
+    // ✅ clear any duplicates that may exist
     serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: "cloudcarsltd.com" }),
     serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: "www.cloudcarsltd.com" }),
+    serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: ".cloudcarsltd.com" }),
 
-    // set correct cookie
+    // ✅ set correct cookie
     serialize(COOKIE_NAME, value, {
       httpOnly: true,
-      secure: isProd,
+      secure: isProd, // https only in prod
       sameSite: "lax",
       path: "/",
       maxAge: ONE_WEEK_SECONDS,
@@ -45,20 +46,18 @@ export function setAdminCookie(res: Response, adminId: number) {
 }
 
 /**
- * ✅ Clear cookie (logout)
+ * ✅ Clear cookie (logout) - clears all possible domains
  */
 export function clearAdminCookie(res: Response) {
   const isProd = process.env.NODE_ENV === "production";
-  const domain = isProd ? ".cloudcarsltd.com" : undefined;
+  const rootDomain = isProd ? ".cloudcarsltd.com" : undefined;
 
-  res.setHeader(
-    "Set-Cookie",
-    serialize(COOKIE_NAME, "", {
-      path: "/",
-      maxAge: 0,
-      domain,
-    })
-  );
+  res.setHeader("Set-Cookie", [
+    serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: "cloudcarsltd.com" }),
+    serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: "www.cloudcarsltd.com" }),
+    serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: ".cloudcarsltd.com" }),
+    serialize(COOKIE_NAME, "", { path: "/", maxAge: 0, domain: rootDomain }),
+  ]);
 }
 
 /**
