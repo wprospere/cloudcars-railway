@@ -48,7 +48,10 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
 
   // ✅ Require admin role
-  if (ctx.user.role !== "admin") {
+  if (!ctx.user || ctx.user.role !== "admin") {
+  throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+}
+ {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Admin access required",
