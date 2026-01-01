@@ -39,17 +39,14 @@ import { emailTemplates, EmailTemplateType } from "./emailTemplates";
    Admin-only middleware (FIXED)
 ---------------------------------------- */
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  // ✅ Prevent crash when ctx.user is null
   if (!ctx.user) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Not logged in",
-    });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not logged in" });
   }
-
-  // ✅ Require admin role
-  if (!ctx.user || ctx.user.role !== "admin") {
-  throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  }
+  return next({ ctx });
+});
 }
  {
     throw new TRPCError({
