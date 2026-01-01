@@ -1,6 +1,20 @@
 import { publicProcedure, protectedProcedure, router } from "./railway-trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+
+// ...
+
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const role = ctx.user?.role;
+
+  // ✅ allow both admin + staff
+  if (role !== "admin" && role !== "staff") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  }
+
+  return next({ ctx });
+});
+
 import {
   createBooking,
   createDriverApplication,
