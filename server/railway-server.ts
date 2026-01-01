@@ -10,7 +10,7 @@ import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
 // ✅ DB helper to save corporate enquiries (adjust path if needed)
-import { createCorporateInquiry } from "./db/db.js";
+import { createCorporateInquiry } from "./db";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
