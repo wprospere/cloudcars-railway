@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import superjson from "superjson";
 
 import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
@@ -106,12 +107,13 @@ app.post("/api/corporate-inquiry", async (req, res) => {
 // ✅ Admin auth routes
 app.use("/api/admin", adminRoutes);
 
-// ✅ tRPC routes
+// ✅ tRPC routes (FIX: add superjson transformer to match client)
 app.use(
   "/api/trpc",
   createExpressMiddleware({
     router: appRouter,
     createContext,
+    transformer: superjson,
   })
 );
 
