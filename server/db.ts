@@ -4,7 +4,7 @@
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
 
 /**
@@ -52,18 +52,36 @@ const pool = DATABASE_URL
 export const db = drizzle(pool, { schema, mode: "default" });
 export { schema };
 
-// -------------------- Helpers --------------------
+/**
+ * Helper: get insertId reliably across mysql2/drizzle versions
+ */
+async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
+  const res: any = await q;
+  const id =
+    res?.[0]?.insertId ??
+    res?.insertId ??
+    res?.[0]?.id ??
+    res?.id;
 
-// Bookings
-export async function createBooking(data: typeof schema.bookings.$inferInsert) {
-  return db.insert(schema.bookings).values(data);
+  if (!id) {
+    // If drizzle returns OkPacket-like but no insertId, surface it
+    throw new Error(`Insert succeeded but no insertId returned: ${JSON.stringify(res)}`);
+  }
+  return { id: Number(id) };
 }
 
-// Driver Applications
+// -------------------- Bookings --------------------
+
+export async function createBooking(data: typeof schema.bookings.$inferInsert) {
+  return insertAndReturnId(db.insert(schema.bookings).values(data));
+}
+
+// -------------------- Driver Applications --------------------
+
 export async function createDriverApplication(
   data: typeof schema.driverApplications.$inferInsert
 ) {
-  return db.insert(schema.driverApplications).values(data);
+  return insertAndReturnId(db.insert(schema.driverApplications).values(data));
 }
 
 export async function getAllDriverApplications() {
@@ -72,7 +90,10 @@ export async function getAllDriverApplications() {
   });
 }
 
-export async function updateDriverApplicationStatus(id: number, status: string) {
+export async function updateDriverApplicationStatus(
+  id: number,
+  status: "pending" | "reviewing" | "approved" | "rejected"
+) {
   await db
     .update(schema.driverApplications)
     .set({ status } as any)
@@ -80,9 +101,10 @@ export async function updateDriverApplicationStatus(id: number, status: string) 
 }
 
 export async function updateDriverApplicationNotes(id: number, notes: string) {
+  // Schema field is internalNotes
   await db
     .update(schema.driverApplications)
-    .set({ notes } as any)
+    .set({ internalNotes: notes } as any)
     .where(eq(schema.driverApplications.id, id));
 }
 
@@ -96,11 +118,12 @@ export async function updateDriverApplicationAssignment(
     .where(eq(schema.driverApplications.id, id));
 }
 
-// Corporate Inquiries
+// -------------------- Corporate Inquiries --------------------
+
 export async function createCorporateInquiry(
   data: typeof schema.corporateInquiries.$inferInsert
 ) {
-  return db.insert(schema.corporateInquiries).values(data);
+  return insertAndReturnId(db.insert(schema.corporateInquiries).values(data));
 }
 
 export async function getAllCorporateInquiries() {
@@ -109,7 +132,10 @@ export async function getAllCorporateInquiries() {
   });
 }
 
-export async function updateCorporateInquiryStatus(id: number, status: string) {
+export async function updateCorporateInquiryStatus(
+  id: number,
+  status: "pending" | "contacted" | "converted" | "declined"
+) {
   await db
     .update(schema.corporateInquiries)
     .set({ status } as any)
@@ -117,9 +143,10 @@ export async function updateCorporateInquiryStatus(id: number, status: string) {
 }
 
 export async function updateCorporateInquiryNotes(id: number, notes: string) {
+  // Schema field is internalNotes
   await db
     .update(schema.corporateInquiries)
-    .set({ notes } as any)
+    .set({ internalNotes: notes } as any)
     .where(eq(schema.corporateInquiries.id, id));
 }
 
@@ -133,11 +160,12 @@ export async function updateCorporateInquiryAssignment(
     .where(eq(schema.corporateInquiries.id, id));
 }
 
-// Contact Messages
+// -------------------- Contact Messages --------------------
+
 export async function createContactMessage(
   data: typeof schema.contactMessages.$inferInsert
 ) {
-  return db.insert(schema.contactMessages).values(data);
+  return insertAndReturnId(db.insert(schema.contactMessages).values(data));
 }
 
 export async function getAllContactMessages() {
@@ -146,24 +174,19 @@ export async function getAllContactMessages() {
   });
 }
 
-export async function updateContactMessageStatus(id: number, status: string) {
+export async function markContactMessageAsRead(id: number) {
+  // Schema field is isRead
   await db
     .update(schema.contactMessages)
-    .set({ status } as any)
+    .set({ isRead: true } as any)
     .where(eq(schema.contactMessages.id, id));
 }
 
 export async function updateContactMessageNotes(id: number, notes: string) {
+  // Schema field is internalNotes
   await db
     .update(schema.contactMessages)
-    .set({ notes } as any)
-    .where(eq(schema.contactMessages.id, id));
-}
-
-export async function markContactMessageAsRead(id: number) {
-  await db
-    .update(schema.contactMessages)
-    .set({ status: "read" } as any)
+    .set({ internalNotes: notes } as any)
     .where(eq(schema.contactMessages.id, id));
 }
 
@@ -177,107 +200,110 @@ export async function updateContactMessageAssignment(
     .where(eq(schema.contactMessages.id, id));
 }
 
-// Team Members
+// -------------------- Team Members --------------------
+
 export async function getAllTeamMembers() {
+  // Your schema.ts in this chat does NOT show displayOrder, so order by id
+  // If you actually have displayOrder in DB/schema, we can switch back.
   return db.query.teamMembers.findMany({
-    orderBy: (members) => [asc(members.displayOrder)],
+    orderBy: (members) => [asc(members.id)],
   });
 }
 
 export async function createTeamMember(
-  data: typeof schema.teamMembers.$inferInsert
+  name: string,
+  email?: string,
+  role?: string
 ) {
-  return db.insert(schema.teamMembers).values(data);
+  return insertAndReturnId(
+    db.insert(schema.teamMembers).values({
+      name,
+      email: email ?? null,
+      role: role ?? null,
+      isActive: true,
+    } as any)
+  );
 }
 
 export async function updateTeamMember(
   id: number,
   data: Partial<typeof schema.teamMembers.$inferInsert>
 ) {
-  await db
-    .update(schema.teamMembers)
-    .set(data as any)
-    .where(eq(schema.teamMembers.id, id));
+  await db.update(schema.teamMembers).set(data as any).where(eq(schema.teamMembers.id, id));
 }
 
 export async function deleteTeamMember(id: number) {
   await db.delete(schema.teamMembers).where(eq(schema.teamMembers.id, id));
 }
 
-// Site Content (CMS)
-export async function getSiteContent(key: string) {
+// -------------------- Site Content (CMS) --------------------
+
+export async function getSiteContent(sectionKey: string) {
+  // IMPORTANT: your schema uses sectionKey, not "key"
   return db.query.siteContent.findFirst({
-    where: (content, { eq }) => eq(content.key, key),
+    where: (content, { eq }) => eq(content.sectionKey, sectionKey),
   });
 }
 
 export async function getAllSiteContent() {
-  return db.query.siteContent.findMany();
+  return db.query.siteContent.findMany({
+    orderBy: (c, { asc }) => [asc(c.sectionKey)],
+  });
 }
 
-export async function updateSiteContent(key: string, value: string) {
-  const existing = await getSiteContent(key);
+/**
+ * Upsert CMS content by sectionKey
+ * Router expects upsertSiteContent({ sectionKey, title, subtitle, ... })
+ */
+export async function upsertSiteContent(
+  data: typeof schema.siteContent.$inferInsert
+) {
+  const existing = await getSiteContent(String(data.sectionKey));
   if (existing) {
     await db
       .update(schema.siteContent)
-      .set({ value, updatedAt: new Date() } as any)
-      .where(eq(schema.siteContent.key, key));
-  } else {
-    await db.insert(schema.siteContent).values({ key, value } as any);
+      .set({ ...data, updatedAt: new Date() } as any)
+      .where(eq(schema.siteContent.sectionKey, String(data.sectionKey)));
+    return { id: existing.id };
   }
+  return insertAndReturnId(db.insert(schema.siteContent).values(data as any));
 }
 
-export async function upsertSiteContent(key: string, value: string) {
-  return updateSiteContent(key, value);
-}
+// -------------------- Site Images (CMS) --------------------
 
-// Site Images (CMS)
-export async function getSiteImage(key: string) {
+export async function getSiteImage(imageKey: string) {
+  // IMPORTANT: your schema uses imageKey, not "key"
   return db.query.siteImages.findFirst({
-    where: (image, { eq }) => eq(image.key, key),
+    where: (image, { eq }) => eq(image.imageKey, imageKey),
   });
 }
 
 export async function getAllSiteImages() {
-  return db.query.siteImages.findMany();
+  return db.query.siteImages.findMany({
+    orderBy: (i, { asc }) => [asc(i.imageKey)],
+  });
 }
 
-export async function createSiteImage(
+/**
+ * Upsert CMS image record by imageKey
+ * Router expects upsertSiteImage({ imageKey, url, altText, caption })
+ */
+export async function upsertSiteImage(
   data: typeof schema.siteImages.$inferInsert
 ) {
-  return db.insert(schema.siteImages).values(data);
-}
-
-export async function updateSiteImage(
-  id: number,
-  data: Partial<typeof schema.siteImages.$inferInsert>
-) {
-  await db
-    .update(schema.siteImages)
-    .set({ ...data, updatedAt: new Date() } as any)
-    .where(eq(schema.siteImages.id, id));
-}
-
-export async function upsertSiteImage(key: string, url: string, alt?: string) {
-  const existing = await getSiteImage(key);
-
+  const existing = await getSiteImage(String(data.imageKey));
   if (existing) {
     await db
       .update(schema.siteImages)
-      .set({ url, alt: alt || existing.alt, updatedAt: new Date() } as any)
-      .where(eq(schema.siteImages.key, key));
-    return existing.id;
-  } else {
-    const result: any = await db.insert(schema.siteImages).values({
-      key,
-      url,
-      alt: alt || key,
-    } as any);
-
-    return result?.[0]?.insertId ?? result?.insertId ?? null;
+      .set({ ...data, updatedAt: new Date() } as any)
+      .where(eq(schema.siteImages.imageKey, String(data.imageKey)));
+    return { id: existing.id };
   }
+  return insertAndReturnId(db.insert(schema.siteImages).values(data as any));
 }
 
-export async function deleteSiteImage(id: number) {
-  await db.delete(schema.siteImages).where(eq(schema.siteImages.id, id));
+export async function deleteSiteImage(imageKey: string) {
+  await db
+    .delete(schema.siteImages)
+    .where(eq(schema.siteImages.imageKey, imageKey));
 }
