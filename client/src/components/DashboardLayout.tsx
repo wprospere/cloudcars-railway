@@ -20,7 +20,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Mail, Settings } from "lucide-react";
+import {
+  FileText,
+  Image,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  PanelLeft,
+  Settings,
+  Users,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -29,6 +39,8 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: Mail, label: "Inquiries", path: "/admin/inquiries" },
+  { icon: FileText, label: "Edit Content", path: "/admin/content" },
+  { icon: Image, label: "Manage Images", path: "/admin/images" },
   { icon: Users, label: "Team Members", path: "/admin/team-members" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
@@ -91,9 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <SidebarProvider
-      style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
-    >
+    <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
       <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
         {children}
       </DashboardLayoutContent>
@@ -118,6 +128,16 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
     [location]
   );
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+
+  // ✅ When returning to Inquiries, force-refresh admin data so counts/lists don't go stale
+  useEffect(() => {
+    if (location === "/admin/inquiries") {
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && q.queryKey.includes("admin"),
+      });
+    }
+  }, [location, queryClient]);
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
