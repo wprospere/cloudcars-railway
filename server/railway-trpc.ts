@@ -6,10 +6,17 @@ import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { adminUsers } from "../drizzle/schema.js";
 import { readAdminIdFromCookie } from "./auth/session.js";
+import { UNAUTHED_ERR_MSG } from "@shared/const"; // ✅ add this
 
 export type AuthedUser = { id: number; role: "admin" | "staff" | "user" };
 
-export const createContext = async ({ req, res }: { req: Request; res: Response }) => {
+export const createContext = async ({
+  req,
+  res,
+}: {
+  req: Request;
+  res: Response;
+}) => {
   let user: AuthedUser | null = null;
 
   try {
@@ -25,7 +32,7 @@ export const createContext = async ({ req, res }: { req: Request; res: Response 
       const admin = rows[0];
       if (admin) user = { id: admin.id, role: admin.role as any };
     }
-  } catch (e) {
+  } catch {
     // don't crash context
     user = null;
   }
@@ -47,7 +54,10 @@ export const publicProcedure = t.procedure;
  */
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not logged in" });
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: UNAUTHED_ERR_MSG, // ✅ match the client
+    });
   }
   return next({ ctx });
 });
