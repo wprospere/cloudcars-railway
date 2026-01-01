@@ -31,8 +31,8 @@ adminRoutes.post("/login", async (req, res) => {
   const ok = await verifyPassword(password, admin.passwordHash);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
-  // ✅ FIXED: matches setAdminCookie(req, res, adminId)
-  setAdminCookie(req, res, admin.id);
+  // ✅ CORRECT: (res, adminId)
+  setAdminCookie(res, admin.id);
 
   return res.json({
     ok: true,
@@ -41,8 +41,8 @@ adminRoutes.post("/login", async (req, res) => {
 });
 
 adminRoutes.post("/logout", (req, res) => {
-  // ✅ FIXED: matches clearAdminCookie(req, res)
-  clearAdminCookie(req, res);
+  // ✅ CORRECT: (res)
+  clearAdminCookie(res);
   return res.status(204).end();
 });
 
