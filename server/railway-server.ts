@@ -62,6 +62,42 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// ✅ Public corporate enquiry (NO tRPC required)
+app.post("/api/corporate-inquiry", async (req, res) => {
+  try {
+    const {
+      companyName,
+      contactName,
+      email,
+      phone,
+      estimatedMonthlyTrips,
+      requirements,
+    } = req.body ?? {};
+
+    // Basic validation
+    if (!companyName || !contactName || !email || !phone) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    // TODO: Save to DB / email / CRM.
+    // For now, log it so you can confirm it works in Railway logs.
+    console.log("✅ Corporate inquiry received:", {
+      companyName,
+      contactName,
+      email,
+      phone,
+      estimatedMonthlyTrips,
+      requirements,
+      createdAt: new Date().toISOString(),
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /api/corporate-inquiry error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ✅ Admin auth routes
 app.use("/api/admin", adminRoutes);
 

@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const benefits = [
@@ -50,14 +49,11 @@ const benefits = [
   },
 ];
 
-const clients = [
-  "Boots UK",
-  "Speedo",
-  "Nottinghamshire Healthcare Trust",
-];
+const clients = ["Boots UK", "Speedo", "Nottinghamshire Healthcare Trust"];
 
 export default function Corporate() {
   const content = useCmsContent("corporate");
+
   const [formData, setFormData] = useState({
     companyName: "",
     contactName: "",
@@ -66,30 +62,43 @@ export default function Corporate() {
     estimatedMonthlyTrips: "",
     requirements: "",
   });
-  const [submitted, setSubmitted] = useState(false);
 
-  const inquiryMutation = trpc.corporate.inquire.useMutation({
-    onSuccess: () => {
+  const [submitted, setSubmitted] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSending) return;
+
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/corporate-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Something went wrong. Please try again.");
+      }
+
       setSubmitted(true);
       toast.success("Thanks! We'll give you a call within 24 hours.");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Something went wrong. Please try again.");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    inquiryMutation.mutate(formData);
+    } catch (err: any) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -101,12 +110,14 @@ export default function Corporate() {
             <span className="text-sm font-semibold text-primary uppercase tracking-wider">
               Business Accounts
             </span>
+
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-6">
               {content.title}{" "}
               <span className="text-gradient-green font-['Playfair_Display',serif] italic">
                 {content.subtitle}
               </span>
             </h2>
+
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
               {content.description}
             </p>
@@ -159,8 +170,8 @@ export default function Corporate() {
                   Got It!
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Thanks for getting in touch. Someone from our team will 
-                  call you within 24 hours to chat about what you need.
+                  Thanks for getting in touch. Someone from our team will call you
+                  within 24 hours to chat about what you need.
                 </p>
               </div>
             ) : (
@@ -169,8 +180,8 @@ export default function Corporate() {
                   Let's Talk Business
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  Tell us a bit about your company and we'll put together 
-                  a package that works for you.
+                  Tell us a bit about your company and we'll put together a
+                  package that works for you.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -245,9 +256,7 @@ export default function Corporate() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="requirements">
-                      What Do You Need?
-                    </Label>
+                    <Label htmlFor="requirements">What Do You Need?</Label>
                     <Textarea
                       id="requirements"
                       name="requirements"
@@ -261,10 +270,10 @@ export default function Corporate() {
 
                   <Button
                     type="submit"
-                    disabled={inquiryMutation.isPending}
+                    disabled={isSending}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
                   >
-                    {inquiryMutation.isPending ? (
+                    {isSending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Sending...
