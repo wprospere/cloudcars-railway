@@ -17,20 +17,23 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-function getCookieOptions(req: Request) {
-  const isProd = process.env.NODE_ENV === "production";
+function isHttps(req: Request): boolean {
+  const xfProto = String(req.headers["x-forwarded-proto"] ?? "");
+  return req.secure || xfProto.includes("https");
+}
 
+function getCookieOptions(req: Request) {
   return {
     httpOnly: true,
-    secure: isProd,                 // MUST be true on Railway HTTPS
+    secure: isHttps(req),   // works with Railway + trust proxy
     sameSite: "lax" as const,
     path: "/",
     maxAge: ONE_WEEK_SECONDS,
-    domain: isProd ? ".cloudcarsltd.com" : undefined,
+    // ✅ NO domain
   };
 }
 
-export function setAdminCookie(res: Response, adminId: number, req: Request) {
+export function setAdminCookie(req: Request, res: Response, adminId: number) {
   const idStr = String(adminId);
   const value = `${idStr}.${sign(idStr)}`;
 
@@ -40,7 +43,7 @@ export function setAdminCookie(res: Response, adminId: number, req: Request) {
   );
 }
 
-export function clearAdminCookie(res: Response, req: Request) {
+export function clearAdminCookie(req: Request, res: Response) {
   res.setHeader(
     "Set-Cookie",
     serialize(COOKIE_NAME, "", {

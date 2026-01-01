@@ -14,6 +14,16 @@ const PORT = Number(process.env.PORT) || 8080;
 
 // ✅ Railway / reverse proxy (important for secure cookies + req.secure)
 app.set("trust proxy", 1);
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").toLowerCase();
+
+  // Force apex -> www
+  if (host === "cloudcarsltd.com") {
+    return res.redirect(301, "https://www.cloudcarsltd.com" + req.originalUrl);
+  }
+
+  next();
+});
 
 // --------------------
 // Middleware
