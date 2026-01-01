@@ -1,85 +1,70 @@
-import { serialize } from "cookie";
+import { serialize, parse } from "cookie";
 import { createHash, timingSafeEqual } from "crypto";
+import type { Request, Response } from "express";
 
 const COOKIE_NAME = "cc_admin";
 const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
 
-/**
- * Sign the admin ID so the cookie cannot be tampered with
- */
-function sign(value: string) {
+function sign(value: string): string {
   const secret = process.env.JWT_SECRET ?? "dev-secret";
   return createHash("sha256").update(`${value}.${secret}`).digest("hex");
 }
 
-/**
- * Set admin session cookie
- * Works on Railway (HTTPS) and locally (HTTP)
- */
-export function setAdminCookie(res: any, adminId: number) {
-  const isProd = process.env.NODE_ENV === "production";
-
-  // IMPORTANT: cookie format must match reader
-  // Format: "v2.<id>.<sig>"
-  const idStr = String(adminId);
-  const value = `v2.${idStr}.${sign(idStr)}`;
-
-  const cookie = serialize(COOKIE_NAME, value, {
-    httpOnly: true,
-    secure: isProd,     // ✅ true on Railway, false on local http
-    sameSite: "lax",    // ✅ correct for same-origin (www.cloudcarsltd.com)
-    path: "/",          // ✅ required
-    maxAge: ONE_WEEK_SECONDS,
-  });
-
-  // Express supports multiple Set-Cookie headers; append is safest
-  if (typeof res.append === "function") res.append("Set-Cookie", cookie);
-  else res.setHeader("Set-Cookie", cookie);
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
 }
 
-/**
- * Clear admin session cookie
- */
-export function clearAdminCookie(res: any) {
+function getCookieOptions(req: Request) {
   const isProd = process.env.NODE_ENV === "production";
 
-  const cookie = serialize(COOKIE_NAME, "", {
+  return {
     httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
+    secure: isProd,                 // MUST be true on Railway HTTPS
+    sameSite: "lax" as const,
     path: "/",
-    maxAge: 0,
-  });
-
-  if (typeof res.append === "function") res.append("Set-Cookie", cookie);
-  else res.setHeader("Set-Cookie", cookie);
+    maxAge: ONE_WEEK_SECONDS,
+    domain: isProd ? ".cloudcarsltd.com" : undefined,
+  };
 }
 
-/**
- * Read and verify admin ID from cookie
- * Requires cookieParser() middleware (which you already use)
- */
-export function readAdminIdFromCookie(req: any): number | null {
-  // Prefer cookie-parser
-  const raw = req.cookies?.[COOKIE_NAME] ?? null;
-  if (!raw || typeof raw !== "string") return null;
+export function setAdminCookie(res: Response, adminId: number, req: Request) {
+  const idStr = String(adminId);
+  const value = `${idStr}.${sign(idStr)}`;
 
-  // Expected: "v2.<id>.<sig>"
-  const parts = raw.split(".");
-  if (parts.length !== 3) return null;
+  res.setHeader(
+    "Set-Cookie",
+    serialize(COOKIE_NAME, value, getCookieOptions(req))
+  );
+}
 
-  const [version, idStr, sig] = parts;
-  if (version !== "v2") return null;
+export function clearAdminCookie(res: Response, req: Request) {
+  res.setHeader(
+    "Set-Cookie",
+    serialize(COOKIE_NAME, "", {
+      ...getCookieOptions(req),
+      maxAge: 0,
+    })
+  );
+}
 
+export function readAdminIdFromCookie(req: Request): number | null {
+  const rawCookieHeader = req.headers?.cookie;
+  if (!rawCookieHeader) return null;
+
+  const cookies = parse(rawCookieHeader);
+  const raw = cookies[COOKIE_NAME];
+  if (!raw) return null;
+
+  const [idStr, hash] = String(raw).split(".");
   const id = Number(idStr);
-  if (!Number.isFinite(id)) return null;
 
-  const expected = sign(idStr);
+  if (!idStr || !hash || !Number.isFinite(id) || id <= 0) return null;
 
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
+  const expected = sign(String(id));
+  if (!safeEqual(hash, expected)) return null;
 
   return id;
 }
