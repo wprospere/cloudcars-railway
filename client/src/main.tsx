@@ -44,8 +44,12 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
 
-      // ✅ FORCE POST for queries too (stops GET ?input=... requests)
+      // ✅ Force POST for queries too (stops GET ?input=... requests)
       maxURLLength: 0,
+
+      // ✅ Prevent "Input is too big for a single dispatch"
+      // Splits large pages into smaller batch requests
+      maxBatchSize: 5,
 
       fetch(input, init) {
         return fetch(input, {
