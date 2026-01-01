@@ -36,12 +36,25 @@ import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 
 /* ----------------------------------------
-   Admin-only middleware
+   Admin-only middleware (FIXED)
 ---------------------------------------- */
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  // ✅ Prevent crash when ctx.user is null
+  if (!ctx.user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Not logged in",
+    });
   }
+
+  // ✅ Require admin role
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
   return next({ ctx });
 });
 
@@ -61,15 +74,17 @@ function calculateQuote(serviceType: string, distance: number): number {
     airport: 0,
     executive: 280,
   };
-  return (baseRates[serviceType] || 350) +
-    Math.round(distance * (perMileRates[serviceType] || 180));
+
+  return (
+    (baseRates[serviceType] || 350) +
+    Math.round(distance * (perMileRates[serviceType] || 180))
+  );
 }
 
 /* ----------------------------------------
    App Router
 ---------------------------------------- */
 export const appRouter = router({
-
   /* ---------- AUTH ---------- */
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
@@ -79,33 +94,37 @@ export const appRouter = router({
   /* ---------- BOOKINGS ---------- */
   booking: router({
     create: publicProcedure
-      .input(z.object({
-        customerName: z.string().min(1),
-        customerEmail: z.string().email(),
-        customerPhone: z.string().min(1),
-        serviceType: z.enum(["standard", "courier", "airport", "executive"]),
-        pickupAddress: z.string().min(1),
-        destinationAddress: z.string().min(1),
-        pickupDate: z.string().min(1),
-        pickupTime: z.string().min(1),
-        passengers: z.number().min(1).max(8).default(1),
-        specialRequests: z.string().optional(),
-        estimatedPrice: z.number().optional(),
-      }))
+      .input(
+        z.object({
+          customerName: z.string().min(1),
+          customerEmail: z.string().email(),
+          customerPhone: z.string().min(1),
+          serviceType: z.enum(["standard", "courier", "airport", "executive"]),
+          pickupAddress: z.string().min(1),
+          destinationAddress: z.string().min(1),
+          pickupDate: z.string().min(1),
+          pickupTime: z.string().min(1),
+          passengers: z.number().min(1).max(8).default(1),
+          specialRequests: z.string().optional(),
+          estimatedPrice: z.number().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await createBooking({
           ...input,
           specialRequests: input.specialRequests ?? null,
           estimatedPrice: input.estimatedPrice ?? null,
         });
-        return { success: true, bookingId: result.id };
+        return { success: true, bookingId: (result as any).id ?? (result as any).insertId };
       }),
 
     getQuote: publicProcedure
-      .input(z.object({
-        serviceType: z.enum(["standard", "courier", "airport", "executive"]),
-        estimatedMiles: z.number().min(0),
-      }))
+      .input(
+        z.object({
+          serviceType: z.enum(["standard", "courier", "airport", "executive"]),
+          estimatedMiles: z.number().min(0),
+        })
+      )
       .query(({ input }) => {
         const price = calculateQuote(input.serviceType, input.estimatedMiles);
         return {
@@ -119,17 +138,19 @@ export const appRouter = router({
   /* ---------- DRIVERS ---------- */
   driver: router({
     submitApplication: publicProcedure
-      .input(z.object({
-        fullName: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
-        licenseNumber: z.string().min(1),
-        yearsExperience: z.number().min(0),
-        vehicleOwner: z.boolean().default(false),
-        vehicleType: z.string().optional(),
-        availability: z.enum(["fulltime", "parttime", "weekends"]),
-        message: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          fullName: z.string().min(1),
+          email: z.string().email(),
+          phone: z.string().min(1),
+          licenseNumber: z.string().min(1),
+          yearsExperience: z.number().min(0),
+          vehicleOwner: z.boolean().default(false),
+          vehicleType: z.string().optional(),
+          availability: z.enum(["fulltime", "parttime", "weekends"]),
+          message: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         try {
           const result = await createDriverApplication({
@@ -145,11 +166,9 @@ export const appRouter = router({
           notifyOwner({
             title: "New Driver Application",
             content: `${input.fullName} applied. Phone: ${input.phone}`,
-          }).catch(err =>
-            console.error("⚠️ notifyOwner failed", err)
-          );
+          }).catch((err) => console.error("⚠️ notifyOwner failed", err));
 
-          return { success: true, applicationId: result.id };
+          return { success: true, applicationId: (result as any).id ?? (result as any).insertId };
         } catch (err: any) {
           console.error("❌ submitApplication failed", err);
           throw new TRPCError({
@@ -163,14 +182,16 @@ export const appRouter = router({
   /* ---------- CORPORATE ---------- */
   corporate: router({
     inquire: publicProcedure
-      .input(z.object({
-        companyName: z.string().min(1),
-        contactName: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
-        estimatedMonthlyTrips: z.string().optional(),
-        requirements: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          companyName: z.string().min(1),
+          contactName: z.string().min(1),
+          email: z.string().email(),
+          phone: z.string().min(1),
+          estimatedMonthlyTrips: z.string().optional(),
+          requirements: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await createCorporateInquiry({
           ...input,
@@ -185,20 +206,22 @@ export const appRouter = router({
           content: `${input.companyName} (${input.contactName})`,
         });
 
-        return { success: true, inquiryId: result.id };
+        return { success: true, inquiryId: (result as any).id ?? (result as any).insertId };
       }),
   }),
 
   /* ---------- CONTACT ---------- */
   contact: router({
     send: publicProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().optional(),
-        subject: z.string().min(1),
-        message: z.string().min(1),
-      }))
+      .input(
+        z.object({
+          name: z.string().min(1),
+          email: z.string().email(),
+          phone: z.string().optional(),
+          subject: z.string().min(1),
+          message: z.string().min(1),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await createContactMessage({
           ...input,
@@ -212,7 +235,7 @@ export const appRouter = router({
           content: `${input.name}: ${input.subject}`,
         });
 
-        return { success: true, messageId: result.id };
+        return { success: true, messageId: (result as any).id ?? (result as any).insertId };
       }),
   }),
 
@@ -248,15 +271,17 @@ export const appRouter = router({
     getAllImages: publicProcedure.query(getAllSiteImages),
 
     updateContent: adminProcedure
-      .input(z.object({
-        sectionKey: z.string(),
-        title: z.string().optional(),
-        subtitle: z.string().optional(),
-        description: z.string().optional(),
-        buttonText: z.string().optional(),
-        buttonLink: z.string().optional(),
-        extraData: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          sectionKey: z.string(),
+          title: z.string().optional(),
+          subtitle: z.string().optional(),
+          description: z.string().optional(),
+          buttonText: z.string().optional(),
+          buttonLink: z.string().optional(),
+          extraData: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         await upsertSiteContent({
           sectionKey: input.sectionKey,
@@ -271,13 +296,15 @@ export const appRouter = router({
       }),
 
     uploadImage: adminProcedure
-      .input(z.object({
-        imageKey: z.string(),
-        base64Data: z.string(),
-        mimeType: z.string().default("image/png"),
-        altText: z.string().optional(),
-        caption: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          imageKey: z.string(),
+          base64Data: z.string(),
+          mimeType: z.string().default("image/png"),
+          altText: z.string().optional(),
+          caption: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const buffer = Buffer.from(input.base64Data, "base64");
         const ext = input.mimeType.split("/")[1] || "png";
@@ -307,10 +334,12 @@ export const appRouter = router({
     getDriverApplications: adminProcedure.query(getAllDriverApplications),
 
     updateDriverStatus: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        status: z.enum(["pending", "reviewing", "approved", "rejected"]),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "reviewing", "approved", "rejected"]),
+        })
+      )
       .mutation(async ({ input }) => {
         await updateDriverApplicationStatus(input.id, input.status);
         return { success: true };
@@ -333,10 +362,12 @@ export const appRouter = router({
     getCorporateInquiries: adminProcedure.query(getAllCorporateInquiries),
 
     updateCorporateStatus: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        status: z.enum(["pending", "contacted", "converted", "declined"]),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "contacted", "converted", "declined"]),
+        })
+      )
       .mutation(async ({ input }) => {
         await updateCorporateInquiryStatus(input.id, input.status);
         return { success: true };
@@ -380,11 +411,13 @@ export const appRouter = router({
       }),
 
     sendEmail: adminProcedure
-      .input(z.object({
-        to: z.string().email(),
-        subject: z.string(),
-        message: z.string(),
-      }))
+      .input(
+        z.object({
+          to: z.string().email(),
+          subject: z.string(),
+          message: z.string(),
+        })
+      )
       .mutation(async ({ input }) => {
         return {
           success: await sendEmail({
@@ -396,11 +429,13 @@ export const appRouter = router({
       }),
 
     sendTemplateEmail: adminProcedure
-      .input(z.object({
-        to: z.string().email(),
-        templateType: z.string(),
-        variables: z.record(z.string(), z.string()),
-      }))
+      .input(
+        z.object({
+          to: z.string().email(),
+          templateType: z.string(),
+          variables: z.record(z.string(), z.string()),
+        })
+      )
       .mutation(async ({ input }) => {
         const template = emailTemplates[input.templateType as EmailTemplateType];
         if (!template) throw new Error("Invalid template type");
@@ -421,22 +456,26 @@ export const appRouter = router({
     getTeamMembers: adminProcedure.query(getAllTeamMembers),
 
     createTeamMember: adminProcedure
-      .input(z.object({
-        name: z.string(),
-        email: z.string().email().optional(),
-        role: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string(),
+          email: z.string().email().optional(),
+          role: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         return await createTeamMember(input.name, input.email, input.role);
       }),
 
     updateTeamMember: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        email: z.string().email().optional(),
-        role: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          email: z.string().email().optional(),
+          role: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
         await updateTeamMember(id, data);
