@@ -83,13 +83,32 @@ app.all("/api/*", (_req, res) => {
 // Frontend (Vite build)
 // --------------------
 const publicPath = path.resolve(process.cwd(), "dist", "public");
-app.use(express.static(publicPath));
 
-// SPA fallback (NON-API only)
+// ✅ IMPORTANT: do NOT serve index.html from express.static
+// This prevents caching a stale index.html that points to an old /assets/index-*.js
+app.use(
+  express.static(publicPath, {
+    index: false,
+    // Hashed assets are safe to cache long-term
+    maxAge: "1y",
+    immutable: true,
+  })
+);
+
+// SPA fallback (NON-API only) - always serve fresh HTML
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) {
     return res.status(404).json({ error: "API route not found" });
   }
+
+  // ✅ critical: stop browsers/edge caching index.html
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
   return res.sendFile(path.join(publicPath, "index.html"));
 });
 
