@@ -3,11 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db.js";
 import { adminUsers } from "../../drizzle/schema.js";
 import { verifyPassword } from "./password.js";
-import {
-  clearAdminCookie,
-  readAdminIdFromCookie,
-  setAdminCookie,
-} from "./session.js";
+import { clearAdminCookie, readAdminIdFromCookie, setAdminCookie } from "./session.js";
 
 export const adminRoutes = express.Router();
 
@@ -31,8 +27,8 @@ adminRoutes.post("/login", async (req, res) => {
   const ok = await verifyPassword(password, admin.passwordHash);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
-  // ✅ IMPORTANT: pass req so cookie options (domain/secure) are correct
-  setAdminCookie(res, admin.id, req);
+  // ✅ set cookie
+  setAdminCookie(req, res, admin.id);
 
   return res.json({
     ok: true,
@@ -41,8 +37,8 @@ adminRoutes.post("/login", async (req, res) => {
 });
 
 adminRoutes.post("/logout", (req, res) => {
-  // ✅ IMPORTANT: pass req
-  clearAdminCookie(res, req);
+  // ✅ clear cookie
+  clearAdminCookie(req, res);
   return res.status(204).end();
 });
 
