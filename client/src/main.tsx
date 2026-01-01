@@ -39,13 +39,13 @@ queryClient.getMutationCache().subscribe((event) => {
 });
 
 const trpcClient = trpc.createClient({
-  transformer: superjson, // ✅ correct place for transformer
+  transformer: superjson,
   links: [
     httpBatchLink({
       url: "/api/trpc",
       fetch(input, init) {
-        const url = typeof input === "string" ? input : input.url;
-        return fetch(url, {
+        // ✅ IMPORTANT: keep the original Request so POST body isn't lost
+        return fetch(input, {
           ...(init ?? {}),
           credentials: "include", // ✅ send cc_admin cookie
         });
