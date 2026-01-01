@@ -42,10 +42,7 @@ const quickActions = [
 
 export default function AdminDashboard() {
   return (
-    <AdminLayout
-      title="Dashboard"
-      description="Welcome to the Cloud Cars content management system"
-    >
+    <DashboardLayout>
       <div className="space-y-8">
         {/* Quick Actions */}
         <section>
@@ -63,11 +60,15 @@ export default function AdminDashboard() {
                     >
                       <action.icon className="w-5 h-5" />
                     </div>
-                    <CardTitle className="text-base">{action.title}</CardTitle>
+                    <CardTitle className="text-base">
+                      {action.title}
+                    </CardTitle>
                   </CardHeader>
 
                   <CardContent>
-                    <CardDescription>{action.description}</CardDescription>
+                    <CardDescription>
+                      {action.description}
+                    </CardDescription>
                   </CardContent>
                 </Card>
               </Link>
@@ -92,9 +93,9 @@ export default function AdminDashboard() {
                     Editing Text Content
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Go to "Edit Content" to update headings, descriptions, and
-                    other text on your website. Changes are saved automatically
-                    and appear on your website immediately.
+                    Go to "Edit Content" to update headings, descriptions,
+                    and other text on your website. Changes are saved
+                    automatically and appear on your website immediately.
                   </p>
                 </div>
 
@@ -103,9 +104,10 @@ export default function AdminDashboard() {
                     Managing Images
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Use "Manage Images" to upload new images or replace existing
-                    ones. Supported formats include PNG, JPG, and WebP. Images
-                    are automatically optimised for fast loading.
+                    Use "Manage Images" to upload new images or replace
+                    existing ones. Supported formats include PNG, JPG,
+                    and WebP. Images are automatically optimised for fast
+                    loading.
                   </p>
                 </div>
               </div>
@@ -113,6 +115,6 @@ export default function AdminDashboard() {
           </Card>
         </section>
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }
