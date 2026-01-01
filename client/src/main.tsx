@@ -43,11 +43,14 @@ const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
+
+      // ✅ FORCE POST for queries too (stops GET ?input=... requests)
+      maxURLLength: 0,
+
       fetch(input, init) {
-        // ✅ IMPORTANT: keep the original Request so POST body isn't lost
         return fetch(input, {
           ...(init ?? {}),
-          credentials: "include", // ✅ send cc_admin cookie
+          credentials: "include",
         });
       },
     }),
