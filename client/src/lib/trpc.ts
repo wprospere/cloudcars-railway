@@ -1,14 +1,14 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpLink } from "@trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "../../server/routers"; // adjust path
 
 export const trpc = createTRPCReact<AppRouter>();
 
 export const trpcClientOptions = {
   links: [
-    httpLink({
+    httpBatchLink({
       url: "/trpc",
-      // if you use cookies auth, keep credentials:
+      maxBatchSize: 1,
       fetch(url, options) {
         return fetch(url, { ...options, credentials: "include" });
       },
