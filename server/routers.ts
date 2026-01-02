@@ -489,6 +489,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // ✅ FIXED: sendEmail expects { html }, not { text }
     sendEmail: adminProcedure
       .input(
         z.object({
@@ -502,11 +503,12 @@ export const appRouter = router({
           success: await sendEmail({
             to: input.to,
             subject: input.subject,
-            text: input.message,
+            html: input.message.replace(/\n/g, "<br/>"),
           }),
         };
       }),
 
+    // ✅ FIXED: sendEmail expects { html }, not { text }
     sendTemplateEmail: adminProcedure
       .input(
         z.object({
@@ -528,7 +530,11 @@ export const appRouter = router({
         });
 
         return {
-          success: await sendEmail({ to: input.to, subject, text: body }),
+          success: await sendEmail({
+            to: input.to,
+            subject,
+            html: body.replace(/\n/g, "<br/>"),
+          }),
         };
       }),
 
