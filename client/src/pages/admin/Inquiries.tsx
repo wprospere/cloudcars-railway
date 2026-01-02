@@ -26,7 +26,9 @@ function exportToCSV(data: any[], filename: string) {
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(","),
-    ...data.map((row) => headers.map((h) => JSON.stringify(row[h] || "")).join(",")),
+    ...data.map((row) =>
+      headers.map((h) => JSON.stringify(row?.[h] ?? "")).join(",")
+    ),
   ].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv" });
@@ -66,8 +68,29 @@ function normalizeArray<T = any>(value: any): T[] {
   return [];
 }
 
+function DataLoadErrorBanner({
+  driversError,
+  corporateError,
+  messagesError,
+}: {
+  driversError?: { message?: string } | null;
+  corporateError?: { message?: string } | null;
+  messagesError?: { message?: string } | null;
+}) {
+  if (!driversError && !corporateError && !messagesError) return null;
+
+  return (
+    <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+      <div className="font-semibold mb-1">Data load error</div>
+      <div>Drivers: {driversError?.message || "OK"}</div>
+      <div>Corporate: {corporateError?.message || "OK"}</div>
+      <div>Messages: {messagesError?.message || "OK"}</div>
+    </div>
+  );
+}
+
 export default function Inquiries() {
-  // ✅ protect this page (incognito will redirect to /admin/login?next=...)
+  // ✅ protect this page
   useAuth({ redirectOnUnauthenticated: true, redirectPath: "/admin/login" });
 
   const [activeTab, setActiveTab] = useState("drivers");
@@ -79,6 +102,13 @@ export default function Inquiries() {
   const corporateQuery = trpc.admin.getCorporateInquiries.useQuery();
   const messagesQuery = trpc.admin.getContactMessages.useQuery();
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
+
+  // ✅ TEMP DEBUG (remove later)
+  if (driversQuery.error) console.error("driversQuery.error:", driversQuery.error);
+  if (corporateQuery.error)
+    console.error("corporateQuery.error:", corporateQuery.error);
+  if (messagesQuery.error)
+    console.error("messagesQuery.error:", messagesQuery.error);
 
   const drivers = normalizeArray<any>(driversQuery.data);
   const corporate = normalizeArray<any>(corporateQuery.data);
@@ -140,6 +170,13 @@ export default function Inquiries() {
           </Button>
         </div>
 
+        {/* ✅ Debug banner (safe + inside component) */}
+        <DataLoadErrorBanner
+          driversError={driversQuery.error as any}
+          corporateError={corporateQuery.error as any}
+          messagesError={messagesQuery.error as any}
+        />
+
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="p-4">
@@ -158,9 +195,15 @@ export default function Inquiries() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="drivers">Driver Applications ({drivers.length})</TabsTrigger>
-            <TabsTrigger value="corporate">Corporate Inquiries ({corporate.length})</TabsTrigger>
-            <TabsTrigger value="messages">Contact Messages ({messages.length})</TabsTrigger>
+            <TabsTrigger value="drivers">
+              Driver Applications ({drivers.length})
+            </TabsTrigger>
+            <TabsTrigger value="corporate">
+              Corporate Inquiries ({corporate.length})
+            </TabsTrigger>
+            <TabsTrigger value="messages">
+              Contact Messages ({messages.length})
+            </TabsTrigger>
           </TabsList>
 
           {/* Driver Applications */}
@@ -371,7 +414,9 @@ export default function Inquiries() {
 
                     {inquiry.estimatedMonthlyTrips && (
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Estimated Monthly Trips:</span>{" "}
+                        <span className="text-muted-foreground">
+                          Estimated Monthly Trips:
+                        </span>{" "}
                         {inquiry.estimatedMonthlyTrips}
                       </div>
                     )}
