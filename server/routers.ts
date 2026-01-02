@@ -30,7 +30,17 @@ import {
   createTeamMember,
   updateTeamMember,
   deleteTeamMember,
+
+  // ✅ NEW (Phase 1 Onboarding)
+  createDriverOnboardingToken,
+  getDriverOnboardingByToken,
+  markDriverOnboardingTokenUsed,
+  upsertDriverVehicle,
+  upsertDriverDocument,
+  getDriverOnboardingProfile,
+  setDriverDocumentReview,
 } from "./db";
+
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { sendEmail, notifyOwner } from "./railway-email";
@@ -70,6 +80,28 @@ function calculateQuote(serviceType: string, distance: number): number {
   return (
     (baseRates[serviceType] || 350) +
     Math.round(distance * (perMileRates[serviceType] || 180))
+  );
+}
+
+/* ----------------------------------------
+   Helpers (Phase 1 Onboarding)
+---------------------------------------- */
+const DRIVER_DOC_TYPES = [
+  "LICENSE_FRONT",
+  "LICENSE_BACK",
+  "BADGE",
+  "PLATING",
+  "INSURANCE",
+  "MOT",
+] as const;
+
+function getPublicBaseUrl() {
+  // ✅ Set this in Railway ENV for best reliability:
+  // PUBLIC_BASE_URL=https://www.cloudcarsltd.com
+  return (
+    process.env.PUBLIC_BASE_URL ||
+    process.env.VITE_PUBLIC_BASE_URL ||
+    "https://www.cloudcarsltd.com"
   );
 }
 
@@ -333,6 +365,112 @@ export const appRouter = router({
       }),
   }),
 
+  /* =======================================================================
+     ✅ DRIVER ONBOARDING (Phase 1) - Public (token based)
+     ======================================================================= */
+  driverOnboarding: router({
+    getByToken: publicProcedure
+      .input(z.object({ token: z.string().min(10) }))
+      .query(async ({ input }) => {
+        const tokenRow = await getDriverOnboardingByToken(input.token);
+        if (!tokenRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Invalid or expired onboarding link",
+          });
+        }
+        return await getDriverOnboardingProfile((tokenRow as any).driverApplicationId);
+      }),
+
+    saveVehicle: publicProcedure
+      .input(
+        z.object({
+          token: z.string().min(10),
+          registration: z.string().min(1),
+          make: z.string().min(1),
+          model: z.string().min(1),
+          colour: z.string().min(1),
+          year: z.string().optional(),
+          plateNumber: z.string().optional(),
+          capacity: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const tokenRow = await getDriverOnboardingByToken(input.token);
+        if (!tokenRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Invalid or expired onboarding link",
+          });
+        }
+
+        await upsertDriverVehicle({
+          driverApplicationId: (tokenRow as any).driverApplicationId,
+          registration: input.registration,
+          make: input.make,
+          model: input.model,
+          colour: input.colour,
+          year: input.year ?? null,
+          plateNumber: input.plateNumber ?? null,
+          capacity: input.capacity ?? null,
+        });
+
+        return { success: true };
+      }),
+
+    uploadDocument: publicProcedure
+      .input(
+        z.object({
+          token: z.string().min(10),
+          type: z.enum(DRIVER_DOC_TYPES),
+          base64Data: z.string().min(20),
+          mimeType: z.string().default("image/jpeg"),
+          expiryDate: z.string().optional(), // ISO string, optional
+        })
+      )
+      .mutation(async ({ input }) => {
+        const tokenRow = await getDriverOnboardingByToken(input.token);
+        if (!tokenRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Invalid or expired onboarding link",
+          });
+        }
+
+        const buffer = Buffer.from(input.base64Data, "base64");
+        const ext = input.mimeType.split("/")[1] || "bin";
+        const filename = `drivers/${(tokenRow as any).driverApplicationId}/${input.type}-${nanoid(
+          10
+        )}.${ext}`;
+
+        const { url } = await storagePut(filename, buffer, input.mimeType);
+
+        await upsertDriverDocument({
+          driverApplicationId: (tokenRow as any).driverApplicationId,
+          type: input.type as any,
+          fileUrl: url,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+        });
+
+        return { success: true, url };
+      }),
+
+    submit: publicProcedure
+      .input(z.object({ token: z.string().min(10) }))
+      .mutation(async ({ input }) => {
+        const tokenRow = await getDriverOnboardingByToken(input.token);
+        if (!tokenRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Invalid or expired onboarding link",
+          });
+        }
+
+        await markDriverOnboardingTokenUsed(input.token);
+        return { success: true };
+      }),
+  }),
+
   /* ---------- ADMIN ---------- */
   admin: router({
     /**
@@ -571,6 +709,74 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await deleteTeamMember(input.id);
+        return { success: true };
+      }),
+
+    /* ==============================
+       ✅ Phase 1 - Admin Onboarding
+       ============================== */
+
+    sendDriverOnboardingLink: adminProcedure
+      .input(z.object({ driverApplicationId: z.number() }))
+      .mutation(async ({ input }) => {
+        // Simple lookup (Phase 1): use existing fetch, then find
+        const apps: any[] = await getAllDriverApplications();
+        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
+
+        if (!app) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Driver application not found" });
+        }
+
+        const rawToken = nanoid(32);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        await createDriverOnboardingToken({
+          driverApplicationId: Number(app.id),
+          rawToken,
+          expiresAt,
+        });
+
+        const link = `${getPublicBaseUrl()}/driver/onboarding?token=${rawToken}`;
+
+        const html = `
+          <p>Hi ${app.fullName || "Driver"},</p>
+          <p>Please complete your driver onboarding by uploading your documents and vehicle details:</p>
+          <p><a href="${link}">${link}</a></p>
+          <p>This link expires in 7 days.</p>
+          <p>Cloud Cars</p>
+        `;
+
+        const ok = await sendEmail({
+          to: app.email,
+          subject: "Complete your driver onboarding",
+          html,
+        });
+
+        return { success: ok, link };
+      }),
+
+    getDriverOnboardingProfile: adminProcedure
+      .input(z.object({ driverApplicationId: z.number() }))
+      .query(async ({ input }) => {
+        return await getDriverOnboardingProfile(input.driverApplicationId);
+      }),
+
+    reviewDriverDocument: adminProcedure
+      .input(
+        z.object({
+          docId: z.number(),
+          status: z.enum(["approved", "rejected"]),
+          rejectionReason: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        await setDriverDocumentReview({
+          docId: input.docId,
+          status: input.status,
+          reviewedBy: ctx.user?.email || "admin",
+          rejectionReason: input.rejectionReason ?? null,
+        });
+
         return { success: true };
       }),
   }),
