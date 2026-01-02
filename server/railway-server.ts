@@ -10,8 +10,8 @@ import { createContext } from "./railway-trpc.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
-// ✅ DB helper to save corporate enquiries (adjust path if needed)
-import { createCorporateInquiry } from "./db";
+// ✅ DB helpers
+import { createCorporateInquiry, createDriverApplication } from "./db";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -78,7 +78,6 @@ app.post("/api/corporate-inquiry", async (req, res) => {
       requirements,
     } = req.body ?? {};
 
-    // Basic validation
     if (!companyName || !contactName || !email || !phone) {
       return res.status(400).json({ message: "Missing required fields." });
     }
@@ -93,8 +92,6 @@ app.post("/api/corporate-inquiry", async (req, res) => {
       status: "pending",
       internalNotes: null,
       assignedTo: null,
-      // createdAt is usually defaulted by DB/schema. If yours requires it, uncomment:
-      // createdAt: new Date(),
     } as any);
 
     return res.json({ ok: true });
@@ -104,10 +101,52 @@ app.post("/api/corporate-inquiry", async (req, res) => {
   }
 });
 
+// ✅ Public driver application (SAVES TO DB so it appears in /admin/inquiries)
+// NOTE: This avoids tRPC "input too big" issues (base64/files etc.)
+app.post("/api/driver-application", async (req, res) => {
+  try {
+    const {
+      fullName,
+      email,
+      phone,
+      licenseNumber,
+      yearsExperience,
+      vehicleOwner,
+      vehicleType,
+      availability,
+      message,
+    } = req.body ?? {};
+
+    if (!fullName || !email || !phone || !licenseNumber || !availability) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    await createDriverApplication({
+      fullName,
+      email,
+      phone,
+      licenseNumber,
+      yearsExperience: Number(yearsExperience ?? 0),
+      vehicleOwner: Boolean(vehicleOwner ?? false),
+      vehicleType: vehicleType || null,
+      availability,
+      message: message || null,
+      status: "pending",
+      internalNotes: null,
+      assignedTo: null,
+    } as any);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ /api/driver-application error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ✅ Admin auth routes
 app.use("/api/admin", adminRoutes);
 
-// ✅ tRPC routes (FIX: add superjson transformer to match client)
+// ✅ tRPC routes (server transformer must match client transformer)
 app.use(
   "/api/trpc",
   createExpressMiddleware({
@@ -127,24 +166,20 @@ app.all("/api/*", (_req, res) => {
 // --------------------
 const publicPath = path.resolve(process.cwd(), "dist", "public");
 
-// ✅ IMPORTANT: do NOT serve index.html from express.static
-// This prevents caching a stale index.html that points to an old /assets/index-*.js
 app.use(
   express.static(publicPath, {
     index: false,
-    // Hashed assets are safe to cache long-term
     maxAge: "1y",
     immutable: true,
   })
 );
 
-// SPA fallback (NON-API only) - always serve fresh HTML
+// SPA fallback (NON-API only)
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) {
     return res.status(404).json({ error: "API route not found" });
   }
 
-  // ✅ critical: stop browsers/edge caching index.html
   res.setHeader(
     "Cache-Control",
     "no-store, no-cache, must-revalidate, proxy-revalidate"
