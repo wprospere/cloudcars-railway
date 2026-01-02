@@ -11,7 +11,13 @@ import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
 // ✅ DB helpers (same ones admin/tRPC uses)
-import { createCorporateInquiry, createDriverApplication } from "./db";
+import {
+  createCorporateInquiry,
+  createDriverApplication,
+  getAllDriverApplications,
+  getAllCorporateInquiries,
+  getAllContactMessages,
+} from "./db";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -22,7 +28,10 @@ app.set("trust proxy", 1);
 // Redirect apex -> www (GET/HEAD only)
 app.use((req, res, next) => {
   const host = (req.headers.host || "").toLowerCase();
-  if ((req.method === "GET" || req.method === "HEAD") && host === "cloudcarsltd.com") {
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    host === "cloudcarsltd.com"
+  ) {
     return res.redirect(301, "https://www.cloudcarsltd.com" + req.originalUrl);
   }
   next();
@@ -47,6 +56,29 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// ✅ Debug endpoint: confirms what the DB actually contains
+app.get("/api/debug/counts", async (_req, res) => {
+  try {
+    const [drivers, corporate, contact] = await Promise.all([
+      getAllDriverApplications(),
+      getAllCorporateInquiries(),
+      getAllContactMessages(),
+    ]);
+
+    return res.json({
+      ok: true,
+      drivers: drivers.length,
+      corporate: corporate.length,
+      contact: contact.length,
+    });
+  } catch (err: any) {
+    console.error("❌ /api/debug/counts error:", err?.message || err);
+    return res
+      .status(500)
+      .json({ ok: false, message: err?.message || "error" });
+  }
+});
+
 /**
  * ✅ PUBLIC: Corporate inquiry -> SAVES TO DB
  * This makes it appear in Admin → Inquiries → Corporate Inquiries
@@ -63,7 +95,9 @@ app.post("/api/corporate-inquiry", async (req, res) => {
     } = req.body ?? {};
 
     if (!companyName || !contactName || !email || !phone) {
-      return res.status(400).json({ ok: false, message: "Missing required fields." });
+      return res
+        .status(400)
+        .json({ ok: false, message: "Missing required fields." });
     }
 
     const result = await createCorporateInquiry({
@@ -105,7 +139,9 @@ app.post("/api/driver-application", async (req, res) => {
     } = req.body ?? {};
 
     if (!fullName || !email || !phone || !licenseNumber || availability == null) {
-      return res.status(400).json({ ok: false, message: "Missing required fields." });
+      return res
+        .status(400)
+        .json({ ok: false, message: "Missing required fields." });
     }
 
     const result = await createDriverApplication({
@@ -164,7 +200,10 @@ app.get("*", (req, res) => {
     return res.status(404).json({ error: "API route not found" });
   }
 
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
 
@@ -172,10 +211,17 @@ app.get("*", (req, res) => {
 });
 
 // Error handling
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("Server error:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error("Server error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+);
 
 // Startup
 async function start() {
@@ -184,7 +230,9 @@ async function start() {
   } catch (err: any) {
     const msg = String(err?.message ?? "");
     if (msg.includes("admin_users") && msg.includes("doesn't exist")) {
-      console.warn("⚠️ admin_users table missing. Run drizzle migrations against Railway DB.");
+      console.warn(
+        "⚠️ admin_users table missing. Run drizzle migrations against Railway DB."
+      );
     } else {
       console.error("❌ ensureDefaultAdmin failed:", err);
     }
