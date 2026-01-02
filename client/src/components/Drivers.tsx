@@ -22,14 +22,14 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const benefits = [
   {
     icon: PoundSterling,
     title: "Good Money",
-    description: "Earn well with fair commission and weekly pay straight to your bank.",
+    description:
+      "Earn well with fair commission and weekly pay straight to your bank.",
   },
   {
     icon: Calendar,
@@ -72,27 +72,39 @@ export default function Drivers() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const applyMutation = trpc.driver.submitApplication.useMutation({
-    onSuccess: () => {
-      setSubmitted(true);
-      toast.success("Application sent! We'll be in touch soon.");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Something went wrong. Please try again.");
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formData.availability) {
       toast.error("Please select your availability");
       return;
     }
-    applyMutation.mutate({
-      ...formData,
-      availability: formData.availability as "fulltime" | "parttime" | "weekends",
-    });
+
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/driver-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          availability: formData.availability,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any));
+        throw new Error(err?.message || "Something went wrong. Please try again.");
+      }
+
+      setSubmitted(true);
+      toast.success("Application sent! We'll be in touch soon.");
+    } catch (error: any) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleChange = (
@@ -184,7 +196,7 @@ export default function Drivers() {
                   Application Sent
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Thanks for applying. We'll have a look at your details and 
+                  Thanks for applying. We'll have a look at your details and
                   give you a call within a couple of days.
                 </p>
               </div>
@@ -276,7 +288,10 @@ export default function Drivers() {
                       onValueChange={(value) =>
                         setFormData((prev) => ({
                           ...prev,
-                          availability: value as "fulltime" | "parttime" | "weekends",
+                          availability: value as
+                            | "fulltime"
+                            | "parttime"
+                            | "weekends",
                         }))
                       }
                     >
@@ -336,10 +351,10 @@ export default function Drivers() {
 
                   <Button
                     type="submit"
-                    disabled={applyMutation.isPending}
+                    disabled={isSending}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
                   >
-                    {applyMutation.isPending ? (
+                    {isSending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Sending...
