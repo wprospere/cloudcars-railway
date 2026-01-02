@@ -4,8 +4,9 @@
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc, desc } from "drizzle-orm";
+import { eq, asc, desc, and, isNull } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
+import { createHash } from "crypto";
 
 /**
  * Prefer DATABASE_URL (Railway standard).
@@ -57,15 +58,13 @@ export { schema };
  */
 async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
   const res: any = await q;
-  const id =
-    res?.[0]?.insertId ??
-    res?.insertId ??
-    res?.[0]?.id ??
-    res?.id;
+  const id = res?.[0]?.insertId ?? res?.insertId ?? res?.[0]?.id ?? res?.id;
 
   if (!id) {
     // If drizzle returns OkPacket-like but no insertId, surface it
-    throw new Error(`Insert succeeded but no insertId returned: ${JSON.stringify(res)}`);
+    throw new Error(
+      `Insert succeeded but no insertId returned: ${JSON.stringify(res)}`
+    );
   }
   return { id: Number(id) };
 }
@@ -210,11 +209,7 @@ export async function getAllTeamMembers() {
   });
 }
 
-export async function createTeamMember(
-  name: string,
-  email?: string,
-  role?: string
-) {
+export async function createTeamMember(name: string, email?: string, role?: string) {
   return insertAndReturnId(
     db.insert(schema.teamMembers).values({
       name,
@@ -229,7 +224,10 @@ export async function updateTeamMember(
   id: number,
   data: Partial<typeof schema.teamMembers.$inferInsert>
 ) {
-  await db.update(schema.teamMembers).set(data as any).where(eq(schema.teamMembers.id, id));
+  await db
+    .update(schema.teamMembers)
+    .set(data as any)
+    .where(eq(schema.teamMembers.id, id));
 }
 
 export async function deleteTeamMember(id: number) {
@@ -255,9 +253,7 @@ export async function getAllSiteContent() {
  * Upsert CMS content by sectionKey
  * Router expects upsertSiteContent({ sectionKey, title, subtitle, ... })
  */
-export async function upsertSiteContent(
-  data: typeof schema.siteContent.$inferInsert
-) {
+export async function upsertSiteContent(data: typeof schema.siteContent.$inferInsert) {
   const existing = await getSiteContent(String(data.sectionKey));
   if (existing) {
     await db
@@ -288,9 +284,7 @@ export async function getAllSiteImages() {
  * Upsert CMS image record by imageKey
  * Router expects upsertSiteImage({ imageKey, url, altText, caption })
  */
-export async function upsertSiteImage(
-  data: typeof schema.siteImages.$inferInsert
-) {
+export async function upsertSiteImage(data: typeof schema.siteImages.$inferInsert) {
   const existing = await getSiteImage(String(data.imageKey));
   if (existing) {
     await db
@@ -303,7 +297,218 @@ export async function upsertSiteImage(
 }
 
 export async function deleteSiteImage(imageKey: string) {
+  await db.delete(schema.siteImages).where(eq(schema.siteImages.imageKey, imageKey));
+}
+
+// ============================================================================
+// ✅ Phase 1 Driver Onboarding (Secure link + vehicle + documents + review)
+// ============================================================================
+
+function sha256(input: string) {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+/**
+ * Create onboarding token (store hash only).
+ * Expires typically in 7 days.
+ */
+export async function createDriverOnboardingToken(params: {
+  driverApplicationId: number;
+  rawToken: string;
+  expiresAt: Date;
+}) {
+  const tokenHash = sha256(params.rawToken);
+
+  await db.insert(schema.driverOnboardingTokens).values({
+    driverApplicationId: params.driverApplicationId,
+    tokenHash,
+    expiresAt: params.expiresAt,
+  } as any);
+
+  return { success: true };
+}
+
+/**
+ * Redeem/validate onboarding token.
+ * Returns driverApplicationId if valid and unused + not expired.
+ */
+export async function getDriverOnboardingByToken(rawToken: string) {
+  const tokenHash = sha256(rawToken);
+
+  const rows = await db
+    .select()
+    .from(schema.driverOnboardingTokens)
+    .where(
+      and(
+        eq(schema.driverOnboardingTokens.tokenHash, tokenHash),
+        isNull(schema.driverOnboardingTokens.usedAt)
+      )
+    );
+
+  const tokenRow: any = rows[0];
+  if (!tokenRow) return null;
+
+  const exp = new Date(tokenRow.expiresAt);
+  if (exp.getTime() < Date.now()) return null;
+
+  return tokenRow as typeof schema.driverOnboardingTokens.$inferSelect;
+}
+
+/**
+ * Mark onboarding token as used (one-time link).
+ */
+export async function markDriverOnboardingTokenUsed(rawToken: string) {
+  const tokenHash = sha256(rawToken);
+
   await db
-    .delete(schema.siteImages)
-    .where(eq(schema.siteImages.imageKey, imageKey));
+    .update(schema.driverOnboardingTokens)
+    .set({ usedAt: new Date() } as any)
+    .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash));
+}
+
+/**
+ * Upsert vehicle details for a driver application.
+ */
+export async function upsertDriverVehicle(params: {
+  driverApplicationId: number;
+  registration: string;
+  make: string;
+  model: string;
+  colour: string;
+  year?: string | null;
+  plateNumber?: string | null;
+  capacity?: string | null;
+}) {
+  // Check if vehicle exists
+  const existing = await db
+    .select()
+    .from(schema.driverVehicles)
+    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+
+  if (existing.length > 0) {
+    await db
+      .update(schema.driverVehicles)
+      .set({
+        registration: params.registration,
+        make: params.make,
+        model: params.model,
+        colour: params.colour,
+        year: params.year ?? null,
+        plateNumber: params.plateNumber ?? null,
+        capacity: params.capacity ?? null,
+        updatedAt: new Date(),
+      } as any)
+      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+
+    return { success: true };
+  }
+
+  await db.insert(schema.driverVehicles).values({
+    driverApplicationId: params.driverApplicationId,
+    registration: params.registration,
+    make: params.make,
+    model: params.model,
+    colour: params.colour,
+    year: params.year ?? null,
+    plateNumber: params.plateNumber ?? null,
+    capacity: params.capacity ?? null,
+  } as any);
+
+  return { success: true };
+}
+
+export type DriverDocType =
+  | "LICENSE_FRONT"
+  | "LICENSE_BACK"
+  | "BADGE"
+  | "PLATING"
+  | "INSURANCE"
+  | "MOT";
+
+/**
+ * Upsert a driver document by (driverApplicationId + type)
+ * Always sets status back to pending on reupload.
+ */
+export async function upsertDriverDocument(params: {
+  driverApplicationId: number;
+  type: DriverDocType;
+  fileUrl: string;
+  expiryDate?: Date | null;
+}) {
+  const existing = await db
+    .select()
+    .from(schema.driverDocuments)
+    .where(
+      and(
+        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
+        eq(schema.driverDocuments.type, params.type as any)
+      )
+    );
+
+  if (existing.length > 0) {
+    await db
+      .update(schema.driverDocuments)
+      .set({
+        fileUrl: params.fileUrl,
+        expiryDate: params.expiryDate ?? null,
+        status: "pending",
+        rejectionReason: null,
+        reviewedAt: null,
+        reviewedBy: null,
+      } as any)
+      .where(eq(schema.driverDocuments.id, (existing[0] as any).id));
+
+    return { success: true };
+  }
+
+  await db.insert(schema.driverDocuments).values({
+    driverApplicationId: params.driverApplicationId,
+    type: params.type as any,
+    fileUrl: params.fileUrl,
+    expiryDate: params.expiryDate ?? null,
+    status: "pending",
+  } as any);
+
+  return { success: true };
+}
+
+/**
+ * Admin: approve/reject a document
+ */
+export async function setDriverDocumentReview(params: {
+  docId: number;
+  status: "approved" | "rejected";
+  reviewedBy: string;
+  rejectionReason?: string | null;
+}) {
+  await db
+    .update(schema.driverDocuments)
+    .set({
+      status: params.status,
+      reviewedAt: new Date(),
+      reviewedBy: params.reviewedBy,
+      rejectionReason:
+        params.status === "rejected" ? params.rejectionReason ?? "Rejected" : null,
+    } as any)
+    .where(eq(schema.driverDocuments.id, params.docId));
+}
+
+/**
+ * Admin: fetch full onboarding profile for a driver application
+ */
+export async function getDriverOnboardingProfile(driverApplicationId: number) {
+  const app = await db.query.driverApplications.findFirst({
+    where: (a, { eq }) => eq(a.id, driverApplicationId),
+  });
+
+  const vehicle = await db.query.driverVehicles.findFirst({
+    where: (v, { eq }) => eq(v.driverApplicationId, driverApplicationId),
+  });
+
+  const documents = await db.query.driverDocuments.findMany({
+    where: (d, { eq }) => eq(d.driverApplicationId, driverApplicationId),
+    orderBy: (d, { asc }) => [asc(d.type)],
+  });
+
+  return { application: app ?? null, vehicle: vehicle ?? null, documents };
 }
