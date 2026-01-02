@@ -17,6 +17,14 @@ import ImageManager from "./pages/admin/ImageManager";
 import AdminSettings from "./pages/admin/Settings";
 import Inquiries from "./pages/admin/Inquiries";
 import TeamMembers from "./pages/admin/TeamMembers";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import DriverOnboardingPage from "@/pages/DriverOnboarding";
+
+// ...inside your router:
+<Routes>
+  {/* other routes... */}
+  <Route path="/driver/onboarding" element={<DriverOnboardingPage />} />
+</Routes>
 
 function Router() {
   return (
