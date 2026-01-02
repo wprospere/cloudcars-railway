@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpLink, TRPCClientError } from "@trpc/client"; // ✅ changed
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
@@ -43,9 +43,9 @@ queryClient.getMutationCache().subscribe((event) => {
 const trpcClient = trpc.createClient({
   transformer: superjson,
   links: [
-    httpBatchLink({
+    // ✅ NO batching -> avoids "Input is too big for a single dispatch"
+    httpLink({
       url: "/api/trpc",
-      maxURLLength: 0, // ✅ force POST so input isn't lost/undefined
       fetch(input, init) {
         return fetch(input, {
           ...(init ?? {}),
