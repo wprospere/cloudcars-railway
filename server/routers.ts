@@ -335,7 +335,36 @@ export const appRouter = router({
 
   /* ---------- ADMIN ---------- */
   admin: router({
-    getDriverApplications: adminProcedure.query(getAllDriverApplications),
+    /**
+     * ✅ Reduce payload to prevent:
+     * "Input is too big for a single dispatch"
+     * Adds optional limit + returns only fields the UI needs.
+     */
+    getDriverApplications: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .query(async ({ input }) => {
+        const rows: any[] = await getAllDriverApplications();
+        const limit = input?.limit ?? 200;
+
+        return rows.slice(0, limit).map((r: any) => ({
+          id: r.id,
+          fullName: r.fullName,
+          email: r.email,
+          phone: r.phone,
+          licenseNumber: r.licenseNumber,
+          yearsExperience: r.yearsExperience,
+          vehicleOwner: r.vehicleOwner,
+          availability: r.availability,
+          message: typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+          status: r.status,
+          assignedTo: r.assignedTo,
+          internalNotes:
+            typeof r.internalNotes === "string"
+              ? r.internalNotes.slice(0, 5000)
+              : r.internalNotes,
+          createdAt: r.createdAt,
+        }));
+      }),
 
     updateDriverStatus: adminProcedure
       .input(
@@ -363,7 +392,32 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    getCorporateInquiries: adminProcedure.query(getAllCorporateInquiries),
+    getCorporateInquiries: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .query(async ({ input }) => {
+        const rows: any[] = await getAllCorporateInquiries();
+        const limit = input?.limit ?? 200;
+
+        return rows.slice(0, limit).map((r: any) => ({
+          id: r.id,
+          companyName: r.companyName,
+          contactName: r.contactName,
+          email: r.email,
+          phone: r.phone,
+          estimatedMonthlyTrips: r.estimatedMonthlyTrips,
+          requirements:
+            typeof r.requirements === "string"
+              ? r.requirements.slice(0, 5000)
+              : r.requirements,
+          status: r.status,
+          assignedTo: r.assignedTo,
+          internalNotes:
+            typeof r.internalNotes === "string"
+              ? r.internalNotes.slice(0, 5000)
+              : r.internalNotes,
+          createdAt: r.createdAt,
+        }));
+      }),
 
     updateCorporateStatus: adminProcedure
       .input(
@@ -391,7 +445,28 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    getContactMessages: adminProcedure.query(getAllContactMessages),
+    getContactMessages: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .query(async ({ input }) => {
+        const rows: any[] = await getAllContactMessages();
+        const limit = input?.limit ?? 200;
+
+        return rows.slice(0, limit).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          subject: r.subject,
+          message: typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+          isRead: r.isRead,
+          assignedTo: r.assignedTo,
+          internalNotes:
+            typeof r.internalNotes === "string"
+              ? r.internalNotes.slice(0, 5000)
+              : r.internalNotes,
+          createdAt: r.createdAt,
+        }));
+      }),
 
     markContactRead: adminProcedure
       .input(z.object({ id: z.number() }))
