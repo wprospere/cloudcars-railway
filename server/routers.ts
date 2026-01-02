@@ -1,24 +1,32 @@
 import { publicProcedure, protectedProcedure, router } from "./railway-trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { nanoid } from "nanoid";
 
 import {
+  // Bookings / leads
   createBooking,
   createDriverApplication,
   createCorporateInquiry,
   createContactMessage,
+
+  // Admin inbox
   getAllDriverApplications,
   updateDriverApplicationStatus,
   updateDriverApplicationNotes,
   updateDriverApplicationAssignment,
+
   getAllCorporateInquiries,
   updateCorporateInquiryStatus,
   updateCorporateInquiryNotes,
   updateCorporateInquiryAssignment,
+
   getAllContactMessages,
   markContactMessageAsRead,
   updateContactMessageNotes,
   updateContactMessageAssignment,
+
+  // CMS
   getSiteContent,
   getAllSiteContent,
   upsertSiteContent,
@@ -26,12 +34,14 @@ import {
   getAllSiteImages,
   upsertSiteImage,
   deleteSiteImage,
+
+  // Team
   getAllTeamMembers,
   createTeamMember,
   updateTeamMember,
   deleteTeamMember,
 
-  // ✅ NEW (Phase 1 Onboarding)
+  // ✅ Phase 1 onboarding (DB helpers)
   createDriverOnboardingToken,
   getDriverOnboardingByToken,
   markDriverOnboardingTokenUsed,
@@ -42,13 +52,11 @@ import {
 } from "./db";
 
 import { storagePut } from "./storage";
-import { nanoid } from "nanoid";
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 
 /* ----------------------------------------
-   Admin-only middleware (FIXED)
-   Allows: admin + staff
+   Admin-only middleware
 ---------------------------------------- */
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   const role = ctx.user?.role;
@@ -96,7 +104,7 @@ const DRIVER_DOC_TYPES = [
 ] as const;
 
 function getPublicBaseUrl() {
-  // ✅ Set this in Railway ENV for best reliability:
+  // ✅ Put this in Railway env for reliability:
   // PUBLIC_BASE_URL=https://www.cloudcarsltd.com
   return (
     process.env.PUBLIC_BASE_URL ||
@@ -187,8 +195,6 @@ export const appRouter = router({
             internalNotes: null,
             assignedTo: null,
           });
-
-          console.log("✅ Driver application inserted:", result);
 
           notifyOwner({
             title: "New Driver Application",
@@ -379,7 +385,9 @@ export const appRouter = router({
             message: "Invalid or expired onboarding link",
           });
         }
-        return await getDriverOnboardingProfile((tokenRow as any).driverApplicationId);
+        return await getDriverOnboardingProfile(
+          (tokenRow as any).driverApplicationId
+        );
       }),
 
     saveVehicle: publicProcedure
@@ -425,7 +433,7 @@ export const appRouter = router({
           type: z.enum(DRIVER_DOC_TYPES),
           base64Data: z.string().min(20),
           mimeType: z.string().default("image/jpeg"),
-          expiryDate: z.string().optional(), // ISO string, optional
+          expiryDate: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -439,9 +447,9 @@ export const appRouter = router({
 
         const buffer = Buffer.from(input.base64Data, "base64");
         const ext = input.mimeType.split("/")[1] || "bin";
-        const filename = `drivers/${(tokenRow as any).driverApplicationId}/${input.type}-${nanoid(
-          10
-        )}.${ext}`;
+        const filename = `drivers/${(tokenRow as any).driverApplicationId}/${
+          input.type
+        }-${nanoid(10)}.${ext}`;
 
         const { url } = await storagePut(filename, buffer, input.mimeType);
 
@@ -473,11 +481,6 @@ export const appRouter = router({
 
   /* ---------- ADMIN ---------- */
   admin: router({
-    /**
-     * ✅ Reduce payload to prevent:
-     * "Input is too big for a single dispatch"
-     * Adds optional limit + returns only fields the UI needs.
-     */
     getDriverApplications: adminProcedure
       .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
       .query(async ({ input }) => {
@@ -627,7 +630,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // ✅ FIXED: sendEmail expects { html }, not { text }
     sendEmail: adminProcedure
       .input(
         z.object({
@@ -646,7 +648,6 @@ export const appRouter = router({
         };
       }),
 
-    // ✅ FIXED: sendEmail expects { html }, not { text }
     sendTemplateEmail: adminProcedure
       .input(
         z.object({
@@ -719,16 +720,20 @@ export const appRouter = router({
     sendDriverOnboardingLink: adminProcedure
       .input(z.object({ driverApplicationId: z.number() }))
       .mutation(async ({ input }) => {
-        // Simple lookup (Phase 1): use existing fetch, then find
         const apps: any[] = await getAllDriverApplications();
-        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
+        const app = apps.find(
+          (a) => Number(a.id) === Number(input.driverApplicationId)
+        );
 
         if (!app) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Driver application not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Driver application not found",
+          });
         }
 
         const rawToken = nanoid(32);
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
         await createDriverOnboardingToken({
           driverApplicationId: Number(app.id),
