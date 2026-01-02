@@ -6,6 +6,7 @@ import {
   timestamp,
   varchar,
   boolean,
+  date,
 } from "drizzle-orm/mysql-core";
 
 /**
@@ -198,3 +199,77 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
 
 export const __schemaVersion = "schema-aligned-with-railway";
+/**
+ * Driver onboarding tokens (Phase 1 - secure link)
+ */
+export const driverOnboardingTokens = mysqlTable("driver_onboarding_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  driverApplicationId: int("driverApplicationId").notNull(),
+
+  // store hashed token (safer than raw token)
+  tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DriverOnboardingToken = typeof driverOnboardingTokens.$inferSelect;
+export type InsertDriverOnboardingToken = typeof driverOnboardingTokens.$inferInsert;
+
+/**
+ * Driver vehicle details (Phase 1)
+ */
+export const driverVehicles = mysqlTable("driver_vehicles", {
+  id: int("id").autoincrement().primaryKey(),
+  driverApplicationId: int("driverApplicationId").notNull(),
+
+  registration: varchar("registration", { length: 32 }).notNull(),
+  make: varchar("make", { length: 64 }).notNull(),
+  model: varchar("model", { length: 64 }).notNull(),
+  colour: varchar("colour", { length: 32 }).notNull(),
+
+  year: varchar("year", { length: 8 }),
+  plateNumber: varchar("plateNumber", { length: 64 }),
+  capacity: varchar("capacity", { length: 8 }),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DriverVehicle = typeof driverVehicles.$inferSelect;
+export type InsertDriverVehicle = typeof driverVehicles.$inferInsert;
+
+/**
+ * Driver documents (uploads + review + expiry)
+ */
+export const driverDocuments = mysqlTable("driver_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  driverApplicationId: int("driverApplicationId").notNull(),
+
+  type: mysqlEnum("type", [
+    "LICENSE_FRONT",
+    "LICENSE_BACK",
+    "BADGE",
+    "PLATING",
+    "INSURANCE",
+    "MOT",
+  ]).notNull(),
+
+  fileUrl: text("fileUrl").notNull(),
+
+  status: mysqlEnum("status", ["pending", "approved", "rejected"])
+    .default("pending")
+    .notNull(),
+
+  // use DATE (not timestamp) for expiry clarity
+  expiryDate: date("expiryDate"),
+
+  rejectionReason: text("rejectionReason"),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedBy: varchar("reviewedBy", { length: 320 }),
+});
+
+export type DriverDocument = typeof driverDocuments.$inferSelect;
+export type InsertDriverDocument = typeof driverDocuments.$inferInsert;
