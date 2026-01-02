@@ -512,3 +512,144 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
 
   return { application: app ?? null, vehicle: vehicle ?? null, documents };
 }
+// ==================================================
+// DRIVER ONBOARDING (PHASE 1)
+// ==================================================
+
+import { and, gt } from "drizzle-orm";
+
+/**
+ * Create a secure onboarding token for a driver application
+ */
+export async function createDriverOnboardingToken(
+  driverApplicationId: number,
+  token: string,
+  expiresAt: Date
+) {
+  return insertAndReturnId(
+    db.insert(schema.driverOnboardingTokens).values({
+      driverApplicationId,
+      token,
+      expiresAt,
+    } as any)
+  );
+}
+
+/**
+ * Validate onboarding token (used by driver upload page)
+ */
+export async function getDriverOnboardingByToken(token: string) {
+  return db.query.driverOnboardingTokens.findFirst({
+    where: (t, { eq, gt }) =>
+      and(eq(t.token, token), gt(t.expiresAt, new Date())),
+    with: {
+      driverApplication: true,
+    },
+  });
+}
+
+/**
+ * Save uploaded driver document
+ */
+export async function createDriverDocument(data: {
+  driverApplicationId: number;
+  type: "license" | "badge" | "insurance" | "mot";
+  fileUrl: string;
+  expiryDate?: Date | null;
+}) {
+  return insertAndReturnId(
+    db.insert(schema.driverDocuments).values({
+      driverApplicationId: data.driverApplicationId,
+      type: data.type,
+      fileUrl: data.fileUrl,
+      expiryDate: data.expiryDate ?? null,
+      status: "pending",
+    } as any)
+  );
+}
+
+/**
+ * Approve / reject a driver document (admin)
+ */
+export async function updateDriverDocumentStatus(
+  documentId: number,
+  status: "approved" | "rejected"
+) {
+  await db
+    .update(schema.driverDocuments)
+    .set({ status } as any)
+    .where(eq(schema.driverDocuments.id, documentId));
+}
+
+/**
+ * Insert or update vehicle details for a driver
+ */
+export async function upsertDriverVehicle(data: {
+  driverApplicationId: number;
+  registrationPlate: string;
+  make: string;
+  model: string;
+  colour?: string | null;
+  year?: number | null;
+}) {
+  const existing = await db.query.driverVehicles.findFirst({
+    where: (v, { eq }) =>
+      eq(v.driverApplicationId, data.driverApplicationId),
+  });
+
+  if (existing) {
+    await db
+      .update(schema.driverVehicles)
+      .set({
+        registrationPlate: data.registrationPlate,
+        make: data.make,
+        model: data.model,
+        colour: data.colour ?? null,
+        year: data.year ?? null,
+      } as any)
+      .where(eq(schema.driverVehicles.id, existing.id));
+
+    return { id: existing.id };
+  }
+
+  return insertAndReturnId(
+    db.insert(schema.driverVehicles).values({
+      driverApplicationId: data.driverApplicationId,
+      registrationPlate: data.registrationPlate,
+      make: data.make,
+      model: data.model,
+      colour: data.colour ?? null,
+      year: data.year ?? null,
+    } as any)
+  );
+}
+
+/**
+ * Full onboarding profile (admin view)
+ */
+export async function getDriverOnboardingProfile(
+  driverApplicationId: number
+) {
+  const driver = await db.query.driverApplications.findFirst({
+    where: (d, { eq }) => eq(d.id, driverApplicationId),
+  });
+
+  if (!driver) return null;
+
+  const documents = await db.query.driverDocuments.findMany({
+    where: (doc, { eq }) =>
+      eq(doc.driverApplicationId, driverApplicationId),
+    orderBy: (doc, { asc }) => [asc(doc.type)],
+  });
+
+  const vehicle = await db.query.driverVehicles.findFirst({
+    where: (v, { eq }) =>
+      eq(v.driverApplicationId, driverApplicationId),
+  });
+
+  return {
+    driver,
+    documents,
+    vehicle,
+  };
+}
