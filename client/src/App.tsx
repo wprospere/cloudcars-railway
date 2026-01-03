@@ -63,3 +63,12 @@ function App() {
 }
 
 export default App;
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import DriverOnboardingPage from "@/pages/DriverOnboarding";
+
+// ...inside your router:
+<Routes>
+  {/* other routes... */}
+  <Route path="/driver/onboarding" element={<DriverOnboardingPage />} />
+</Routes>
+
