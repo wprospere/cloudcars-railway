@@ -10,12 +10,9 @@ import { createContext } from "./railway-trpc.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
-// ✅ Drizzle migrations
-import { migrate } from "drizzle-orm/mysql2/migrator";
-
 // ✅ DB helpers (same ones admin/tRPC uses)
 import {
-  db, // ✅ make sure your ./db exports `db` (Drizzle instance)
+  runMigrations,
   createCorporateInquiry,
   createDriverApplication,
   getAllDriverApplications,
@@ -139,7 +136,13 @@ app.post("/api/driver-application", async (req, res) => {
       message,
     } = req.body ?? {};
 
-    if (!fullName || !email || !phone || !licenseNumber || availability == null) {
+    if (
+      !fullName ||
+      !email ||
+      !phone ||
+      !licenseNumber ||
+      availability == null
+    ) {
       return res
         .status(400)
         .json({ ok: false, message: "Missing required fields." });
@@ -228,19 +231,12 @@ app.use(
 async function start() {
   // ✅ Run migrations first (so tables/columns exist before any queries)
   try {
-    const migrationsFolder = path.join(process.cwd(), "drizzle", "migrations");
-    console.log("🛠️ Running drizzle migrations from:", migrationsFolder);
-    await migrate(db as any, { migrationsFolder });
-    console.log("✅ Drizzle migrations complete");
+    await runMigrations();
   } catch (err: any) {
-    console.error("❌ Drizzle migrate failed:", err?.message || err);
-    // Don't crash the whole server if you want it to still boot:
-    // If you prefer to hard-fail, uncomment the next line:
+    console.error("❌ runMigrations failed:", err?.message || err);
+    // If you prefer to hard-fail deploy when migrations fail, uncomment:
     // throw err;
   }
-import { runMigrations } from "./db";
-
-await runMigrations();
 
   try {
     await ensureDefaultAdmin();
@@ -248,7 +244,7 @@ await runMigrations();
     const msg = String(err?.message ?? "");
     if (msg.includes("admin_users") && msg.includes("doesn't exist")) {
       console.warn(
-        "⚠️ admin_users table missing. Run drizzle migrations against Railway DB."
+        "⚠️ admin_users table missing. Drizzle migrations may not have run."
       );
     } else {
       console.error("❌ ensureDefaultAdmin failed:", err);
