@@ -19,6 +19,7 @@ import Inquiries from "./pages/admin/Inquiries";
 import TeamMembers from "./pages/admin/TeamMembers";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DriverOnboardingPage from "@/pages/DriverOnboarding";
+import DriverOnboardingReview from "@/pages/admin/DriverOnboardingReview";
 
 // ...inside your router:
 <Routes>
@@ -42,6 +43,10 @@ function Router() {
       <Route path="/admin/images" component={ImageManager} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin" component={AdminDashboard} />
+<Route
+  path="/admin/driver-onboarding/:id"
+  element={<DriverOnboardingReview />}
+/>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
