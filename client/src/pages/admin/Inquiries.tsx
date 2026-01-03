@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
+// ✅ Completion badge helper
+import { getDriverCompletionBadge } from "@/lib/driverCompletion";
+
 /* ---------------- CSV Export ---------------- */
 function exportToCSV(data: any[], filename: string) {
   if (!data || data.length === 0) return;
@@ -195,6 +198,13 @@ export default function Inquiries() {
 
                 const isSendingThis = sendingForId === Number(driver.id);
 
+                // ✅ completion badge: supports either driver.documents or driver.driverDocuments
+                const docs = (driver?.documents ??
+                  driver?.driverDocuments ??
+                  []) as any[];
+
+                const completion = getDriverCompletionBadge(docs);
+
                 return (
                   <Card key={driver.id} className="p-6 space-y-4">
                     <div className="flex items-start justify-between gap-3">
@@ -203,11 +213,22 @@ export default function Inquiries() {
                           <h3 className="text-lg font-semibold">
                             {driver.fullName}
                           </h3>
+
+                          {/* Time badge */}
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(driver.createdAt)}
                           </Badge>
+
+                          {/* ✅ Completion badge */}
+                          <Badge
+                            variant={completion.variant}
+                            title={completion.detail}
+                          >
+                            {completion.text}
+                          </Badge>
                         </div>
+
                         <div className="text-sm text-muted-foreground">
                           {driver.email} · {driver.phone}
                         </div>
@@ -472,9 +493,7 @@ export default function Inquiries() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="font-semibold">{msg.subject}</div>
-                          {!msg.isRead && (
-                            <Badge variant="destructive">Unread</Badge>
-                          )}
+                          {!msg.isRead && <Badge variant="destructive">Unread</Badge>}
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(msg.createdAt)}
