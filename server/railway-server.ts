@@ -2,6 +2,9 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import superjson from "superjson";
 
@@ -12,7 +15,6 @@ import { adminRoutes } from "./auth/adminRoutes.js";
 
 // ✅ DB helpers (same ones admin/tRPC uses)
 import {
-  runMigrations,
   createCorporateInquiry,
   createDriverApplication,
   getAllDriverApplications,
@@ -20,240 +22,179 @@ import {
   getAllContactMessages,
 } from "./db";
 
+// If you have your own migrate runner, import it here.
+// (If you don't, this file will still work; migrations will simply be skipped.)
+import { runMigrations } from "./migrate-db.js"; // <-- if your project uses a different path, change this
+
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
-// Railway / reverse proxy
 app.set("trust proxy", 1);
 
-// Redirect apex -> www (GET/HEAD only)
-app.use((req, res, next) => {
-  const host = (req.headers.host || "").toLowerCase();
-  if (
-    (req.method === "GET" || req.method === "HEAD") &&
-    host === "cloudcarsltd.com"
-  ) {
-    return res.redirect(301, "https://www.cloudcarsltd.com" + req.originalUrl);
-  }
-  next();
-});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// --------------------
 // Middleware
+// --------------------
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// Force lowercase admin URLs
+// ✅ Force lowercase admin URLs
 app.use((req, res, next) => {
-  if (/^\/admin/i.test(req.path) || /^\/api\/admin/i.test(req.path)) {
-    const lower = req.originalUrl.toLowerCase();
-    if (lower !== req.originalUrl) return res.redirect(301, lower);
+  if (/^\/admin/i.test(req.path)) {
+    const lower = req.path.toLowerCase();
+    if (req.path !== lower) return res.redirect(301, lower);
+  }
+  next();
+});
+
+// ✅ Redirect apex -> www (GET/HEAD only)
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").toLowerCase();
+  if ((req.method === "GET" || req.method === "HEAD") && host === "cloudcarsltd.com") {
+    return res.redirect(301, `https://www.cloudcarsltd.com${req.originalUrl}`);
   }
   next();
 });
 
 // Health check
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+app.get("/healthz", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-// ✅ Debug endpoint: confirms what the DB actually contains
-app.get("/api/debug/counts", async (_req, res) => {
-  try {
-    const [drivers, corporate, contact] = await Promise.all([
-      getAllDriverApplications(),
-      getAllCorporateInquiries(),
-      getAllContactMessages(),
-    ]);
-
-    return res.json({
-      ok: true,
-      drivers: drivers.length,
-      corporate: corporate.length,
-      contact: contact.length,
-    });
-  } catch (err: any) {
-    console.error("❌ /api/debug/counts error:", err?.message || err);
-    return res
-      .status(500)
-      .json({ ok: false, message: err?.message || "error" });
-  }
-});
-
-/**
- * ✅ PUBLIC: Corporate inquiry -> SAVES TO DB
- */
-app.post("/api/corporate-inquiry", async (req, res) => {
-  try {
-    const {
-      companyName,
-      contactName,
-      email,
-      phone,
-      estimatedMonthlyTrips,
-      requirements,
-    } = req.body ?? {};
-
-    if (!companyName || !contactName || !email || !phone) {
-      return res
-        .status(400)
-        .json({ ok: false, message: "Missing required fields." });
-    }
-
-    const result = await createCorporateInquiry({
-      companyName,
-      contactName,
-      email,
-      phone,
-      estimatedMonthlyTrips: estimatedMonthlyTrips || null,
-      requirements: requirements || null,
-      internalNotes: null,
-      assignedTo: null,
-    } as any);
-
-    console.log("✅ Corporate inquiry saved:", result);
-    return res.json({ ok: true });
-  } catch (err: any) {
-    console.error("❌ /api/corporate-inquiry error:", err?.message || err);
-    return res.status(500).json({ ok: false, message: "Server error" });
-  }
-});
-
-/**
- * ✅ PUBLIC: Driver application -> SAVES TO DB
- */
-app.post("/api/driver-application", async (req, res) => {
-  try {
-    const {
-      fullName,
-      email,
-      phone,
-      licenseNumber,
-      yearsExperience,
-      vehicleOwner,
-      vehicleType,
-      availability,
-      message,
-    } = req.body ?? {};
-
-    if (
-      !fullName ||
-      !email ||
-      !phone ||
-      !licenseNumber ||
-      availability == null
-    ) {
-      return res
-        .status(400)
-        .json({ ok: false, message: "Missing required fields." });
-    }
-
-    const result = await createDriverApplication({
-      fullName,
-      email,
-      phone,
-      licenseNumber,
-      yearsExperience: Number(yearsExperience ?? 0),
-      vehicleOwner: Boolean(vehicleOwner),
-      vehicleType: vehicleType || null,
-      availability,
-      message: message || null,
-      internalNotes: null,
-      assignedTo: null,
-    } as any);
-
-    console.log("✅ Driver application saved:", result);
-    return res.json({ ok: true });
-  } catch (err: any) {
-    console.error("❌ /api/driver-application error:", err?.message || err);
-    return res.status(500).json({ ok: false, message: "Server error" });
-  }
-});
+// --------------------
+// API routes
+// --------------------
 
 // Admin auth routes
-app.use("/api/admin", adminRoutes);
+app.use("/admin", adminRoutes);
 
-// tRPC routes (superjson must match client)
+// tRPC
 app.use(
-  "/api/trpc",
+  "/trpc",
   createExpressMiddleware({
     router: appRouter,
     createContext,
     transformer: superjson,
+    onError({ error, path }) {
+      console.error("tRPC error on path:", path, error);
+    },
   })
 );
 
-// Block unknown API routes
-app.all("/api/*", (_req, res) => {
-  res.status(404).json({ error: "API route not found" });
+// Example public form endpoints (if you use them)
+app.post("/api/driver-apply", async (req, res) => {
+  try {
+    const result = await createDriverApplication(req.body);
+    res.json({ ok: true, result });
+  } catch (e: any) {
+    console.error("createDriverApplication failed:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to submit driver application" });
+  }
 });
 
-// Frontend
-const publicPath = path.resolve(process.cwd(), "dist", "public");
+app.post("/api/corporate-inquiry", async (req, res) => {
+  try {
+    const result = await createCorporateInquiry(req.body);
+    res.json({ ok: true, result });
+  } catch (e: any) {
+    console.error("createCorporateInquiry failed:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to submit corporate inquiry" });
+  }
+});
 
-app.use(
-  express.static(publicPath, {
-    index: false,
-    maxAge: "1y",
-    immutable: true,
-  })
-);
+// Admin exports (if your UI calls these)
+app.get("/api/admin/driver-applications", async (_req, res) => {
+  try {
+    const rows = await getAllDriverApplications();
+    res.json({ ok: true, rows });
+  } catch (e: any) {
+    console.error("getAllDriverApplications failed:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to load driver applications" });
+  }
+});
 
+app.get("/api/admin/corporate-inquiries", async (_req, res) => {
+  try {
+    const rows = await getAllCorporateInquiries();
+    res.json({ ok: true, rows });
+  } catch (e: any) {
+    console.error("getAllCorporateInquiries failed:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to load corporate inquiries" });
+  }
+});
+
+app.get("/api/admin/contact-messages", async (_req, res) => {
+  try {
+    const rows = await getAllContactMessages();
+    res.json({ ok: true, rows });
+  } catch (e: any) {
+    console.error("getAllContactMessages failed:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to load contact messages" });
+  }
+});
+
+// --------------------
+// Static / SPA
+// --------------------
+const clientDist = path.join(__dirname, "../client/dist");
+app.use(express.static(clientDist));
+
+// SPA fallback (keep LAST)
 app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ error: "API route not found" });
-  }
-
-  res.setHeader(
-    "Cache-Control",
-    "no-store, no-cache, must-revalidate, proxy-revalidate"
-  );
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
-
-  return res.sendFile(path.join(publicPath, "index.html"));
+  res.sendFile(path.join(clientDist, "index.html"));
 });
 
-// Error handling
-app.use(
-  (
-    err: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error("Server error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-);
-
+// --------------------
 // Startup
-async function start() {
-  // ✅ Run migrations first (so tables/columns exist before any queries)
-  try {
-    await runMigrations();
-  } catch (err: any) {
-    console.error("❌ runMigrations failed:", err?.message || err);
-    // If you prefer to hard-fail deploy when migrations fail, uncomment:
-    // throw err;
-  }
+// --------------------
 
-  try {
-    await ensureDefaultAdmin();
-  } catch (err: any) {
-    const msg = String(err?.message ?? "");
-    if (msg.includes("admin_users") && msg.includes("doesn't exist")) {
-      console.warn(
-        "⚠️ admin_users table missing. Drizzle migrations may not have run."
-      );
-    } else {
-      console.error("❌ ensureDefaultAdmin failed:", err);
-    }
-  }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ Cloud Cars server running on port ${PORT}`);
-  });
+function shouldRunMigrations() {
+  // ✅ Default: do NOT run migrations automatically on Railway
+  // To run them manually: set RUN_MIGRATIONS=true on Railway then redeploy once.
+  return String(process.env.RUN_MIGRATIONS || "").toLowerCase() === "true";
 }
 
-start();
+function drizzleJournalExists() {
+  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
+  return fs.existsSync(journalPath);
+}
+
+async function safeRunMigrations() {
+  if (!shouldRunMigrations()) {
+    console.log("ℹ️ RUN_MIGRATIONS is not true — skipping migrations");
+    return;
+  }
+
+  // ✅ This is the key fix for Railway/Nixpacks:
+  // some builds include drizzle/migrations but not drizzle/meta
+  if (!drizzleJournalExists()) {
+    console.warn("⚠️ Skipping migrations: drizzle/meta/_journal.json missing in container");
+    console.warn("   (This is common on Railway Nixpacks unless explicitly included.)");
+    return;
+  }
+
+  try {
+    console.log("🛠️ Running drizzle migrations from: /app/drizzle/migrations");
+    await runMigrations();
+    console.log("✅ Migrations complete");
+  } catch (e: any) {
+    // ✅ Do NOT crash prod boot. Log and continue.
+    console.error("❌ runMigrations failed:", e?.message || e);
+  }
+}
+
+(async () => {
+  await safeRunMigrations();
+
+  // Ensure default admin user exists
+  try {
+    await ensureDefaultAdmin();
+  } catch (e: any) {
+    console.error("ensureDefaultAdmin failed:", e?.message || e);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Cloud Cars server running on port ${PORT}`);
+  });
+})();
