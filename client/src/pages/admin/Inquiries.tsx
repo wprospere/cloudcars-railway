@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import AdminLayout from "@/components/AdminLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -15,20 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Mail, Phone, Download, Clock, User } from "lucide-react";
+
+import { Mail, Phone, Download, Clock, User, Link as LinkIcon } from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
 /* ---------------- CSV Export ---------------- */
 function exportToCSV(data: any[], filename: string) {
-  if (data.length === 0) return;
+  if (!data || data.length === 0) return;
 
-  const headers = Object.keys(data[0]);
+  const headers = Object.keys(data[0] ?? {});
   const csvContent = [
     headers.join(","),
-    ...data.map((row) =>
-      headers.map((((h) => JSON.stringify(row?.[h] ?? ""))).join(",")
-    ),
+    ...data.map((row) => headers.map((h) => JSON.stringify(row?.[h] ?? "")).join(",")),
   ].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv" });
@@ -54,16 +52,23 @@ function normalizeArray<T = any>(value: any): T[] {
       "inquiries",
       "messages",
     ]) {
-      if (Array.isArray(value[key])) return value[key];
+      const v = (value as any)[key];
+      if (Array.isArray(v)) return v;
     }
   }
   return [];
 }
 
 function LoadingCard({ text }: { text: string }) {
+  return <Card className="p-6 text-center text-muted-foreground">{text}</Card>;
+}
+
+function ErrorCard({ title, message }: { title: string; message?: string }) {
+  if (!message) return null;
   return (
-    <Card className="p-6 text-center text-muted-foreground">
-      {text}
+    <Card className="p-4 border border-destructive/40 bg-destructive/10">
+      <div className="font-semibold">{title}</div>
+      <div className="text-sm mt-1">{message}</div>
     </Card>
   );
 }
@@ -80,15 +85,22 @@ export default function Inquiries() {
   const messagesQuery = trpc.admin.getContactMessages.useQuery({ limit: 200 });
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
-  const drivers = normalizeArray(driversQuery.data);
-  const corporate = normalizeArray(corporateQuery.data);
-  const messages = normalizeArray(messagesQuery.data);
-  const teamMembersData = normalizeArray(teamMembersQuery.data);
+  const drivers = normalizeArray<any>(driversQuery.data);
+  const corporate = normalizeArray<any>(corporateQuery.data);
+  const messages = normalizeArray<any>(messagesQuery.data);
+  const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
 
-  const teamMembers =
-    teamMembersData.length > 0
-      ? teamMembersData.map((m: any) => m.name)
-      : ["Unassigned"];
+  const teamMembers = useMemo(() => {
+    const names =
+      teamMembersData.length > 0
+        ? teamMembersData
+            .map((m: any) => m?.name)
+            .filter(Boolean)
+            .map(String)
+        : [];
+    // de-dupe
+    return Array.from(new Set(names));
+  }, [teamMembersData]);
 
   /* ---------- Mutations ---------- */
   const updateDriverStatus = trpc.admin.updateDriverStatus.useMutation();
@@ -103,6 +115,7 @@ export default function Inquiries() {
   const updateContactNotes = trpc.admin.updateContactNotes.useMutation();
   const updateContactAssignment = trpc.admin.updateContactAssignment.useMutation();
 
+  // ✅ Phase 1 onboarding (admin)
   const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
 
   const handleExport = () => {
@@ -114,7 +127,7 @@ export default function Inquiries() {
   return (
     <AdminLayout title="Inquiries" description="Manage all inbound requests">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-3xl font-bold">Inquiries</h1>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
@@ -122,24 +135,29 @@ export default function Inquiries() {
           </Button>
         </div>
 
+        {/* Errors */}
+        <div className="space-y-2">
+          <ErrorCard title="Drivers error" message={(driversQuery.error as any)?.message} />
+          <ErrorCard
+            title="Corporate error"
+            message={(corporateQuery.error as any)?.message}
+          />
+          <ErrorCard
+            title="Messages error"
+            message={(messagesQuery.error as any)?.message}
+          />
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="drivers">
-              Drivers ({drivers.length})
-            </TabsTrigger>
-            <TabsTrigger value="corporate">
-              Corporate ({corporate.length})
-            </TabsTrigger>
-            <TabsTrigger value="messages">
-              Messages ({messages.length})
-            </TabsTrigger>
+            <TabsTrigger value="drivers">Drivers ({drivers.length})</TabsTrigger>
+            <TabsTrigger value="corporate">Corporate ({corporate.length})</TabsTrigger>
+            <TabsTrigger value="messages">Messages ({messages.length})</TabsTrigger>
           </TabsList>
 
           {/* ---------------- DRIVERS ---------------- */}
           <TabsContent value="drivers" className="space-y-4">
-            {driversQuery.isLoading && (
-              <LoadingCard text="Loading driver applications..." />
-            )}
+            {driversQuery.isLoading && <LoadingCard text="Loading driver applications..." />}
 
             {!driversQuery.isLoading &&
               drivers.map((driver: any) => {
@@ -148,13 +166,18 @@ export default function Inquiries() {
 
                 return (
                   <Card key={driver.id} className="p-6 space-y-4">
-                    <div className="flex justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold">{driver.fullName}</h3>
-                        <Badge className={urgencyColor}>
-                          <Clock className="h-3 w-3 mr-1" />
-                          {timeAgo(driver.createdAt)}
-                        </Badge>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">{driver.fullName}</h3>
+                          <Badge className={urgencyColor}>
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timeAgo(driver.createdAt)}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {driver.email} · {driver.phone}
+                        </div>
                       </div>
 
                       <Select
@@ -178,20 +201,99 @@ export default function Inquiries() {
                       </Select>
                     </div>
 
-                    <div className="text-sm text-muted-foreground">
-                      {driver.email} · {driver.phone}
+                    {/* Assignment */}
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <Select
+                        value={driver.assignedTo || "unassigned"}
+                        onValueChange={(value) =>
+                          updateDriverAssignment.mutate(
+                            {
+                              id: driver.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
+                            { onSuccess: () => driversQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[220px]">
+                          <SelectValue placeholder="Assign to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teamMembers.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
+                    {/* Notes */}
                     <Textarea
                       defaultValue={driver.internalNotes || ""}
                       placeholder="Internal notes..."
-                      onBlur={(e) =>
+                      onBlur={(e) => {
+                        const next = e.target.value ?? "";
+                        const prev = driver.internalNotes ?? "";
+                        if (next === prev) return;
+
                         updateDriverNotes.mutate(
-                          { id: driver.id, notes: e.target.value },
+                          { id: driver.id, notes: next },
                           { onSuccess: () => driversQuery.refetch() }
-                        )
-                      }
+                        );
+                      }}
                     />
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`mailto:${driver.email}`}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email
+                        </a>
+                      </Button>
+
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`tel:${driver.phone}`}>
+                          <Phone className="h-4 w-4 mr-2" />
+                          Call
+                        </a>
+                      </Button>
+
+                      <Button
+                        variant="default"
+                        size="sm"
+                        disabled={sendOnboardingLink.isPending}
+                        onClick={() => {
+                          sendOnboardingLink.mutate(
+                            { driverApplicationId: Number(driver.id) },
+                            {
+                              onSuccess: async (res: any) => {
+                                const link = res?.link;
+                                if (link && typeof navigator !== "undefined") {
+                                  try {
+                                    await navigator.clipboard.writeText(link);
+                                    alert("Onboarding link sent + copied to clipboard ✅");
+                                  } catch {
+                                    alert(`Onboarding link sent ✅\n\n${link}`);
+                                  }
+                                } else {
+                                  alert("Onboarding link sent ✅");
+                                }
+                              },
+                              onError: (err: any) => {
+                                alert(err?.message || "Failed to send onboarding link");
+                              },
+                            }
+                          );
+                        }}
+                      >
+                        <LinkIcon className="h-4 w-4 mr-2" />
+                        Send Onboarding Link
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}
@@ -203,19 +305,97 @@ export default function Inquiries() {
 
           {/* ---------------- CORPORATE ---------------- */}
           <TabsContent value="corporate" className="space-y-4">
-            {corporateQuery.isLoading && (
-              <LoadingCard text="Loading corporate inquiries..." />
-            )}
+            {corporateQuery.isLoading && <LoadingCard text="Loading corporate inquiries..." />}
 
             {!corporateQuery.isLoading &&
-              corporate.map((inquiry: any) => (
-                <Card key={inquiry.id} className="p-6 space-y-4">
-                  <h3 className="text-lg font-semibold">{inquiry.companyName}</h3>
-                  <div className="text-sm text-muted-foreground">
-                    {inquiry.contactName} · {inquiry.email}
-                  </div>
-                </Card>
-              ))}
+              corporate.map((inquiry: any) => {
+                const urgency = getUrgency(inquiry.createdAt);
+                const urgencyColor = getUrgencyColor(urgency);
+
+                return (
+                  <Card key={inquiry.id} className="p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">{inquiry.companyName}</h3>
+                          <Badge className={urgencyColor}>
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timeAgo(inquiry.createdAt)}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {inquiry.contactName} · {inquiry.email} · {inquiry.phone}
+                        </div>
+                      </div>
+
+                      <Select
+                        value={inquiry.status}
+                        onValueChange={(status) =>
+                          updateCorporateStatus.mutate(
+                            { id: inquiry.id, status: status as any },
+                            { onSuccess: () => corporateQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="contacted">Contacted</SelectItem>
+                          <SelectItem value="converted">Converted</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Assignment */}
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <Select
+                        value={inquiry.assignedTo || "unassigned"}
+                        onValueChange={(value) =>
+                          updateCorporateAssignment.mutate(
+                            {
+                              id: inquiry.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
+                            { onSuccess: () => corporateQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[220px]">
+                          <SelectValue placeholder="Assign to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teamMembers.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Notes */}
+                    <Textarea
+                      defaultValue={inquiry.internalNotes || ""}
+                      placeholder="Internal notes..."
+                      onBlur={(e) => {
+                        const next = e.target.value ?? "";
+                        const prev = inquiry.internalNotes ?? "";
+                        if (next === prev) return;
+
+                        updateCorporateNotes.mutate(
+                          { id: inquiry.id, notes: next },
+                          { onSuccess: () => corporateQuery.refetch() }
+                        );
+                      }}
+                    />
+                  </Card>
+                );
+              })}
 
             {!corporateQuery.isLoading && corporate.length === 0 && (
               <LoadingCard text="No corporate inquiries yet." />
@@ -224,17 +404,110 @@ export default function Inquiries() {
 
           {/* ---------------- MESSAGES ---------------- */}
           <TabsContent value="messages" className="space-y-4">
-            {messagesQuery.isLoading && (
-              <LoadingCard text="Loading messages..." />
-            )}
+            {messagesQuery.isLoading && <LoadingCard text="Loading messages..." />}
 
             {!messagesQuery.isLoading &&
-              messages.map((msg: any) => (
-                <Card key={msg.id} className="p-6 space-y-2">
-                  <div className="font-semibold">{msg.subject}</div>
-                  <div className="text-sm">{msg.message}</div>
-                </Card>
-              ))}
+              messages.map((msg: any) => {
+                const urgency = getUrgency(msg.createdAt);
+                const urgencyColor = getUrgencyColor(urgency);
+
+                return (
+                  <Card key={msg.id} className="p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">{msg.subject}</div>
+                          {!msg.isRead && <Badge variant="destructive">Unread</Badge>}
+                          <Badge className={urgencyColor}>
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timeAgo(msg.createdAt)}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {msg.name} · {msg.email} {msg.phone ? `· ${msg.phone}` : ""}
+                        </div>
+                      </div>
+
+                      {!msg.isRead && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            markContactRead.mutate(
+                              { id: msg.id },
+                              { onSuccess: () => messagesQuery.refetch() }
+                            )
+                          }
+                        >
+                          Mark as Read
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="text-sm bg-muted p-3 rounded-md">{msg.message}</div>
+
+                    {/* Assignment */}
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <Select
+                        value={msg.assignedTo || "unassigned"}
+                        onValueChange={(value) =>
+                          updateContactAssignment.mutate(
+                            { id: msg.id, assignedTo: value === "unassigned" ? null : value },
+                            { onSuccess: () => messagesQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[220px]">
+                          <SelectValue placeholder="Assign to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teamMembers.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Notes */}
+                    <Textarea
+                      defaultValue={msg.internalNotes || ""}
+                      placeholder="Internal notes..."
+                      onBlur={(e) => {
+                        const next = e.target.value ?? "";
+                        const prev = msg.internalNotes ?? "";
+                        if (next === prev) return;
+
+                        updateContactNotes.mutate(
+                          { id: msg.id, notes: next },
+                          { onSuccess: () => messagesQuery.refetch() }
+                        );
+                      }}
+                    />
+
+                    {/* Quick actions */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`mailto:${msg.email}`}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email
+                        </a>
+                      </Button>
+                      {msg.phone && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={`tel:${msg.phone}`}>
+                            <Phone className="h-4 w-4 mr-2" />
+                            Call
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
 
             {!messagesQuery.isLoading && messages.length === 0 && (
               <LoadingCard text="No messages yet." />
