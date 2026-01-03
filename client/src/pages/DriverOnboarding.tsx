@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "wouter";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,11 @@ const DOCS: { type: DocType; label: string; hint?: string }[] = [
 ];
 
 function useQueryToken() {
-  const location = useLocation();
+  const [location] = useLocation(); // wouter returns [location, setLocation]
   return useMemo(() => {
-    const sp = new URLSearchParams(location.search);
+    const sp = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "");
     return sp.get("token") || "";
-  }, [location.search]);
+  }, [location]);
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -209,7 +209,9 @@ export default function DriverOnboardingPage() {
         type,
         base64Data,
         mimeType: file.type || "application/octet-stream",
-        expiryDate: expiryDates[type] ? new Date(expiryDates[type]).toISOString() : undefined,
+        expiryDate: expiryDates[type]
+          ? new Date(expiryDates[type]).toISOString()
+          : undefined,
       });
 
       showMsg(`✅ Uploaded: ${prettyDocLabel(type)}`);
@@ -376,18 +378,11 @@ export default function DriverOnboardingPage() {
 
                 {existing?.fileUrl && (
                   <div className="text-sm">
-                    <a
-                      className="underline"
-                      href={existing.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a className="underline" href={existing.fileUrl} target="_blank" rel="noreferrer">
                       View uploaded file
                     </a>
                     {existing?.status && (
-                      <span className="ml-2 text-muted-foreground">
-                        (Status: {existing.status})
-                      </span>
+                      <span className="ml-2 text-muted-foreground">(Status: {existing.status})</span>
                     )}
                   </div>
                 )}
@@ -444,10 +439,7 @@ export default function DriverOnboardingPage() {
           Once you have saved vehicle details and uploaded all documents, submit for review.
         </p>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={submitOnboarding.isPending || !allRequiredUploaded}
-        >
+        <Button onClick={handleSubmit} disabled={submitOnboarding.isPending || !allRequiredUploaded}>
           {submitOnboarding.isPending ? "Submitting..." : "Submit for Review"}
         </Button>
 
