@@ -103,6 +103,8 @@ export default function Inquiries() {
   const updateContactNotes = trpc.admin.updateContactNotes.useMutation();
   const updateContactAssignment = trpc.admin.updateContactAssignment.useMutation();
 
+  const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
+
   const handleExport = () => {
     if (activeTab === "drivers") exportToCSV(drivers, "driver-applications");
     else if (activeTab === "corporate") exportToCSV(corporate, "corporate-inquiries");
