@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -22,6 +22,14 @@ export default function DriverOnboardingReview() {
 
   const reviewDoc = trpc.admin.reviewDriverDocument.useMutation();
 
+  const apiErrorMessage = useMemo(() => {
+    const msg =
+      (profileQuery.error as any)?.message ||
+      (reviewDoc.error as any)?.message ||
+      "";
+    return typeof msg === "string" ? msg : "";
+  }, [profileQuery.error, reviewDoc.error]);
+
   if (!Number.isFinite(driverApplicationId) || driverApplicationId <= 0) {
     return (
       <AdminLayout title="Driver Onboarding">
@@ -43,6 +51,14 @@ export default function DriverOnboardingReview() {
       <AdminLayout title="Driver Onboarding">
         <Card className="p-6 text-destructive">
           Failed to load onboarding profile.
+          {apiErrorMessage ? (
+            <div className="text-sm mt-2 opacity-90">{apiErrorMessage}</div>
+          ) : null}
+          <div className="mt-4">
+            <Button variant="outline" onClick={() => (window.location.href = "/admin/inquiries")}>
+              Back to Inquiries
+            </Button>
+          </div>
         </Card>
       </AdminLayout>
     );
@@ -56,24 +72,37 @@ export default function DriverOnboardingReview() {
       description="Review uploaded documents and vehicle details"
     >
       <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => (window.location.href = "/admin/inquiries")}>
+            Back to Inquiries
+          </Button>
+        </div>
+
+        {apiErrorMessage ? (
+          <Card className="p-4 border border-destructive/40 bg-destructive/10">
+            <div className="font-semibold">Action error</div>
+            <div className="text-sm mt-1">{apiErrorMessage}</div>
+          </Card>
+        ) : null}
+
         {/* Driver */}
         <Card className="p-6 space-y-2">
           <h2 className="text-lg font-semibold">Driver</h2>
-          <div>Name: {driver?.fullName}</div>
-          <div>Email: {driver?.email}</div>
-          <div>Phone: {driver?.phone}</div>
+          <div>Name: {driver?.fullName || "-"}</div>
+          <div>Email: {driver?.email || "-"}</div>
+          <div>Phone: {driver?.phone || "-"}</div>
         </Card>
 
         {/* Vehicle */}
         <Card className="p-6 space-y-2">
           <h2 className="text-lg font-semibold">Vehicle</h2>
-          <div>Registration: {vehicle?.registration}</div>
-          <div>Make: {vehicle?.make}</div>
-          <div>Model: {vehicle?.model}</div>
-          <div>Colour: {vehicle?.colour}</div>
-          <div>Year: {vehicle?.year}</div>
-          <div>Plate: {vehicle?.plateNumber}</div>
-          <div>Capacity: {vehicle?.capacity}</div>
+          <div>Registration: {vehicle?.registration || "-"}</div>
+          <div>Make: {vehicle?.make || "-"}</div>
+          <div>Model: {vehicle?.model || "-"}</div>
+          <div>Colour: {vehicle?.colour || "-"}</div>
+          <div>Year: {vehicle?.year || "-"}</div>
+          <div>Plate: {vehicle?.plateNumber || "-"}</div>
+          <div>Capacity: {vehicle?.capacity || "-"}</div>
         </Card>
 
         {/* Documents */}
@@ -82,7 +111,7 @@ export default function DriverOnboardingReview() {
 
           {documents?.map((doc: any) => (
             <div key={doc.id} className="border rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div className="font-medium">{doc.type}</div>
                 <Badge
                   variant={
@@ -97,14 +126,18 @@ export default function DriverOnboardingReview() {
                 </Badge>
               </div>
 
-              <a
-                href={doc.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="underline text-sm"
-              >
-                View document
-              </a>
+              {doc.fileUrl ? (
+                <a
+                  href={doc.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-sm"
+                >
+                  View document
+                </a>
+              ) : (
+                <div className="text-sm text-muted-foreground">No file URL saved.</div>
+              )}
 
               {doc.expiryDate && (
                 <div className="text-sm text-muted-foreground">
@@ -112,22 +145,30 @@ export default function DriverOnboardingReview() {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  onClick={() =>
+                  disabled={reviewDoc.isPending}
+                  onClick={() => {
+                    const ok = confirm("Approve this document?");
+                    if (!ok) return;
+
                     reviewDoc.mutate(
                       { docId: doc.id, status: "approved" },
                       { onSuccess: () => profileQuery.refetch() }
-                    )
-                  }
+                    );
+                  }}
                 >
-                  Approve
+                  {reviewDoc.isPending ? "Saving..." : "Approve"}
                 </Button>
 
                 <RejectDoc
                   docId={doc.id}
-                  onReject={(reason) =>
+                  disabled={reviewDoc.isPending}
+                  onReject={(reason) => {
+                    const ok = confirm("Reject this document?");
+                    if (!ok) return;
+
                     reviewDoc.mutate(
                       {
                         docId: doc.id,
@@ -135,8 +176,8 @@ export default function DriverOnboardingReview() {
                         rejectionReason: reason,
                       },
                       { onSuccess: () => profileQuery.refetch() }
-                    )
-                  }
+                    );
+                  }}
                 />
               </div>
             </div>
@@ -156,9 +197,11 @@ export default function DriverOnboardingReview() {
 function RejectDoc({
   docId,
   onReject,
+  disabled,
 }: {
   docId: number;
   onReject: (reason: string) => void;
+  disabled?: boolean;
 }) {
   const [reason, setReason] = useState("");
 
@@ -170,11 +213,13 @@ function RejectDoc({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           className="w-[220px]"
+          disabled={disabled}
         />
       </div>
       <Button
         size="sm"
         variant="destructive"
+        disabled={disabled}
         onClick={() => {
           if (!reason.trim()) {
             alert("Please enter a rejection reason");
@@ -189,4 +234,3 @@ function RejectDoc({
     </div>
   );
 }
-
