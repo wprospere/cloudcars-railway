@@ -4,9 +4,13 @@
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc, desc, and, isNull } from "drizzle-orm";
+import { eq, asc, desc, and, isNull, inArray } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
+
+// ✅ Drizzle migrations (run on server boot)
+import path from "path";
+import { migrate } from "drizzle-orm/mysql2/migrator";
 
 /**
  * Prefer DATABASE_URL (Railway standard).
@@ -54,6 +58,24 @@ export const db = drizzle(pool, { schema, mode: "default" });
 export { schema };
 
 /**
+ * ✅ Run Drizzle migrations once (call this on server startup)
+ * Safe to call multiple times; it only runs once per process.
+ */
+let migrationsRan = false;
+
+export async function runMigrations() {
+  if (migrationsRan) return;
+  migrationsRan = true;
+
+  const migrationsFolder = path.join(process.cwd(), "drizzle", "migrations");
+  console.log("🛠️ Running drizzle migrations from:", migrationsFolder);
+
+  await migrate(db as any, { migrationsFolder });
+
+  console.log("✅ Drizzle migrations complete");
+}
+
+/**
  * Helper: get insertId reliably across mysql2/drizzle versions
  */
 async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
@@ -82,10 +104,39 @@ export async function createDriverApplication(
   return insertAndReturnId(db.insert(schema.driverApplications).values(data));
 }
 
+/**
+ * ✅ Returns driver applications + their documents as `documents: []`
+ * This powers completion badges on the Inquiries page.
+ */
 export async function getAllDriverApplications() {
-  return db.query.driverApplications.findMany({
+  const apps = await db.query.driverApplications.findMany({
     orderBy: (applications, { desc }) => [desc(applications.createdAt)],
   });
+
+  const ids = apps.map((a: any) => Number(a.id)).filter((n) => Number.isFinite(n));
+
+  if (ids.length === 0) {
+    // attach empty docs so UI doesn't break
+    return apps.map((a: any) => ({ ...a, documents: [] }));
+  }
+
+  const docs = await db
+    .select()
+    .from(schema.driverDocuments)
+    .where(inArray(schema.driverDocuments.driverApplicationId as any, ids));
+
+  // Group documents by application id
+  const byAppId = new Map<number, any[]>();
+  for (const d of docs as any[]) {
+    const appId = Number(d.driverApplicationId);
+    if (!byAppId.has(appId)) byAppId.set(appId, []);
+    byAppId.get(appId)!.push(d);
+  }
+
+  return (apps as any[]).map((a) => ({
+    ...a,
+    documents: byAppId.get(Number(a.id)) ?? [],
+  }));
 }
 
 export async function updateDriverApplicationStatus(
@@ -253,7 +304,6 @@ export async function getAllSiteContent() {
 
 /**
  * Upsert CMS content by sectionKey
- * Router expects upsertSiteContent({ sectionKey, title, subtitle, ... })
  */
 export async function upsertSiteContent(
   data: typeof schema.siteContent.$inferInsert
@@ -286,7 +336,6 @@ export async function getAllSiteImages() {
 
 /**
  * Upsert CMS image record by imageKey
- * Router expects upsertSiteImage({ imageKey, url, altText, caption })
  */
 export async function upsertSiteImage(
   data: typeof schema.siteImages.$inferInsert
@@ -318,7 +367,6 @@ function sha256(input: string) {
 
 /**
  * Create onboarding token (store hash only).
- * Expires typically in 7 days.
  */
 export async function createDriverOnboardingToken(params: {
   driverApplicationId: number;
@@ -338,7 +386,6 @@ export async function createDriverOnboardingToken(params: {
 
 /**
  * Redeem/validate onboarding token.
- * Returns token row if valid and unused + not expired.
  */
 export async function getDriverOnboardingByToken(rawToken: string) {
   const tokenHash = sha256(rawToken);
@@ -353,7 +400,7 @@ export async function getDriverOnboardingByToken(rawToken: string) {
       )
     );
 
-  const tokenRow: any = rows[0];
+  const tokenRow: any = (rows as any[])[0];
   if (!tokenRow) return null;
 
   const exp = new Date(tokenRow.expiresAt);
@@ -390,9 +437,11 @@ export async function upsertDriverVehicle(params: {
   const existing = await db
     .select()
     .from(schema.driverVehicles)
-    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+    .where(
+      eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+    );
 
-  if (existing.length > 0) {
+  if ((existing as any[]).length > 0) {
     await db
       .update(schema.driverVehicles)
       .set({
@@ -405,7 +454,9 @@ export async function upsertDriverVehicle(params: {
         capacity: params.capacity ?? null,
         updatedAt: new Date(),
       } as any)
-      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+      .where(
+        eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+      );
 
     return { success: true };
   }
@@ -434,7 +485,6 @@ export type DriverDocType =
 
 /**
  * Upsert a driver document by (driverApplicationId + type)
- * Always sets status back to pending on reupload.
  */
 export async function upsertDriverDocument(params: {
   driverApplicationId: number;
@@ -452,7 +502,7 @@ export async function upsertDriverDocument(params: {
       )
     );
 
-  if (existing.length > 0) {
+  if ((existing as any[]).length > 0) {
     await db
       .update(schema.driverDocuments)
       .set({
@@ -463,7 +513,7 @@ export async function upsertDriverDocument(params: {
         reviewedAt: null,
         reviewedBy: null,
       } as any)
-      .where(eq(schema.driverDocuments.id, (existing[0] as any).id));
+      .where(eq(schema.driverDocuments.id, (existing as any[])[0].id));
 
     return { success: true };
   }
@@ -495,7 +545,9 @@ export async function setDriverDocumentReview(params: {
       reviewedAt: new Date(),
       reviewedBy: params.reviewedBy,
       rejectionReason:
-        params.status === "rejected" ? params.rejectionReason ?? "Rejected" : null,
+        params.status === "rejected"
+          ? params.rejectionReason ?? "Rejected"
+          : null,
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
 }
