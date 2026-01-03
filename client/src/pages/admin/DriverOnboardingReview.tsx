@@ -9,6 +9,26 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
+import {
+  DocumentPreviewGrid,
+  type DriverDocument,
+} from "@/components/documents/DocumentPreview";
+
+type DocStatusUI = "approved" | "rejected" | "pending" | string;
+type DocStatusPreview = "APPROVED" | "REJECTED" | "PENDING";
+
+function toPreviewStatus(status: DocStatusUI | undefined | null): DocStatusPreview {
+  const s = String(status || "pending").toLowerCase();
+  if (s === "approved") return "APPROVED";
+  if (s === "rejected") return "REJECTED";
+  return "PENDING";
+}
+
+function filenameFromUrl(url: string) {
+  const clean = url.split("?")[0] || url;
+  return clean.split("/").pop() || "document";
+}
+
 export default function DriverOnboardingReview() {
   // ✅ wouter param: /admin/driver-onboarding/:id
   const [, params] = useRoute("/admin/driver-onboarding/:id");
@@ -55,7 +75,10 @@ export default function DriverOnboardingReview() {
             <div className="text-sm mt-2 opacity-90">{apiErrorMessage}</div>
           ) : null}
           <div className="mt-4">
-            <Button variant="outline" onClick={() => (window.location.href = "/admin/inquiries")}>
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = "/admin/inquiries")}
+            >
               Back to Inquiries
             </Button>
           </div>
@@ -66,6 +89,24 @@ export default function DriverOnboardingReview() {
 
   const { driver, vehicle, documents } = profileQuery.data as any;
 
+  // Map your current docs -> preview component docs
+  const previewDocs: DriverDocument[] = Array.isArray(documents)
+    ? documents
+        .filter((d: any) => !!d?.fileUrl)
+        .map((d: any) => {
+          const url = String(d.fileUrl);
+          return {
+            id: d.id,
+            label: d.type || d.label || "Document",
+            url,
+            filename: d.filename || filenameFromUrl(url),
+            mimeType: d.mimeType || undefined,
+            status: toPreviewStatus(d.status),
+            uploadedAt: d.uploadedAt || undefined,
+          } satisfies DriverDocument;
+        })
+    : [];
+
   return (
     <AdminLayout
       title="Driver Onboarding Review"
@@ -73,7 +114,10 @@ export default function DriverOnboardingReview() {
     >
       <div className="space-y-6">
         <div className="flex justify-end">
-          <Button variant="outline" onClick={() => (window.location.href = "/admin/inquiries")}>
+          <Button
+            variant="outline"
+            onClick={() => (window.location.href = "/admin/inquiries")}
+          >
             Back to Inquiries
           </Button>
         </div>
@@ -107,87 +151,95 @@ export default function DriverOnboardingReview() {
 
         {/* Documents */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Documents</h2>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Documents</h2>
+              <p className="text-sm text-muted-foreground">
+                Images preview inline. PDFs can be opened or downloaded.
+              </p>
+            </div>
+            <Badge variant="secondary">{documents?.length ?? 0} total</Badge>
+          </div>
 
-          {documents?.map((doc: any) => (
-            <div key={doc.id} className="border rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-medium">{doc.type}</div>
-                <Badge
-                  variant={
-                    doc.status === "approved"
-                      ? "default"
-                      : doc.status === "rejected"
-                      ? "destructive"
-                      : "secondary"
-                  }
-                >
-                  {doc.status || "pending"}
-                </Badge>
-              </div>
+          {/* ✅ Preview grid */}
+          <DocumentPreviewGrid documents={previewDocs} />
 
-              {doc.fileUrl ? (
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline text-sm"
-                >
-                  View document
-                </a>
-              ) : (
-                <div className="text-sm text-muted-foreground">No file URL saved.</div>
-              )}
+          {/* ✅ Approve/Reject controls (kept) */}
+          <div className="pt-2 space-y-3">
+            {Array.isArray(documents) &&
+              documents.map((doc: any) => (
+                <div key={doc.id} className="border rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium">{doc.type || "Document"}</div>
+                    <Badge
+                      variant={
+                        String(doc.status).toLowerCase() === "approved"
+                          ? "default"
+                          : String(doc.status).toLowerCase() === "rejected"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {doc.status || "pending"}
+                    </Badge>
+                  </div>
 
-              {doc.expiryDate && (
-                <div className="text-sm text-muted-foreground">
-                  Expiry: {new Date(doc.expiryDate).toLocaleDateString()}
+                  {!doc.fileUrl ? (
+                    <div className="text-sm text-muted-foreground">
+                      No file URL saved.
+                    </div>
+                  ) : null}
+
+                  {doc.expiryDate ? (
+                    <div className="text-sm text-muted-foreground">
+                      Expiry: {new Date(doc.expiryDate).toLocaleDateString()}
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={reviewDoc.isPending}
+                      onClick={() => {
+                        const ok = confirm("Approve this document?");
+                        if (!ok) return;
+
+                        reviewDoc.mutate(
+                          { docId: doc.id, status: "approved" },
+                          { onSuccess: () => profileQuery.refetch() }
+                        );
+                      }}
+                    >
+                      {reviewDoc.isPending ? "Saving..." : "Approve"}
+                    </Button>
+
+                    <RejectDoc
+                      docId={doc.id}
+                      disabled={reviewDoc.isPending}
+                      onReject={(reason) => {
+                        const ok = confirm("Reject this document?");
+                        if (!ok) return;
+
+                        reviewDoc.mutate(
+                          {
+                            docId: doc.id,
+                            status: "rejected",
+                            rejectionReason: reason,
+                          },
+                          { onSuccess: () => profileQuery.refetch() }
+                        );
+                      }}
+                    />
+                  </div>
                 </div>
-              )}
+              ))}
 
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  disabled={reviewDoc.isPending}
-                  onClick={() => {
-                    const ok = confirm("Approve this document?");
-                    if (!ok) return;
-
-                    reviewDoc.mutate(
-                      { docId: doc.id, status: "approved" },
-                      { onSuccess: () => profileQuery.refetch() }
-                    );
-                  }}
-                >
-                  {reviewDoc.isPending ? "Saving..." : "Approve"}
-                </Button>
-
-                <RejectDoc
-                  docId={doc.id}
-                  disabled={reviewDoc.isPending}
-                  onReject={(reason) => {
-                    const ok = confirm("Reject this document?");
-                    if (!ok) return;
-
-                    reviewDoc.mutate(
-                      {
-                        docId: doc.id,
-                        status: "rejected",
-                        rejectionReason: reason,
-                      },
-                      { onSuccess: () => profileQuery.refetch() }
-                    );
-                  }}
-                />
+            {(!documents || documents.length === 0) && (
+              <div className="text-muted-foreground text-sm">
+                No documents uploaded yet.
               </div>
-            </div>
-          ))}
-
-          {(!documents || documents.length === 0) && (
-            <div className="text-muted-foreground text-sm">
-              No documents uploaded yet.
-            </div>
-          )}
+            )}
+          </div>
         </Card>
       </div>
     </AdminLayout>
