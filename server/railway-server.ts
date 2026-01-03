@@ -238,6 +238,9 @@ async function start() {
     // If you prefer to hard-fail, uncomment the next line:
     // throw err;
   }
+import { runMigrations } from "./db";
+
+await runMigrations();
 
   try {
     await ensureDefaultAdmin();
