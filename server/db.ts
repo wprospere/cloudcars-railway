@@ -113,22 +113,24 @@ export async function getAllDriverApplications() {
     orderBy: (applications, { desc }) => [desc(applications.createdAt)],
   });
 
-  const ids = apps.map((a: any) => Number(a.id)).filter((n) => Number.isFinite(n));
+  const ids = (apps as any[])
+    .map((a) => Number(a.id))
+    .filter((n) => Number.isFinite(n));
 
   if (ids.length === 0) {
     // attach empty docs so UI doesn't break
-    return apps.map((a: any) => ({ ...a, documents: [] }));
+    return (apps as any[]).map((a) => ({ ...a, documents: [] }));
   }
 
   const docs = await db
     .select()
     .from(schema.driverDocuments)
-    .where(inArray(schema.driverDocuments.driverApplicationId as any, ids));
+    .where(inArray(schema.driverDocuments.driverApplicationId, ids));
 
   // Group documents by application id
   const byAppId = new Map<number, any[]>();
   for (const d of docs as any[]) {
-    const appId = Number(d.driverApplicationId);
+    const appId = Number((d as any).driverApplicationId);
     if (!byAppId.has(appId)) byAppId.set(appId, []);
     byAppId.get(appId)!.push(d);
   }
@@ -252,7 +254,6 @@ export async function updateContactMessageAssignment(
 // -------------------- Team Members --------------------
 
 export async function getAllTeamMembers() {
-  // Your schema.ts in this chat does NOT show displayOrder, so order by id
   return db.query.teamMembers.findMany({
     orderBy: (members) => [asc(members.id)],
   });
@@ -290,7 +291,6 @@ export async function deleteTeamMember(id: number) {
 // -------------------- Site Content (CMS) --------------------
 
 export async function getSiteContent(sectionKey: string) {
-  // IMPORTANT: your schema uses sectionKey, not "key"
   return db.query.siteContent.findFirst({
     where: (content, { eq }) => eq(content.sectionKey, sectionKey),
   });
@@ -302,9 +302,6 @@ export async function getAllSiteContent() {
   });
 }
 
-/**
- * Upsert CMS content by sectionKey
- */
 export async function upsertSiteContent(
   data: typeof schema.siteContent.$inferInsert
 ) {
@@ -322,7 +319,6 @@ export async function upsertSiteContent(
 // -------------------- Site Images (CMS) --------------------
 
 export async function getSiteImage(imageKey: string) {
-  // IMPORTANT: your schema uses imageKey, not "key"
   return db.query.siteImages.findFirst({
     where: (image, { eq }) => eq(image.imageKey, imageKey),
   });
@@ -334,9 +330,6 @@ export async function getAllSiteImages() {
   });
 }
 
-/**
- * Upsert CMS image record by imageKey
- */
 export async function upsertSiteImage(
   data: typeof schema.siteImages.$inferInsert
 ) {
@@ -365,9 +358,6 @@ function sha256(input: string) {
   return createHash("sha256").update(input).digest("hex");
 }
 
-/**
- * Create onboarding token (store hash only).
- */
 export async function createDriverOnboardingToken(params: {
   driverApplicationId: number;
   rawToken: string;
@@ -384,9 +374,6 @@ export async function createDriverOnboardingToken(params: {
   return { success: true };
 }
 
-/**
- * Redeem/validate onboarding token.
- */
 export async function getDriverOnboardingByToken(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
@@ -409,9 +396,6 @@ export async function getDriverOnboardingByToken(rawToken: string) {
   return tokenRow as typeof schema.driverOnboardingTokens.$inferSelect;
 }
 
-/**
- * Mark onboarding token as used (one-time link).
- */
 export async function markDriverOnboardingTokenUsed(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
@@ -421,9 +405,6 @@ export async function markDriverOnboardingTokenUsed(rawToken: string) {
     .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash));
 }
 
-/**
- * Upsert vehicle details for a driver application.
- */
 export async function upsertDriverVehicle(params: {
   driverApplicationId: number;
   registration: string;
@@ -437,9 +418,7 @@ export async function upsertDriverVehicle(params: {
   const existing = await db
     .select()
     .from(schema.driverVehicles)
-    .where(
-      eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
-    );
+    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
 
   if ((existing as any[]).length > 0) {
     await db
@@ -454,9 +433,7 @@ export async function upsertDriverVehicle(params: {
         capacity: params.capacity ?? null,
         updatedAt: new Date(),
       } as any)
-      .where(
-        eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
-      );
+      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
 
     return { success: true };
   }
@@ -483,9 +460,6 @@ export type DriverDocType =
   | "INSURANCE"
   | "MOT";
 
-/**
- * Upsert a driver document by (driverApplicationId + type)
- */
 export async function upsertDriverDocument(params: {
   driverApplicationId: number;
   type: DriverDocType;
@@ -529,9 +503,6 @@ export async function upsertDriverDocument(params: {
   return { success: true };
 }
 
-/**
- * Admin: approve/reject a document
- */
 export async function setDriverDocumentReview(params: {
   docId: number;
   status: "approved" | "rejected";
@@ -545,16 +516,11 @@ export async function setDriverDocumentReview(params: {
       reviewedAt: new Date(),
       reviewedBy: params.reviewedBy,
       rejectionReason:
-        params.status === "rejected"
-          ? params.rejectionReason ?? "Rejected"
-          : null,
+        params.status === "rejected" ? params.rejectionReason ?? "Rejected" : null,
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
 }
 
-/**
- * Admin: fetch full onboarding profile for a driver application
- */
 export async function getDriverOnboardingProfile(driverApplicationId: number) {
   const app = await db.query.driverApplications.findFirst({
     where: (a, { eq }) => eq(a.id, driverApplicationId),
@@ -569,5 +535,11 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
     orderBy: (d, { asc }) => [asc(d.type)],
   });
 
-  return { application: app ?? null, vehicle: vehicle ?? null, documents };
+  // ✅ Return both to avoid breaking anything
+  return {
+    driver: app ?? null,
+    application: app ?? null,
+    vehicle: vehicle ?? null,
+    documents,
+  };
 }
