@@ -10,8 +10,12 @@ import { createContext } from "./railway-trpc.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 
+// ✅ Drizzle migrations
+import { migrate } from "drizzle-orm/mysql2/migrator";
+
 // ✅ DB helpers (same ones admin/tRPC uses)
 import {
+  db, // ✅ make sure your ./db exports `db` (Drizzle instance)
   createCorporateInquiry,
   createDriverApplication,
   getAllDriverApplications,
@@ -81,7 +85,6 @@ app.get("/api/debug/counts", async (_req, res) => {
 
 /**
  * ✅ PUBLIC: Corporate inquiry -> SAVES TO DB
- * This makes it appear in Admin → Inquiries → Corporate Inquiries
  */
 app.post("/api/corporate-inquiry", async (req, res) => {
   try {
@@ -109,7 +112,6 @@ app.post("/api/corporate-inquiry", async (req, res) => {
       requirements: requirements || null,
       internalNotes: null,
       assignedTo: null,
-      // status/createdAt should be DB defaults (if required in your schema, tell me and I’ll add)
     } as any);
 
     console.log("✅ Corporate inquiry saved:", result);
@@ -122,7 +124,6 @@ app.post("/api/corporate-inquiry", async (req, res) => {
 
 /**
  * ✅ PUBLIC: Driver application -> SAVES TO DB
- * This makes it appear in Admin → Inquiries → Driver Applications
  */
 app.post("/api/driver-application", async (req, res) => {
   try {
@@ -225,6 +226,19 @@ app.use(
 
 // Startup
 async function start() {
+  // ✅ Run migrations first (so tables/columns exist before any queries)
+  try {
+    const migrationsFolder = path.join(process.cwd(), "drizzle", "migrations");
+    console.log("🛠️ Running drizzle migrations from:", migrationsFolder);
+    await migrate(db as any, { migrationsFolder });
+    console.log("✅ Drizzle migrations complete");
+  } catch (err: any) {
+    console.error("❌ Drizzle migrate failed:", err?.message || err);
+    // Don't crash the whole server if you want it to still boot:
+    // If you prefer to hard-fail, uncomment the next line:
+    // throw err;
+  }
+
   try {
     await ensureDefaultAdmin();
   } catch (err: any) {
