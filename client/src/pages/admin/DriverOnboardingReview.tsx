@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
 import AdminLayout from "@/components/AdminLayout";
@@ -9,15 +10,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export default function DriverOnboardingReview() {
-  const { id } = useParams<{ id: string }>();
-  const driverApplicationId = Number(id);
+  // ✅ wouter param: /admin/driver-onboarding/:id
+  const [, params] = useRoute("/admin/driver-onboarding/:id");
+  const id = params?.id;
+  const driverApplicationId = id ? Number(id) : NaN;
 
   const profileQuery = trpc.admin.getDriverOnboardingProfile.useQuery(
     { driverApplicationId },
-    { enabled: !!driverApplicationId }
+    { enabled: Number.isFinite(driverApplicationId) && driverApplicationId > 0 }
   );
 
   const reviewDoc = trpc.admin.reviewDriverDocument.useMutation();
+
+  if (!Number.isFinite(driverApplicationId) || driverApplicationId <= 0) {
+    return (
+      <AdminLayout title="Driver Onboarding">
+        <Card className="p-6 text-destructive">Invalid driver id in URL.</Card>
+      </AdminLayout>
+    );
+  }
 
   if (profileQuery.isLoading) {
     return (
