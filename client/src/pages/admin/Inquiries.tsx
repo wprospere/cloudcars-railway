@@ -16,7 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Mail, Phone, Download, Clock, User, Link as LinkIcon } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  Download,
+  Clock,
+  User,
+  Link as LinkIcon,
+  Eye,
+} from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
 /* ---------------- CSV Export ---------------- */
@@ -26,7 +34,9 @@ function exportToCSV(data: any[], filename: string) {
   const headers = Object.keys(data[0] ?? {});
   const csvContent = [
     headers.join(","),
-    ...data.map((row) => headers.map((h) => JSON.stringify(row?.[h] ?? "")).join(",")),
+    ...data.map((row) =>
+      headers.map((h) => JSON.stringify(row?.[h] ?? "")).join(",")
+    ),
   ].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv" });
@@ -73,15 +83,25 @@ function ErrorCard({ title, message }: { title: string; message?: string }) {
   );
 }
 
+function openAdminReview(driverApplicationId: number) {
+  // wouter route exists: /admin/driver-onboarding/:id
+  window.location.href = `/admin/driver-onboarding/${driverApplicationId}`;
+}
+
 /* ---------------- Page ---------------- */
 export default function Inquiries() {
   useAuth({ redirectOnUnauthenticated: true, redirectPath: "/admin/login" });
 
   const [activeTab, setActiveTab] = useState("drivers");
 
+  // keep a tiny per-driver "sending" state so one send doesn't disable all
+  const [sendingForId, setSendingForId] = useState<number | null>(null);
+
   /* ---------- Queries (LIMITED) ---------- */
   const driversQuery = trpc.admin.getDriverApplications.useQuery({ limit: 200 });
-  const corporateQuery = trpc.admin.getCorporateInquiries.useQuery({ limit: 200 });
+  const corporateQuery = trpc.admin.getCorporateInquiries.useQuery({
+    limit: 200,
+  });
   const messagesQuery = trpc.admin.getContactMessages.useQuery({ limit: 200 });
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
@@ -98,7 +118,6 @@ export default function Inquiries() {
             .filter(Boolean)
             .map(String)
         : [];
-    // de-dupe
     return Array.from(new Set(names));
   }, [teamMembersData]);
 
@@ -109,18 +128,21 @@ export default function Inquiries() {
 
   const updateCorporateStatus = trpc.admin.updateCorporateStatus.useMutation();
   const updateCorporateNotes = trpc.admin.updateCorporateNotes.useMutation();
-  const updateCorporateAssignment = trpc.admin.updateCorporateAssignment.useMutation();
+  const updateCorporateAssignment =
+    trpc.admin.updateCorporateAssignment.useMutation();
 
   const markContactRead = trpc.admin.markContactRead.useMutation();
   const updateContactNotes = trpc.admin.updateContactNotes.useMutation();
-  const updateContactAssignment = trpc.admin.updateContactAssignment.useMutation();
+  const updateContactAssignment =
+    trpc.admin.updateContactAssignment.useMutation();
 
   // ✅ Phase 1 onboarding (admin)
   const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
 
   const handleExport = () => {
     if (activeTab === "drivers") exportToCSV(drivers, "driver-applications");
-    else if (activeTab === "corporate") exportToCSV(corporate, "corporate-inquiries");
+    else if (activeTab === "corporate")
+      exportToCSV(corporate, "corporate-inquiries");
     else exportToCSV(messages, "contact-messages");
   };
 
@@ -137,7 +159,10 @@ export default function Inquiries() {
 
         {/* Errors */}
         <div className="space-y-2">
-          <ErrorCard title="Drivers error" message={(driversQuery.error as any)?.message} />
+          <ErrorCard
+            title="Drivers error"
+            message={(driversQuery.error as any)?.message}
+          />
           <ErrorCard
             title="Corporate error"
             message={(corporateQuery.error as any)?.message}
@@ -151,25 +176,33 @@ export default function Inquiries() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="drivers">Drivers ({drivers.length})</TabsTrigger>
-            <TabsTrigger value="corporate">Corporate ({corporate.length})</TabsTrigger>
+            <TabsTrigger value="corporate">
+              Corporate ({corporate.length})
+            </TabsTrigger>
             <TabsTrigger value="messages">Messages ({messages.length})</TabsTrigger>
           </TabsList>
 
           {/* ---------------- DRIVERS ---------------- */}
           <TabsContent value="drivers" className="space-y-4">
-            {driversQuery.isLoading && <LoadingCard text="Loading driver applications..." />}
+            {driversQuery.isLoading && (
+              <LoadingCard text="Loading driver applications..." />
+            )}
 
             {!driversQuery.isLoading &&
               drivers.map((driver: any) => {
                 const urgency = getUrgency(driver.createdAt);
                 const urgencyColor = getUrgencyColor(urgency);
 
+                const isSendingThis = sendingForId === Number(driver.id);
+
                 return (
                   <Card key={driver.id} className="p-6 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">{driver.fullName}</h3>
+                          <h3 className="text-lg font-semibold">
+                            {driver.fullName}
+                          </h3>
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(driver.createdAt)}
@@ -265,17 +298,22 @@ export default function Inquiries() {
                       <Button
                         variant="default"
                         size="sm"
-                        disabled={sendOnboardingLink.isPending}
+                        disabled={sendOnboardingLink.isPending && isSendingThis}
                         onClick={() => {
+                          const driverId = Number(driver.id);
+                          setSendingForId(driverId);
+
                           sendOnboardingLink.mutate(
-                            { driverApplicationId: Number(driver.id) },
+                            { driverApplicationId: driverId },
                             {
                               onSuccess: async (res: any) => {
                                 const link = res?.link;
                                 if (link && typeof navigator !== "undefined") {
                                   try {
                                     await navigator.clipboard.writeText(link);
-                                    alert("Onboarding link sent + copied to clipboard ✅");
+                                    alert(
+                                      "Onboarding link sent + copied to clipboard ✅"
+                                    );
                                   } catch {
                                     alert(`Onboarding link sent ✅\n\n${link}`);
                                   }
@@ -284,14 +322,27 @@ export default function Inquiries() {
                                 }
                               },
                               onError: (err: any) => {
-                                alert(err?.message || "Failed to send onboarding link");
+                                alert(
+                                  err?.message ||
+                                    "Failed to send onboarding link"
+                                );
                               },
+                              onSettled: () => setSendingForId(null),
                             }
                           );
                         }}
                       >
                         <LinkIcon className="h-4 w-4 mr-2" />
-                        Send Onboarding Link
+                        {isSendingThis ? "Sending..." : "Send Onboarding Link"}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAdminReview(Number(driver.id))}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Review Uploads
                       </Button>
                     </div>
                   </Card>
@@ -305,7 +356,9 @@ export default function Inquiries() {
 
           {/* ---------------- CORPORATE ---------------- */}
           <TabsContent value="corporate" className="space-y-4">
-            {corporateQuery.isLoading && <LoadingCard text="Loading corporate inquiries..." />}
+            {corporateQuery.isLoading && (
+              <LoadingCard text="Loading corporate inquiries..." />
+            )}
 
             {!corporateQuery.isLoading &&
               corporate.map((inquiry: any) => {
@@ -317,7 +370,9 @@ export default function Inquiries() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">{inquiry.companyName}</h3>
+                          <h3 className="text-lg font-semibold">
+                            {inquiry.companyName}
+                          </h3>
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(inquiry.createdAt)}
@@ -417,14 +472,17 @@ export default function Inquiries() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="font-semibold">{msg.subject}</div>
-                          {!msg.isRead && <Badge variant="destructive">Unread</Badge>}
+                          {!msg.isRead && (
+                            <Badge variant="destructive">Unread</Badge>
+                          )}
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(msg.createdAt)}
                           </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {msg.name} · {msg.email} {msg.phone ? `· ${msg.phone}` : ""}
+                          {msg.name} · {msg.email}{" "}
+                          {msg.phone ? `· ${msg.phone}` : ""}
                         </div>
                       </div>
 
@@ -444,7 +502,9 @@ export default function Inquiries() {
                       )}
                     </div>
 
-                    <div className="text-sm bg-muted p-3 rounded-md">{msg.message}</div>
+                    <div className="text-sm bg-muted p-3 rounded-md">
+                      {msg.message}
+                    </div>
 
                     {/* Assignment */}
                     <div className="flex items-center gap-2">
@@ -453,7 +513,10 @@ export default function Inquiries() {
                         value={msg.assignedTo || "unassigned"}
                         onValueChange={(value) =>
                           updateContactAssignment.mutate(
-                            { id: msg.id, assignedTo: value === "unassigned" ? null : value },
+                            {
+                              id: msg.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
                             { onSuccess: () => messagesQuery.refetch() }
                           )
                         }
