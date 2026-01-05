@@ -71,8 +71,13 @@ app.get("/healthz", (_req, res) =>
 // API routes
 // --------------------
 
-// Admin auth routes
-app.use("/admin", adminRoutes);
+// Admin auth routes (IMPORTANT)
+// Let the React SPA handle GET/HEAD /admin/* (e.g. /admin/login page)
+// But still allow POST/PUT/DELETE (login/logout actions) to hit adminRoutes.
+app.use("/admin", (req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") return next();
+  return (adminRoutes as any)(req, res, next);
+});
 
 // tRPC
 app.use(
