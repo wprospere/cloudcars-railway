@@ -22,9 +22,9 @@ import {
   getAllContactMessages,
 } from "./db";
 
-// If you have your own migrate runner, import it here.
-// (If you don't, this file will still work; migrations will simply be skipped.)
-import { runMigrations } from "./migrate-db.js"; // <-- if your project uses a different path, change this
+// ✅ FIX 2: migrations live in PROJECT ROOT as migrate-db.mjs
+// From /server/railway-server.ts, go up one level.
+import { runMigrations } from "../migrate-db.mjs";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -53,14 +53,19 @@ app.use((req, res, next) => {
 // ✅ Redirect apex -> www (GET/HEAD only)
 app.use((req, res, next) => {
   const host = (req.headers.host || "").toLowerCase();
-  if ((req.method === "GET" || req.method === "HEAD") && host === "cloudcarsltd.com") {
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    host === "cloudcarsltd.com"
+  ) {
     return res.redirect(301, `https://www.cloudcarsltd.com${req.originalUrl}`);
   }
   next();
 });
 
 // Health check
-app.get("/healthz", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.get("/healthz", (_req, res) =>
+  res.json({ ok: true, ts: new Date().toISOString() })
+);
 
 // --------------------
 // API routes
@@ -89,7 +94,9 @@ app.post("/api/driver-apply", async (req, res) => {
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createDriverApplication failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to submit driver application" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to submit driver application" });
   }
 });
 
@@ -99,7 +106,9 @@ app.post("/api/corporate-inquiry", async (req, res) => {
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createCorporateInquiry failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to submit corporate inquiry" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to submit corporate inquiry" });
   }
 });
 
@@ -110,7 +119,9 @@ app.get("/api/admin/driver-applications", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllDriverApplications failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load driver applications" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load driver applications" });
   }
 });
 
@@ -120,7 +131,9 @@ app.get("/api/admin/corporate-inquiries", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllCorporateInquiries failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load corporate inquiries" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load corporate inquiries" });
   }
 });
 
@@ -130,18 +143,22 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllContactMessages failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load contact messages" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load contact messages" });
   }
 });
 
 // --------------------
 // Static / SPA
 // --------------------
-const clientDist = path.join(__dirname, "../client/dist");
+// NOTE: your build output is /dist/public (per logs), not /client/dist.
+// Use /dist/public so assets resolve correctly on Railway.
+const clientDist = path.join(process.cwd(), "dist", "public");
 app.use(express.static(clientDist));
 
 // SPA fallback (keep LAST)
-app.get("*", (req, res) => {
+app.get("*", (_req, res) => {
   res.sendFile(path.join(clientDist, "index.html"));
 });
 
@@ -166,7 +183,7 @@ async function safeRunMigrations() {
     return;
   }
 
-  // ✅ This is the key fix for Railway/Nixpacks:
+  // ✅ Key fix for Railway/Nixpacks:
   // some builds include drizzle/migrations but not drizzle/meta
   if (!drizzleJournalExists()) {
     console.warn("⚠️ Skipping migrations: drizzle/meta/_journal.json missing in container");
