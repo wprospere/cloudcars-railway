@@ -1,31 +1,42 @@
-import formData from 'form-data';
-import Mailgun from 'mailgun.js';
+import formData from "form-data";
+import Mailgun from "mailgun.js";
 
 const mailgun = new Mailgun(formData);
 
-// Initialize Mailgun client
-const getMailgunClient = () => {
+// ✅ Helper: EU-safe base URL (you confirmed EU)
+function getApiBaseUrl() {
+  return (
+    process.env.MAILGUN_API_BASE_URL ||
+    process.env.MAILGUN_BASE_URL ||
+    "https://api.eu.mailgun.net"
+  );
+}
+
+function getMailgunClient() {
   const apiKey = process.env.MAILGUN_API_KEY;
   const domain = process.env.MAILGUN_DOMAIN;
-  const apiBaseUrl = process.env.MAILGUN_API_BASE_URL || 'https://api.mailgun.net';
 
   if (!apiKey || !domain) {
-    console.warn('Mailgun not configured - emails will not be sent');
+    console.warn("Mailgun not configured - emails will not be sent", {
+      hasKey: !!apiKey,
+      hasDomain: !!domain,
+      baseUrl: getApiBaseUrl(),
+    });
     return null;
   }
 
   return mailgun.client({
-    username: 'api',
+    username: "api",
     key: apiKey,
-    url: apiBaseUrl,
+    url: getApiBaseUrl(), // ✅ EU by default
   });
-};
+}
 
 export async function sendEmail({
   to,
   subject,
   html,
-  from = 'Cloud Cars <noreply@cloudcarsltd.com>',
+  from = "Cloud Cars <no-reply@cloudcarsltd.com>",
 }: {
   to: string;
   subject: string;
@@ -33,9 +44,9 @@ export async function sendEmail({
   from?: string;
 }): Promise<boolean> {
   const mg = getMailgunClient();
-  
+
   if (!mg) {
-    console.log('Email would be sent to:', to, 'Subject:', subject);
+    console.log("Email NOT sent (Mailgun not configured):", { to, subject });
     return false;
   }
 
@@ -43,18 +54,29 @@ export async function sendEmail({
     const domain = process.env.MAILGUN_DOMAIN!;
     await mg.messages.create(domain, {
       from,
-      to: [to],
+      to, // ✅ Mailgun accepts string; no need for [to]
       subject,
       html,
     });
     return true;
-  } catch (error) {
-    console.error('Failed to send email:', error);
+  } catch (err: any) {
+    // ✅ This will show the REAL reason in Railway logs
+    console.error("Failed to send email (Mailgun):", {
+      status: err?.status,
+      message: err?.message,
+      details: err?.details,
+      baseUrl: getApiBaseUrl(),
+      domain: process.env.MAILGUN_DOMAIN,
+      keyStartsWith: process.env.MAILGUN_API_KEY?.slice(0, 4),
+      to,
+      from,
+    });
     return false;
   }
 }
 
-// Stub for owner notifications (not needed for Railway)
+// If you want owner notifications later, you can wire it to sendEmail.
+// For now, keep as log-only.
 export async function notifyOwner({
   title,
   content,
@@ -62,7 +84,6 @@ export async function notifyOwner({
   title: string;
   content: string;
 }): Promise<boolean> {
-  console.log('Owner notification:', title, '-', content);
-  // You could send an email to the owner here if needed
+  console.log("Owner notification:", title, "-", content);
   return true;
 }
