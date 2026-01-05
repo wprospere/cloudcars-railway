@@ -787,7 +787,11 @@ export const appRouter = router({
         await setDriverDocumentReview({
           docId: input.docId,
           status: input.status,
-          reviewedBy: ctx.user?.email || "admin",
+          reviewedBy:
+  (ctx.user as any)?.email ||
+  (ctx.user as any)?.username ||
+  String((ctx.user as any)?.id ?? "") ||
+  "admin",
           rejectionReason: input.rejectionReason ?? null,
         });
 
