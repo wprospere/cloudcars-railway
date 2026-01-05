@@ -182,7 +182,9 @@ export default function Inquiries() {
             <TabsTrigger value="corporate">
               Corporate ({corporate.length})
             </TabsTrigger>
-            <TabsTrigger value="messages">Messages ({messages.length})</TabsTrigger>
+            <TabsTrigger value="messages">
+              Messages ({messages.length})
+            </TabsTrigger>
           </TabsList>
 
           {/* ---------------- DRIVERS ---------------- */}
@@ -196,7 +198,8 @@ export default function Inquiries() {
                 const urgency = getUrgency(driver.createdAt);
                 const urgencyColor = getUrgencyColor(urgency);
 
-                const isSendingThis = sendingForId === Number(driver.id);
+                const driverId = Number(driver.id);
+                const isSendingThis = sendingForId === driverId;
 
                 // ✅ completion badge: supports either driver.documents or driver.driverDocuments
                 const docs = (driver?.documents ??
@@ -321,13 +324,20 @@ export default function Inquiries() {
                         size="sm"
                         disabled={sendOnboardingLink.isPending && isSendingThis}
                         onClick={() => {
-                          const driverId = Number(driver.id);
                           setSendingForId(driverId);
 
                           sendOnboardingLink.mutate(
                             { driverApplicationId: driverId },
                             {
                               onSuccess: async (res: any) => {
+                                // ✅ Only show success if server confirms email sent
+                                if (!res?.success) {
+                                  alert(
+                                    "Email failed to send (Mailgun). Check Railway logs/variables."
+                                  );
+                                  return;
+                                }
+
                                 const link = res?.link;
                                 if (link && typeof navigator !== "undefined") {
                                   try {
@@ -400,7 +410,8 @@ export default function Inquiries() {
                           </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {inquiry.contactName} · {inquiry.email} · {inquiry.phone}
+                          {inquiry.contactName} · {inquiry.email} ·{" "}
+                          {inquiry.phone}
                         </div>
                       </div>
 
@@ -480,7 +491,9 @@ export default function Inquiries() {
 
           {/* ---------------- MESSAGES ---------------- */}
           <TabsContent value="messages" className="space-y-4">
-            {messagesQuery.isLoading && <LoadingCard text="Loading messages..." />}
+            {messagesQuery.isLoading && (
+              <LoadingCard text="Loading messages..." />
+            )}
 
             {!messagesQuery.isLoading &&
               messages.map((msg: any) => {
@@ -493,7 +506,9 @@ export default function Inquiries() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="font-semibold">{msg.subject}</div>
-                          {!msg.isRead && <Badge variant="destructive">Unread</Badge>}
+                          {!msg.isRead && (
+                            <Badge variant="destructive">Unread</Badge>
+                          )}
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(msg.createdAt)}
