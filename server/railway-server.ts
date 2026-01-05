@@ -24,7 +24,7 @@ import {
 
 // ✅ FIX 2: migrations live in PROJECT ROOT as migrate-db.mjs
 // From /server/railway-server.ts, go up one level.
-import { runMigrations } from "../migrate-db.mjs";
+import { runMigrations } from "../migrate-db.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -86,7 +86,6 @@ app.use(
   createExpressMiddleware({
     router: appRouter,
     createContext,
-    transformer: superjson,
     onError({ error, path }) {
       console.error("tRPC error on path:", path, error);
     },
