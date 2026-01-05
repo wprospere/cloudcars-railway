@@ -757,7 +757,16 @@ export const appRouter = router({
           html,
         });
 
-        return { success: ok, link };
+        // ✅ IMPORTANT: if Mailgun fails, throw so the frontend shows an error
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Mailgun failed to send onboarding email. Check Railway variables.",
+          });
+        }
+
+        return { success: true, link };
       }),
 
     getDriverOnboardingProfile: adminProcedure

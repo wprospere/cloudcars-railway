@@ -330,15 +330,12 @@ export default function Inquiries() {
                             { driverApplicationId: driverId },
                             {
                               onSuccess: async (res: any) => {
-                                // ✅ Only show success if server confirms email sent
-                                if (!res?.success) {
-                                  alert(
-                                    "Email failed to send (Mailgun). Check Railway logs/variables."
-                                  );
-                                  return;
-                                }
-
                                 const link = res?.link;
+
+                                // NOTE:
+                                // After the backend change, failures will come through onError(),
+                                // so we can safely treat onSuccess as "sent".
+
                                 if (link && typeof navigator !== "undefined") {
                                   try {
                                     await navigator.clipboard.writeText(link);
