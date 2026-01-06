@@ -22,7 +22,7 @@ import {
 } from "./db";
 
 // ✅ migrations live in PROJECT ROOT
-import { runMigrations } from "../migrate-db.js";
+import { runMigrations } from "./db";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
