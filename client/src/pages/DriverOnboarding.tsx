@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useRoute } from "wouter";
+import { useLocation } from "wouter";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,26 +25,14 @@ const DOCS: { type: DocType; label: string; hint?: string }[] = [
   { type: "MOT", label: "MOT" },
 ];
 
-// ✅ Robust token reader:
-// - supports ?token=xxxx (your email link)
-// - supports /driver/onboarding/:token (optional alternate format)
-function useOnboardingToken() {
-  const [, params] = useRoute("/driver/onboarding/:token");
-
+function useQueryToken() {
+  const [location] = useLocation(); // wouter returns [location, setLocation]
   return useMemo(() => {
-    // 1) Query string token (source of truth)
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      const qsToken = sp.get("token");
-      if (qsToken) return qsToken.trim();
-    }
-
-    // 2) Path param fallback
-    const pathToken = (params as any)?.token;
-    if (pathToken) return String(pathToken).trim();
-
-    return "";
-  }, [params]);
+    const sp = new URLSearchParams(
+      location.includes("?") ? location.split("?")[1] : ""
+    );
+    return sp.get("token") || "";
+  }, [location]);
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -74,8 +62,52 @@ function prettyDocLabel(type: DocType) {
   return DOCS.find((d) => d.type === type)?.label ?? type;
 }
 
+/* -------------------------
+   ✅ UK reg helpers
+------------------------- */
+function normalizeUkReg(input: string) {
+  // Uppercase, remove spaces/dashes, keep only A–Z 0–9
+  return input
+    .toUpperCase()
+    .replace(/[\s-]+/g, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function isValidUkReg(normalized: string) {
+  // Expect normalized (no spaces)
+  // Covers:
+  // - Current format: AA11AAA
+  // - Prefix: A123ABC
+  // - Suffix: ABC123A
+  // - Dateless private plates (common)
+  // - NI: ABC1234 (3 letters + 1–4 numbers)
+  const current = /^[A-Z]{2}\d{2}[A-Z]{3}$/; // AA11AAA
+  const prefix = /^[A-Z]\d{1,3}[A-Z]{3}$/; // A123ABC
+  const suffix = /^[A-Z]{3}\d{1,3}[A-Z]$/; // ABC123A
+  const dateless1 = /^[A-Z]{1,3}\d{1,4}$/; // ABC1234 / AB12 / A1
+  const dateless2 = /^\d{1,4}[A-Z]{1,3}$/; // 1ABC / 12AB
+  const ni = /^[A-Z]{3}\d{1,4}$/; // ABC1234 (NI style)
+
+  return (
+    current.test(normalized) ||
+    prefix.test(normalized) ||
+    suffix.test(normalized) ||
+    dateless1.test(normalized) ||
+    dateless2.test(normalized) ||
+    ni.test(normalized)
+  );
+}
+
+function formatUkRegForDisplay(normalized: string) {
+  // Add a space for modern style plates: AA11 AAA
+  if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(normalized)) {
+    return `${normalized.slice(0, 4)} ${normalized.slice(4)}`;
+  }
+  return normalized;
+}
+
 export default function DriverOnboardingPage() {
-  const token = useOnboardingToken();
+  const token = useQueryToken();
 
   // Basic UI state
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -91,7 +123,9 @@ export default function DriverOnboardingPage() {
   const [capacity, setCapacity] = useState("");
 
   // Document UI state
-  const [selectedFiles, setSelectedFiles] = useState<Record<DocType, File | null>>({
+  const [selectedFiles, setSelectedFiles] = useState<
+    Record<DocType, File | null>
+  >({
     LICENSE_FRONT: null,
     LICENSE_BACK: null,
     BADGE: null,
@@ -141,7 +175,10 @@ export default function DriverOnboardingPage() {
       setModel(vehicle.model ?? "");
       setColour(vehicle.colour ?? "");
       setYear(vehicle.year ?? "");
-      setPlateNumber(vehicle.plateNumber ?? "");
+      // show formatted if possible
+      setPlateNumber(
+        formatUkRegForDisplay(normalizeUkReg(vehicle.plateNumber ?? ""))
+      );
       setCapacity(vehicle.capacity ?? "");
     }
   }, [profileQuery.data]);
@@ -179,6 +216,13 @@ export default function DriverOnboardingPage() {
       return showError("Please fill Registration, Make, Model, and Colour.");
     }
 
+    const normalizedPlate = normalizeUkReg(plateNumber);
+    if (plateNumber && !isValidUkReg(normalizedPlate)) {
+      return showError(
+        "Licence plate looks invalid. Please enter a UK registration (e.g. AB12 CDE)."
+      );
+    }
+
     await saveVehicle.mutateAsync({
       token,
       registration,
@@ -186,7 +230,7 @@ export default function DriverOnboardingPage() {
       model,
       colour,
       year: year || undefined,
-      plateNumber: plateNumber || undefined,
+      plateNumber: normalizedPlate || undefined,
       capacity: capacity || undefined,
     });
 
@@ -247,6 +291,13 @@ export default function DriverOnboardingPage() {
     // Vehicle minimal required check
     if (!registration || !make || !model || !colour) {
       return showError("Please save your vehicle details first.");
+    }
+
+    const normalizedPlate = normalizeUkReg(plateNumber);
+    if (plateNumber && !isValidUkReg(normalizedPlate)) {
+      return showError(
+        "Licence plate looks invalid. Please enter a UK registration (e.g. AB12 CDE)."
+      );
     }
 
     if (!allRequiredUploaded) {
@@ -336,7 +387,10 @@ export default function DriverOnboardingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Registration (Required)</Label>
-            <Input value={registration} onChange={(e) => setRegistration(e.target.value)} />
+            <Input
+              value={registration}
+              onChange={(e) => setRegistration(e.target.value)}
+            />
           </div>
           <div>
             <Label>Make (Required)</Label>
@@ -355,8 +409,23 @@ export default function DriverOnboardingPage() {
             <Input value={year} onChange={(e) => setYear(e.target.value)} />
           </div>
           <div>
-            <Label>Licence Plate Number</Label>
-            <Input value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} />
+            <Label>Licence Plate</Label>
+            <Input
+              value={plateNumber}
+              onChange={(e) => {
+                const normalized = normalizeUkReg(e.target.value);
+                setPlateNumber(formatUkRegForDisplay(normalized));
+              }}
+              placeholder="e.g. AB12 CDE"
+              inputMode="text"
+              autoCapitalize="characters"
+              spellCheck={false}
+            />
+            {plateNumber && !isValidUkReg(normalizeUkReg(plateNumber)) && (
+              <div className="text-xs text-destructive mt-1">
+                Please enter a valid UK registration (e.g. AB12 CDE).
+              </div>
+            )}
           </div>
           <div>
             <Label>Capacity</Label>
@@ -392,11 +461,18 @@ export default function DriverOnboardingPage() {
 
                 {existing?.fileUrl && (
                   <div className="text-sm">
-                    <a className="underline" href={existing.fileUrl} target="_blank" rel="noreferrer">
+                    <a
+                      className="underline"
+                      href={existing.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       View uploaded file
                     </a>
                     {existing?.status && (
-                      <span className="ml-2 text-muted-foreground">(Status: {existing.status})</span>
+                      <span className="ml-2 text-muted-foreground">
+                        (Status: {existing.status})
+                      </span>
                     )}
                   </div>
                 )}
@@ -425,7 +501,10 @@ export default function DriverOnboardingPage() {
                       type="date"
                       value={expiryDates[doc.type]}
                       onChange={(e) =>
-                        setExpiryDates((prev) => ({ ...prev, [doc.type]: e.target.value }))
+                        setExpiryDates((prev) => ({
+                          ...prev,
+                          [doc.type]: e.target.value,
+                        }))
                       }
                     />
                   </div>
@@ -450,10 +529,14 @@ export default function DriverOnboardingPage() {
       <Card className="p-6 space-y-3">
         <h2 className="text-lg font-semibold">Submit</h2>
         <p className="text-sm text-muted-foreground">
-          Once you have saved vehicle details and uploaded all documents, submit for review.
+          Once you have saved vehicle details and uploaded all documents, submit for
+          review.
         </p>
 
-        <Button onClick={handleSubmit} disabled={submitOnboarding.isPending || !allRequiredUploaded}>
+        <Button
+          onClick={handleSubmit}
+          disabled={submitOnboarding.isPending || !allRequiredUploaded}
+        >
           {submitOnboarding.isPending ? "Submitting..." : "Submit for Review"}
         </Button>
 
