@@ -26,13 +26,11 @@ const DOCS: { type: DocType; label: string; hint?: string }[] = [
 ];
 
 function useQueryToken() {
-  const [location] = useLocation(); // wouter returns [location, setLocation]
   return useMemo(() => {
-    const sp = new URLSearchParams(
-      location.includes("?") ? location.split("?")[1] : ""
-    );
+    if (typeof window === "undefined") return "";
+    const sp = new URLSearchParams(window.location.search);
     return sp.get("token") || "";
-  }, [location]);
+  }, []);
 }
 
 async function fileToBase64(file: File): Promise<string> {
