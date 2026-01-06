@@ -7,6 +7,9 @@ import { fileURLToPath } from "url";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
+// ✅ Needed for DB patching without Railway SQL console
+import mysql from "mysql2/promise";
+
 import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
@@ -27,6 +30,7 @@ import { runMigrations } from "./db";
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
+// Railway / reverse proxy
 app.set("trust proxy", 1);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,19 +73,16 @@ app.get("/healthz", (_req, res) =>
 // API routes
 // --------------------
 
-// ✅ IMPORTANT: Your frontend calls /api/admin/login (seen in DevTools)
-// So mount adminRoutes here:
+// ✅ IMPORTANT: Your frontend calls /api/admin/login
 app.use("/api/admin", adminRoutes);
 
 // ✅ Keep /admin working too, but only for non-GET/HEAD actions
-// (GET /admin/login should be handled by your React SPA)
 app.use("/admin", (req, res, next) => {
   if (req.method === "GET" || req.method === "HEAD") return next();
   return (adminRoutes as any)(req, res, next);
 });
 
-// ✅ IMPORTANT: Your frontend is likely configured for /api/trpc
-// Mount tRPC on BOTH paths to avoid HTML (index.html) being returned.
+// ✅ Mount tRPC on BOTH paths
 app.use(
   ["/trpc", "/api/trpc"],
   createExpressMiddleware({
@@ -168,7 +169,7 @@ app.get("*", (_req, res) => {
 });
 
 // --------------------
-// Startup
+// Startup helpers
 // --------------------
 
 function shouldRunMigrations() {
@@ -176,8 +177,96 @@ function shouldRunMigrations() {
 }
 
 function drizzleJournalExists() {
-  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
+  const journalPath = path.join(
+    process.cwd(),
+    "drizzle",
+    "meta",
+    "_journal.json"
+  );
   return fs.existsSync(journalPath);
+}
+
+/**
+ * ✅ DB patcher: fixes "Unknown column 'revokedAt'" without needing to run SQL manually.
+ * Safe to run on every boot (idempotent).
+ */
+async function patchDatabaseIfNeeded() {
+  const DATABASE_URL =
+    process.env.DATABASE_URL ||
+    process.env.MYSQL_URL ||
+    process.env.MYSQLDATABASE_URL ||
+    process.env.DATABASE_PRIVATE_URL;
+
+  if (!DATABASE_URL) {
+    console.warn(
+      "⚠️ DB patch skipped: no DATABASE_URL / MYSQL_URL / MYSQLDATABASE_URL / DATABASE_PRIVATE_URL found"
+    );
+    return;
+  }
+
+  let pool: mysql.Pool | null = null;
+
+  try {
+    pool = mysql.createPool({
+      uri: DATABASE_URL,
+      waitForConnections: true,
+      connectionLimit: 2,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    });
+
+    async function hasColumn(table: string, column: string) {
+      const [rows] = await pool!.query<any[]>(
+        `
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?
+        `,
+        [table, column]
+      );
+      return Number(rows?.[0]?.cnt ?? 0) > 0;
+    }
+
+    const table = "driver_onboarding_tokens";
+
+    // ✅ Your code selects revokedAt; prod table is missing it
+    if (!(await hasColumn(table, "revokedAt"))) {
+      console.log(`🛠️ DB patch: adding ${table}.revokedAt ...`);
+      await pool.query(
+        `ALTER TABLE \`${table}\` ADD COLUMN \`revokedAt\` DATETIME NULL`
+      );
+      console.log(`✅ DB patch: added ${table}.revokedAt`);
+    }
+
+    // These are common alongside your token logic; safe to add if missing
+    if (!(await hasColumn(table, "lastSentAt"))) {
+      console.log(`🛠️ DB patch: adding ${table}.lastSentAt ...`);
+      await pool.query(
+        `ALTER TABLE \`${table}\` ADD COLUMN \`lastSentAt\` DATETIME NULL`
+      );
+      console.log(`✅ DB patch: added ${table}.lastSentAt`);
+    }
+
+    if (!(await hasColumn(table, "sendCount"))) {
+      console.log(`🛠️ DB patch: adding ${table}.sendCount ...`);
+      await pool.query(
+        `ALTER TABLE \`${table}\` ADD COLUMN \`sendCount\` INT NOT NULL DEFAULT 0`
+      );
+      console.log(`✅ DB patch: added ${table}.sendCount`);
+    }
+  } catch (e: any) {
+    // Do not crash the whole server if patching fails
+    console.error("❌ DB patch failed:", e?.message || e);
+  } finally {
+    try {
+      await pool?.end();
+    } catch {
+      // ignore
+    }
+  }
 }
 
 async function safeRunMigrations() {
@@ -187,7 +276,9 @@ async function safeRunMigrations() {
   }
 
   if (!drizzleJournalExists()) {
-    console.warn("⚠️ Skipping migrations: drizzle/meta/_journal.json missing in container");
+    console.warn(
+      "⚠️ Skipping migrations: drizzle/meta/_journal.json missing in container"
+    );
     return;
   }
 
@@ -200,7 +291,14 @@ async function safeRunMigrations() {
   }
 }
 
+// --------------------
+// Startup
+// --------------------
 (async () => {
+  // ✅ Patch DB first so endpoints don't crash (revokedAt missing)
+  await patchDatabaseIfNeeded();
+
+  // Optional: run migrations if you enable RUN_MIGRATIONS=true
   await safeRunMigrations();
 
   try {
@@ -209,7 +307,7 @@ async function safeRunMigrations() {
     console.error("ensureDefaultAdmin failed:", e?.message || e);
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Cloud Cars server running on port ${PORT}`);
   });
 })();
