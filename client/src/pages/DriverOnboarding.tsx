@@ -409,7 +409,7 @@ export default function DriverOnboardingPage() {
             <Input value={year} onChange={(e) => setYear(e.target.value)} />
           </div>
           <div>
-            <Label>Licence Plate</Label>
+            <Label>Licence Plate Number</Label>
             <Input
               value={plateNumber}
               onChange={(e) => {
