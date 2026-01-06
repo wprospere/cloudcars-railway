@@ -6,7 +6,6 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import superjson from "superjson";
 
 import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
@@ -22,14 +21,12 @@ import {
   getAllContactMessages,
 } from "./db";
 
-// ✅ FIX 2: migrations live in PROJECT ROOT as migrate-db.mjs
-// From /server/railway-server.ts, go up one level.
+// ✅ migrations live in PROJECT ROOT
 import { runMigrations } from "../migrate-db.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
-// Railway / reverse proxy (important for secure cookies + req.secure)
 app.set("trust proxy", 1);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,9 +39,9 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ✅ Force lowercase admin URLs (GET/HEAD only, so APIs aren't affected)
+// ✅ Force lowercase admin URLs
 app.use((req, res, next) => {
-  if ((req.method === "GET" || req.method === "HEAD") && /^\/admin/i.test(req.path)) {
+  if (/^\/admin/i.test(req.path)) {
     const lower = req.path.toLowerCase();
     if (req.path !== lower) return res.redirect(301, lower);
   }
@@ -53,36 +50,40 @@ app.use((req, res, next) => {
 
 // ✅ Redirect apex -> www (GET/HEAD only)
 app.use((req, res, next) => {
-  const host = String(req.headers.host || "").toLowerCase();
-  if ((req.method === "GET" || req.method === "HEAD") && host === "cloudcarsltd.com") {
+  const host = (req.headers.host || "").toLowerCase();
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    host === "cloudcarsltd.com"
+  ) {
     return res.redirect(301, `https://www.cloudcarsltd.com${req.originalUrl}`);
   }
   next();
 });
 
 // Health check
-app.get("/healthz", (_req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
-});
+app.get("/healthz", (_req, res) =>
+  res.json({ ok: true, ts: new Date().toISOString() })
+);
 
 // --------------------
 // API routes
 // --------------------
 
-// ✅ IMPORTANT: Your frontend calls /api/admin/login
-// So mount adminRoutes at /api/admin (not /admin)
+// ✅ IMPORTANT: Your frontend calls /api/admin/login (seen in DevTools)
+// So mount adminRoutes here:
 app.use("/api/admin", adminRoutes);
 
-// (Optional) If you previously had legacy clients posting to /admin/login,
-// you can keep this alias too. It won't break the SPA because SPA needs GET /admin/*.
+// ✅ Keep /admin working too, but only for non-GET/HEAD actions
+// (GET /admin/login should be handled by your React SPA)
 app.use("/admin", (req, res, next) => {
-  if (req.method === "GET" || req.method === "HEAD") return next(); // let SPA handle pages
-  return (adminRoutes as any)(req, res, next); // allow POST /admin/login etc.
+  if (req.method === "GET" || req.method === "HEAD") return next();
+  return (adminRoutes as any)(req, res, next);
 });
 
-// tRPC
+// ✅ IMPORTANT: Your frontend is likely configured for /api/trpc
+// Mount tRPC on BOTH paths to avoid HTML (index.html) being returned.
 app.use(
-  "/trpc",
+  ["/trpc", "/api/trpc"],
   createExpressMiddleware({
     router: appRouter,
     createContext,
@@ -99,7 +100,9 @@ app.post("/api/driver-apply", async (req, res) => {
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createDriverApplication failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to submit driver application" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to submit driver application" });
   }
 });
 
@@ -109,7 +112,9 @@ app.post("/api/corporate-inquiry", async (req, res) => {
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createCorporateInquiry failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to submit corporate inquiry" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to submit corporate inquiry" });
   }
 });
 
@@ -120,7 +125,9 @@ app.get("/api/admin/driver-applications", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllDriverApplications failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load driver applications" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load driver applications" });
   }
 });
 
@@ -130,7 +137,9 @@ app.get("/api/admin/corporate-inquiries", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllCorporateInquiries failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load corporate inquiries" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load corporate inquiries" });
   }
 });
 
@@ -140,14 +149,16 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
     res.json({ ok: true, rows });
   } catch (e: any) {
     console.error("getAllContactMessages failed:", e?.message || e);
-    res.status(500).json({ ok: false, error: "Failed to load contact messages" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Failed to load contact messages" });
   }
 });
 
 // --------------------
 // Static / SPA
 // --------------------
-// NOTE: your build output is /dist/public (per logs), not /client/dist.
+// Railway build output: /dist/public
 const clientDist = path.join(process.cwd(), "dist", "public");
 app.use(express.static(clientDist));
 
@@ -161,8 +172,6 @@ app.get("*", (_req, res) => {
 // --------------------
 
 function shouldRunMigrations() {
-  // Default: do NOT run migrations automatically on Railway
-  // To run them manually: set RUN_MIGRATIONS=true on Railway then redeploy once.
   return String(process.env.RUN_MIGRATIONS || "").toLowerCase() === "true";
 }
 
@@ -179,7 +188,6 @@ async function safeRunMigrations() {
 
   if (!drizzleJournalExists()) {
     console.warn("⚠️ Skipping migrations: drizzle/meta/_journal.json missing in container");
-    console.warn("   (This is common on Railway Nixpacks unless explicitly included.)");
     return;
   }
 
@@ -188,7 +196,6 @@ async function safeRunMigrations() {
     await runMigrations();
     console.log("✅ Migrations complete");
   } catch (e: any) {
-    // Do NOT crash prod boot. Log and continue.
     console.error("❌ runMigrations failed:", e?.message || e);
   }
 }
@@ -196,7 +203,6 @@ async function safeRunMigrations() {
 (async () => {
   await safeRunMigrations();
 
-  // Ensure default admin user exists
   try {
     await ensureDefaultAdmin();
   } catch (e: any) {
