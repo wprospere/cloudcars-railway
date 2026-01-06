@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "wouter";
+import { useRoute } from "wouter";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,26 @@ const DOCS: { type: DocType; label: string; hint?: string }[] = [
   { type: "MOT", label: "MOT" },
 ];
 
-function useQueryToken() {
-  const [location] = useLocation(); // wouter returns [location, setLocation]
+// ✅ Robust token reader:
+// - supports ?token=xxxx (your email link)
+// - supports /driver/onboarding/:token (optional alternate format)
+function useOnboardingToken() {
+  const [, params] = useRoute("/driver/onboarding/:token");
+
   return useMemo(() => {
-    const sp = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "");
-    return sp.get("token") || "";
-  }, [location]);
+    // 1) Query string token (source of truth)
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const qsToken = sp.get("token");
+      if (qsToken) return qsToken.trim();
+    }
+
+    // 2) Path param fallback
+    const pathToken = (params as any)?.token;
+    if (pathToken) return String(pathToken).trim();
+
+    return "";
+  }, [params]);
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -61,7 +75,7 @@ function prettyDocLabel(type: DocType) {
 }
 
 export default function DriverOnboardingPage() {
-  const token = useQueryToken();
+  const token = useOnboardingToken();
 
   // Basic UI state
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
