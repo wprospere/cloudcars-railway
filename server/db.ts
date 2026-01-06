@@ -369,27 +369,39 @@ export async function createDriverOnboardingToken(params: {
     driverApplicationId: params.driverApplicationId,
     tokenHash,
     expiresAt: params.expiresAt,
+    // usedAt: null, // if your schema has it, drizzle will default to null anyway
   } as any);
 
   return { success: true };
 }
 
-export async function getDriverOnboardingByToken(rawToken: string) {
+/**
+ * Low-level lookup:
+ * Returns the token row even if expired/used (so routers can give better messages).
+ */
+export async function getDriverOnboardingTokenRow(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
   const rows = await db
     .select()
     .from(schema.driverOnboardingTokens)
-    .where(
-      and(
-        eq(schema.driverOnboardingTokens.tokenHash, tokenHash),
-        isNull(schema.driverOnboardingTokens.usedAt)
-      )
-    );
+    .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash));
 
-  const tokenRow: any = (rows as any[])[0];
+  return (rows as any[])[0] ?? null;
+}
+
+/**
+ * Current behavior (backwards compatible):
+ * Valid = exists AND not used AND not expired, else null.
+ */
+export async function getDriverOnboardingByToken(rawToken: string) {
+  const tokenRow: any = await getDriverOnboardingTokenRow(rawToken);
   if (!tokenRow) return null;
 
+  // If your schema has usedAt, enforce not used
+  if (tokenRow.usedAt) return null;
+
+  // Enforce not expired
   const exp = new Date(tokenRow.expiresAt);
   if (exp.getTime() < Date.now()) return null;
 
@@ -418,7 +430,9 @@ export async function upsertDriverVehicle(params: {
   const existing = await db
     .select()
     .from(schema.driverVehicles)
-    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+    .where(
+      eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+    );
 
   if ((existing as any[]).length > 0) {
     await db
@@ -433,7 +447,9 @@ export async function upsertDriverVehicle(params: {
         capacity: params.capacity ?? null,
         updatedAt: new Date(),
       } as any)
-      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+      .where(
+        eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+      );
 
     return { success: true };
   }
@@ -471,7 +487,10 @@ export async function upsertDriverDocument(params: {
     .from(schema.driverDocuments)
     .where(
       and(
-        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
+        eq(
+          schema.driverDocuments.driverApplicationId,
+          params.driverApplicationId
+        ),
         eq(schema.driverDocuments.type, params.type as any)
       )
     );
@@ -516,7 +535,9 @@ export async function setDriverDocumentReview(params: {
       reviewedAt: new Date(),
       reviewedBy: params.reviewedBy,
       rejectionReason:
-        params.status === "rejected" ? params.rejectionReason ?? "Rejected" : null,
+        params.status === "rejected"
+          ? params.rejectionReason ?? "Rejected"
+          : null,
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
 }
@@ -535,10 +556,15 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
     orderBy: (d, { asc }) => [asc(d.type)],
   });
 
-  // ✅ Return both to avoid breaking anything
+  // ✅ Return ALL common shapes so your UI never breaks:
   return {
+    // what your DriverOnboarding.tsx expects:
+    driverApplication: app ?? null,
+
+    // aliases (keep for backwards compatibility):
     driver: app ?? null,
     application: app ?? null,
+
     vehicle: vehicle ?? null,
     documents,
   };

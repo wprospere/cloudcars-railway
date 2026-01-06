@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,48 @@ const DOCS: { type: DocType; label: string; hint?: string }[] = [
   { type: "MOT", label: "MOT" },
 ];
 
-function useQueryToken() {
-  return useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const sp = new URLSearchParams(window.location.search);
-    return sp.get("token") || "";
-  }, []);
+// -------------------------
+// Token helpers
+// -------------------------
+
+function getTokenFromWindow(): string {
+  if (typeof window === "undefined") return "";
+  const sp = new URLSearchParams(window.location.search);
+  return sp.get("token") || "";
+}
+
+/**
+ * UK registration validation (covers common modern formats):
+ * - Current format: AA99AAA (e.g. AB12CDE)
+ * - Prefix: A999AAA (e.g. A123BCD)
+ * - Suffix: AAA999A (e.g. ABC123D)
+ * - Dateless: 1–3 letters + 1–3 numbers, or vice versa (basic support)
+ *
+ * We validate after removing spaces and uppercasing.
+ */
+function isUkReg(reg: string): boolean {
+  const v = reg.replace(/\s+/g, "").toUpperCase();
+
+  const current = /^[A-Z]{2}\d{2}[A-Z]{3}$/; // AB12CDE
+  const prefix = /^[A-Z]\d{1,3}[A-Z]{3}$/; // A123BCD
+  const suffix = /^[A-Z]{3}\d{1,3}[A-Z]$/; // ABC123D
+
+  // basic dateless support (not perfect, but good guard)
+  const dateless1 = /^[A-Z]{1,3}\d{1,3}$/; // ABC123
+  const dateless2 = /^\d{1,3}[A-Z]{1,3}$/; // 123ABC
+
+  return (
+    current.test(v) ||
+    prefix.test(v) ||
+    suffix.test(v) ||
+    dateless1.test(v) ||
+    dateless2.test(v)
+  );
+}
+
+function formatUkReg(reg: string): string {
+  // store/display as uppercase with spaces removed (UK regs are often shown without spaces)
+  return reg.replace(/\s+/g, "").toUpperCase();
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -60,52 +96,32 @@ function prettyDocLabel(type: DocType) {
   return DOCS.find((d) => d.type === type)?.label ?? type;
 }
 
-/* -------------------------
-   ✅ UK reg helpers
-------------------------- */
-function normalizeUkReg(input: string) {
-  // Uppercase, remove spaces/dashes, keep only A–Z 0–9
-  return input
-    .toUpperCase()
-    .replace(/[\s-]+/g, "")
-    .replace(/[^A-Z0-9]/g, "");
-}
-
-function isValidUkReg(normalized: string) {
-  // Expect normalized (no spaces)
-  // Covers:
-  // - Current format: AA11AAA
-  // - Prefix: A123ABC
-  // - Suffix: ABC123A
-  // - Dateless private plates (common)
-  // - NI: ABC1234 (3 letters + 1–4 numbers)
-  const current = /^[A-Z]{2}\d{2}[A-Z]{3}$/; // AA11AAA
-  const prefix = /^[A-Z]\d{1,3}[A-Z]{3}$/; // A123ABC
-  const suffix = /^[A-Z]{3}\d{1,3}[A-Z]$/; // ABC123A
-  const dateless1 = /^[A-Z]{1,3}\d{1,4}$/; // ABC1234 / AB12 / A1
-  const dateless2 = /^\d{1,4}[A-Z]{1,3}$/; // 1ABC / 12AB
-  const ni = /^[A-Z]{3}\d{1,4}$/; // ABC1234 (NI style)
-
-  return (
-    current.test(normalized) ||
-    prefix.test(normalized) ||
-    suffix.test(normalized) ||
-    dateless1.test(normalized) ||
-    dateless2.test(normalized) ||
-    ni.test(normalized)
-  );
-}
-
-function formatUkRegForDisplay(normalized: string) {
-  // Add a space for modern style plates: AA11 AAA
-  if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(normalized)) {
-    return `${normalized.slice(0, 4)} ${normalized.slice(4)}`;
-  }
-  return normalized;
-}
-
 export default function DriverOnboardingPage() {
-  const token = useQueryToken();
+  // wouter
+  const [location] = useLocation();
+
+  // Optional fallback route: /driver/onboarding/:token
+  const [, params] = useRoute("/driver/onboarding/:token");
+
+  // ✅ Robust token resolution:
+  // 1) ?token=... from window.location.search
+  // 2) /driver/onboarding/:token param
+  const token = useMemo(() => {
+    const fromQuery = getTokenFromWindow();
+    if (fromQuery) return fromQuery;
+
+    const fromParam = (params as any)?.token;
+    if (typeof fromParam === "string" && fromParam.length >= 10) return fromParam;
+
+    // last resort: try parse query from wouter location (sometimes includes ?...)
+    const hasQ = location.includes("?");
+    if (hasQ) {
+      const sp = new URLSearchParams(location.split("?")[1]);
+      return sp.get("token") || "";
+    }
+
+    return "";
+  }, [location, params]);
 
   // Basic UI state
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -117,13 +133,11 @@ export default function DriverOnboardingPage() {
   const [model, setModel] = useState("");
   const [colour, setColour] = useState("");
   const [year, setYear] = useState("");
-  const [plateNumber, setPlateNumber] = useState("");
+  const [licencePlate, setLicencePlate] = useState(""); // renamed
   const [capacity, setCapacity] = useState("");
 
   // Document UI state
-  const [selectedFiles, setSelectedFiles] = useState<
-    Record<DocType, File | null>
-  >({
+  const [selectedFiles, setSelectedFiles] = useState<Record<DocType, File | null>>({
     LICENSE_FRONT: null,
     LICENSE_BACK: null,
     BADGE: null,
@@ -173,10 +187,7 @@ export default function DriverOnboardingPage() {
       setModel(vehicle.model ?? "");
       setColour(vehicle.colour ?? "");
       setYear(vehicle.year ?? "");
-      // show formatted if possible
-      setPlateNumber(
-        formatUkRegForDisplay(normalizeUkReg(vehicle.plateNumber ?? ""))
-      );
+      setLicencePlate(vehicle.plateNumber ?? ""); // DB field stays plateNumber
       setCapacity(vehicle.capacity ?? "");
     }
   }, [profileQuery.data]);
@@ -205,30 +216,44 @@ export default function DriverOnboardingPage() {
     setStatusErr(null);
   };
 
+  function validateVehicle(): string | null {
+    if (!registration || !make || !model || !colour) {
+      return "Please fill Registration, Make, Model, and Colour.";
+    }
+
+    const reg = formatUkReg(registration);
+    if (!isUkReg(reg)) {
+      return "Registration doesn't look like a valid UK reg (e.g. AB12CDE).";
+    }
+
+    if (licencePlate) {
+      const lp = formatUkReg(licencePlate);
+      // Licence plate is optional, but if present, validate as a UK-style plate too
+      if (!isUkReg(lp)) {
+        return "Licence Plate doesn't look like a valid UK reg (e.g. AB12CDE).";
+      }
+    }
+
+    return null;
+  }
+
   async function handleSaveVehicle() {
     setStatusErr(null);
     setStatusMsg(null);
 
     if (!token) return showError("Missing token in URL.");
-    if (!registration || !make || !model || !colour) {
-      return showError("Please fill Registration, Make, Model, and Colour.");
-    }
 
-    const normalizedPlate = normalizeUkReg(plateNumber);
-    if (plateNumber && !isValidUkReg(normalizedPlate)) {
-      return showError(
-        "Licence plate looks invalid. Please enter a UK registration (e.g. AB12 CDE)."
-      );
-    }
+    const validationError = validateVehicle();
+    if (validationError) return showError(validationError);
 
     await saveVehicle.mutateAsync({
       token,
-      registration,
+      registration: formatUkReg(registration),
       make,
       model,
       colour,
       year: year || undefined,
-      plateNumber: normalizedPlate || undefined,
+      plateNumber: licencePlate ? formatUkReg(licencePlate) : undefined, // DB field name stays plateNumber
       capacity: capacity || undefined,
     });
 
@@ -286,17 +311,8 @@ export default function DriverOnboardingPage() {
 
     if (!token) return showError("Missing token in URL.");
 
-    // Vehicle minimal required check
-    if (!registration || !make || !model || !colour) {
-      return showError("Please save your vehicle details first.");
-    }
-
-    const normalizedPlate = normalizeUkReg(plateNumber);
-    if (plateNumber && !isValidUkReg(normalizedPlate)) {
-      return showError(
-        "Licence plate looks invalid. Please enter a UK registration (e.g. AB12 CDE)."
-      );
-    }
+    const validationError = validateVehicle();
+    if (validationError) return showError("Please fix vehicle details first: " + validationError);
 
     if (!allRequiredUploaded) {
       return showError("Please upload all required documents before submitting.");
@@ -344,7 +360,11 @@ export default function DriverOnboardingPage() {
     );
   }
 
-  const driver = (profileQuery.data as any)?.driverApplication;
+  // ✅ Support both shapes:
+  const driver =
+    (profileQuery.data as any)?.driverApplication ||
+    (profileQuery.data as any)?.driver ||
+    (profileQuery.data as any)?.application;
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
@@ -387,7 +407,10 @@ export default function DriverOnboardingPage() {
             <Label>Registration (Required)</Label>
             <Input
               value={registration}
-              onChange={(e) => setRegistration(e.target.value)}
+              onChange={(e) => setRegistration(formatUkReg(e.target.value))}
+              placeholder="e.g. AB12CDE"
+              inputMode="text"
+              autoCapitalize="characters"
             />
           </div>
           <div>
@@ -407,28 +430,24 @@ export default function DriverOnboardingPage() {
             <Input value={year} onChange={(e) => setYear(e.target.value)} />
           </div>
           <div>
-            <Label>Licence Plate Number</Label>
+            <Label>Licence Plate</Label>
             <Input
-              value={plateNumber}
-              onChange={(e) => {
-                const normalized = normalizeUkReg(e.target.value);
-                setPlateNumber(formatUkRegForDisplay(normalized));
-              }}
-              placeholder="e.g. AB12 CDE"
+              value={licencePlate}
+              onChange={(e) => setLicencePlate(formatUkReg(e.target.value))}
+              placeholder="Optional"
               inputMode="text"
               autoCapitalize="characters"
-              spellCheck={false}
             />
-            {plateNumber && !isValidUkReg(normalizeUkReg(plateNumber)) && (
-              <div className="text-xs text-destructive mt-1">
-                Please enter a valid UK registration (e.g. AB12 CDE).
-              </div>
-            )}
           </div>
           <div>
             <Label>Capacity</Label>
             <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
           </div>
+        </div>
+
+        {/* Small validation hint */}
+        <div className="text-xs text-muted-foreground">
+          UK reg example: <span className="font-medium">AB12CDE</span>
         </div>
       </Card>
 
@@ -527,8 +546,7 @@ export default function DriverOnboardingPage() {
       <Card className="p-6 space-y-3">
         <h2 className="text-lg font-semibold">Submit</h2>
         <p className="text-sm text-muted-foreground">
-          Once you have saved vehicle details and uploaded all documents, submit for
-          review.
+          Once you have saved vehicle details and uploaded all documents, submit for review.
         </p>
 
         <Button
