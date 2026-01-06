@@ -351,33 +351,84 @@ export async function deleteSiteImage(imageKey: string) {
 }
 
 // ============================================================================
-// ✅ Phase 1 Driver Onboarding (Secure link + vehicle + documents + review)
+// ✅ Phase 1.5 Driver Onboarding (Secure link + hardened tokens + vehicle + docs)
 // ============================================================================
 
 function sha256(input: string) {
   return createHash("sha256").update(input).digest("hex");
 }
 
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export type TokenCheckReason =
+  | "TOKEN_INVALID"
+  | "TOKEN_EXPIRED"
+  | "TOKEN_USED"
+  | "TOKEN_REVOKED";
+
+/**
+ * Revoke all active tokens for an application (prevents multiple valid links).
+ */
+export async function revokeActiveDriverOnboardingTokens(
+  driverApplicationId: number
+) {
+  await db
+    .update(schema.driverOnboardingTokens)
+    .set({ revokedAt: new Date() } as any)
+    .where(
+      and(
+        eq(
+          schema.driverOnboardingTokens.driverApplicationId,
+          driverApplicationId
+        ),
+        isNull(schema.driverOnboardingTokens.usedAt),
+        isNull(schema.driverOnboardingTokens.revokedAt)
+      )
+    );
+}
+
+/**
+ * ✅ Create a fresh onboarding token.
+ * - Revokes existing active tokens for that driverApplicationId
+ * - Stores only tokenHash
+ * - Sets expiry (default 7 days if not provided)
+ *
+ * You email the RAW token in the link. You store ONLY the hash.
+ */
 export async function createDriverOnboardingToken(params: {
   driverApplicationId: number;
   rawToken: string;
-  expiresAt: Date;
+  expiresAt?: Date; // optional; defaults to now + 7 days
+  sentNow?: boolean; // if true, sets lastSentAt and sendCount
 }) {
   const tokenHash = sha256(params.rawToken);
+  const now = new Date();
+  const expiresAt = params.expiresAt ?? addDays(now, 7);
+
+  // Ensure only one active token at a time
+  await revokeActiveDriverOnboardingTokens(params.driverApplicationId);
 
   await db.insert(schema.driverOnboardingTokens).values({
     driverApplicationId: params.driverApplicationId,
     tokenHash,
-    expiresAt: params.expiresAt,
-    // usedAt: null, // if your schema has it, drizzle will default to null anyway
+    expiresAt,
+    usedAt: null,
+    revokedAt: null,
+    createdAt: now,
+    lastSentAt: params.sentNow ? now : null,
+    sendCount: params.sentNow ? 1 : 0,
   } as any);
 
-  return { success: true };
+  return { success: true, expiresAt };
 }
 
 /**
  * Low-level lookup:
- * Returns the token row even if expired/used (so routers can give better messages).
+ * Returns the token row even if expired/used/revoked (so UI can be friendly).
  */
 export async function getDriverOnboardingTokenRow(rawToken: string) {
   const tokenHash = sha256(rawToken);
@@ -385,29 +436,48 @@ export async function getDriverOnboardingTokenRow(rawToken: string) {
   const rows = await db
     .select()
     .from(schema.driverOnboardingTokens)
-    .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash));
+    .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash))
+    .limit(1);
 
   return (rows as any[])[0] ?? null;
 }
 
 /**
- * Current behavior (backwards compatible):
- * Valid = exists AND not used AND not expired, else null.
+ * Friendly validation for UI:
+ * Returns {ok:true,row} OR {ok:false, reason}
  */
-export async function getDriverOnboardingByToken(rawToken: string) {
-  const tokenRow: any = await getDriverOnboardingTokenRow(rawToken);
-  if (!tokenRow) return null;
+export async function checkDriverOnboardingToken(
+  rawToken: string
+): Promise<
+  | { ok: true; row: typeof schema.driverOnboardingTokens.$inferSelect }
+  | { ok: false; reason: TokenCheckReason }
+> {
+  const row: any = await getDriverOnboardingTokenRow(rawToken);
+  if (!row) return { ok: false, reason: "TOKEN_INVALID" };
 
-  // If your schema has usedAt, enforce not used
-  if (tokenRow.usedAt) return null;
+  if (row.revokedAt) return { ok: false, reason: "TOKEN_REVOKED" };
+  if (row.usedAt) return { ok: false, reason: "TOKEN_USED" };
 
-  // Enforce not expired
-  const exp = new Date(tokenRow.expiresAt);
-  if (exp.getTime() < Date.now()) return null;
+  const exp = new Date(row.expiresAt);
+  if (exp.getTime() <= Date.now()) return { ok: false, reason: "TOKEN_EXPIRED" };
 
-  return tokenRow as typeof schema.driverOnboardingTokens.$inferSelect;
+  return { ok: true, row };
 }
 
+/**
+ * Backwards compatible:
+ * Valid = exists AND not used AND not revoked AND not expired, else null.
+ */
+export async function getDriverOnboardingByToken(rawToken: string) {
+  const res = await checkDriverOnboardingToken(rawToken);
+  if (!res.ok) return null;
+  return res.row;
+}
+
+/**
+ * Lock token after submit (prevent re-use).
+ * Call this ONLY after successful onboarding save.
+ */
 export async function markDriverOnboardingTokenUsed(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
@@ -416,6 +486,58 @@ export async function markDriverOnboardingTokenUsed(rawToken: string) {
     .set({ usedAt: new Date() } as any)
     .where(eq(schema.driverOnboardingTokens.tokenHash, tokenHash));
 }
+
+/**
+ * Admin resend helper:
+ * - revokes old active tokens
+ * - inserts new token with lastSentAt/sendCount
+ *
+ * (You still send the email in your mailer layer.)
+ */
+export async function resendDriverOnboardingToken(params: {
+  driverApplicationId: number;
+  rawToken: string;
+  expiresAt?: Date;
+}) {
+  const now = new Date();
+  const tokenHash = sha256(params.rawToken);
+  const expiresAt = params.expiresAt ?? addDays(now, 7);
+
+  await revokeActiveDriverOnboardingTokens(params.driverApplicationId);
+
+  await db.insert(schema.driverOnboardingTokens).values({
+    driverApplicationId: params.driverApplicationId,
+    tokenHash,
+    expiresAt,
+    usedAt: null,
+    revokedAt: null,
+    createdAt: now,
+    lastSentAt: now,
+    sendCount: 1,
+  } as any);
+
+  return { success: true, expiresAt };
+}
+
+/**
+ * Optional: if you ever re-send the SAME token (not recommended),
+ * this bumps lastSentAt + sendCount.
+ */
+export async function bumpOnboardingTokenSent(rawToken: string) {
+  const row: any = await getDriverOnboardingTokenRow(rawToken);
+  if (!row) return { success: false };
+
+  const nextCount = Number(row.sendCount ?? 0) + 1;
+
+  await db
+    .update(schema.driverOnboardingTokens)
+    .set({ lastSentAt: new Date(), sendCount: nextCount } as any)
+    .where(eq(schema.driverOnboardingTokens.id, Number(row.id)));
+
+  return { success: true, sendCount: nextCount };
+}
+
+// -------------------- Vehicle --------------------
 
 export async function upsertDriverVehicle(params: {
   driverApplicationId: number;
