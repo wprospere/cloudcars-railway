@@ -7,6 +7,8 @@ import {
   varchar,
   boolean,
   date,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
 /**
@@ -199,20 +201,52 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
 
 export const __schemaVersion = "schema-aligned-with-railway";
+
 /**
- * Driver onboarding tokens (Phase 1 - secure link)
+ * Driver onboarding tokens (Phase 1.5 - hardened secure link)
+ *
+ * ✅ Supports:
+ * - Auto-expire (expiresAt)
+ * - Lock after submit (usedAt)
+ * - Prevent re-use (usedAt check)
+ * - Resend link (revokedAt + lastSentAt + sendCount)
+ *
+ * NOTE:
+ * - You store tokenHash (good). Your email link contains the RAW token.
+ * - On validate/consume, hash(rawToken) and match tokenHash.
  */
-export const driverOnboardingTokens = mysqlTable("driver_onboarding_tokens", {
-  id: int("id").autoincrement().primaryKey(),
-  driverApplicationId: int("driverApplicationId").notNull(),
+export const driverOnboardingTokens = mysqlTable(
+  "driver_onboarding_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
 
-  // store hashed token (safer than raw token)
-  tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+    driverApplicationId: int("driverApplicationId").notNull(),
 
-  expiresAt: timestamp("expiresAt").notNull(),
-  usedAt: timestamp("usedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+    // store hashed token (safer than raw token)
+    tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+
+    // ✅ hardening fields
+    expiresAt: timestamp("expiresAt").notNull(),
+    usedAt: timestamp("usedAt"),
+    revokedAt: timestamp("revokedAt"),
+
+    // ✅ resend tracking (optional but recommended)
+    lastSentAt: timestamp("lastSentAt"),
+    sendCount: int("sendCount").default(0).notNull(),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    // hashed token must be unique
+    tokenHashUnique: uniqueIndex("ux_driver_onboarding_token_hash").on(t.tokenHash),
+
+    // lookups by application are common in admin
+    appIdx: index("ix_driver_onboarding_app").on(t.driverApplicationId),
+
+    // optional: useful for cleanup jobs
+    expiresIdx: index("ix_driver_onboarding_expires").on(t.expiresAt),
+  })
+);
 
 export type DriverOnboardingToken = typeof driverOnboardingTokens.$inferSelect;
 export type InsertDriverOnboardingToken = typeof driverOnboardingTokens.$inferInsert;
