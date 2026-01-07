@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useCmsContent } from "@/hooks/useCmsContent";
+import { trpc } from "@/lib/trpc";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,61 +54,58 @@ const benefits = [
 
 type Partner = { name: string; logo: string };
 
-// ✅ Fallback partners (used if CMS not set / invalid)
+// ✅ The partner logo slots you created in Admin → Manage Images
+const PARTNER_SLOTS: Array<{ key: string; name: string }> = [
+  { key: "partner-logo-1", name: "Trusted Partner" },
+  { key: "partner-logo-2", name: "Trusted Partner" },
+  { key: "partner-logo-3", name: "Trusted Partner" },
+  { key: "partner-logo-4", name: "Trusted Partner" },
+];
+
+// ✅ Fallback partners (used if no uploaded logos available)
 const FALLBACK_PARTNERS: Partner[] = [
   { name: "Boots UK", logo: "/partners/boots.png" },
   { name: "Speedo", logo: "/partners/speedo.png" },
   { name: "Nottinghamshire Healthcare Trust", logo: "/partners/nhs-nottinghamshire.png" },
 ];
 
-function safeParseJson(input: unknown): any | null {
-  if (typeof input !== "string") return null;
-  try {
-    return JSON.parse(input);
-  } catch {
-    return null;
-  }
-}
-
-function isNonEmptyString(v: unknown): v is string {
-  return typeof v === "string" && v.trim().length > 0;
-}
-
-function sanitizePartners(raw: any): Partner[] {
-  const arr = raw?.partners;
-  if (!Array.isArray(arr)) return [];
-  const cleaned: Partner[] = [];
-
-  for (const item of arr) {
-    const name = item?.name;
-    const logo = item?.logo;
-    if (!isNonEmptyString(name) || !isNonEmptyString(logo)) continue;
-    cleaned.push({ name: name.trim(), logo: logo.trim() });
-  }
-
-  // Deduplicate by name
-  const seen = new Set<string>();
-  return cleaned.filter((p) => {
-    const key = p.name.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 export default function Corporate() {
   const content = useCmsContent("corporate");
 
-  // ✅ CMS controlled partners (logos only)
-  // Create this CMS section in admin: sectionKey = "corporate_partners"
-  // Store JSON in extraData: { "partners": [ { "name": "...", "logo": "..." } ] }
-  const partnersContent = useCmsContent("corporate_partners");
+  /**
+   * ✅ Pull uploaded logos from the Images store
+   * If this endpoint is protected on your backend, it may fail on public pages;
+   * we handle that gracefully by falling back to static logos.
+   */
+  const imagesQuery = trpc.cms.getAllImages.useQuery(undefined, {
+    retry: false,
+    staleTime: 60_000,
+  });
 
-  const partners = useMemo(() => {
-    const parsed = safeParseJson(partnersContent?.extraData);
-    const fromCms = sanitizePartners(parsed);
-    return fromCms.length > 0 ? fromCms : FALLBACK_PARTNERS;
-  }, [partnersContent?.extraData]);
+  const partners: Partner[] = useMemo(() => {
+    const imgs = imagesQuery.data;
+
+    if (!Array.isArray(imgs) || imgs.length === 0) {
+      return FALLBACK_PARTNERS;
+    }
+
+    const byKey = new Map<string, string>();
+    for (const img of imgs) {
+      if (img?.imageKey && img?.url) byKey.set(img.imageKey, img.url);
+    }
+
+    // Build partners from uploaded slots (only those that exist)
+    const uploaded: Partner[] = PARTNER_SLOTS.map((slot, idx) => {
+      const url = byKey.get(slot.key);
+      if (!url) return null;
+      // Give each one a stable label if you want, otherwise generic name is fine
+      const name = slot.name === "Trusted Partner" ? `Trusted Partner ${idx + 1}` : slot.name;
+      return { name, logo: url };
+    }).filter(Boolean) as Partner[];
+
+    // If nothing uploaded yet, use fallback logos
+    return uploaded.length > 0 ? uploaded : FALLBACK_PARTNERS;
+  }, [imagesQuery.data]);
 
   // ✅ Track which partner logos failed to load so we can show the name instead
   const [logoFailed, setLogoFailed] = useState<Record<string, boolean>>({});
@@ -197,7 +196,7 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* ✅ Trusted Partners (CMS Controlled) */}
+            {/* ✅ Trusted Partners (from Admin → Manage Images) */}
             <div className="pt-8 border-t border-border">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
@@ -259,13 +258,7 @@ export default function Corporate() {
                 })}
               </div>
 
-              {/* ✅ IMPORTANT: do NOT show this on live site */}
-              {process.env.NODE_ENV !== "production" && (
-                <div className="mt-4 text-xs text-muted-foreground">
-                  To add or update logos, edit CMS section:{" "}
-                  <span className="font-medium">corporate_partners</span>
-                </div>
-              )}
+              {/* ✅ No admin/developer message on homepage (removed) */}
             </div>
           </div>
 
