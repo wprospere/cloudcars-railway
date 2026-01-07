@@ -1,100 +1,147 @@
-// Preconfigured storage helpers for Railway deployment
-// Uses environment variables for AWS S3 or compatible storage
+// server/storage.ts
+// S3-compatible storage helpers (Railway Buckets or any S3-compatible provider)
+//
+// Required env vars:
+//   S3_ENDPOINT
+//   S3_REGION            (optional, defaults to "auto")
+//   S3_BUCKET
+//   S3_ACCESS_KEY_ID
+//   S3_SECRET_ACCESS_KEY
+//
+// Notes:
+// - forcePathStyle: true is important for many S3-compatible endpoints.
+// - storagePut returns BOTH a stable object key and a URL.
+//   - If your bucket is public, it returns a direct URL.
+//   - If your bucket is private, set S3_PUBLIC_BASE_URL="" and it returns a presigned GET URL.
 
-type StorageConfig = { baseUrl: string; apiKey: string };
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-function getStorageConfig(): StorageConfig {
-  const baseUrl = process.env.BUILT_IN_FORGE_API_URL || process.env.STORAGE_API_URL;
-  const apiKey = process.env.BUILT_IN_FORGE_API_KEY || process.env.STORAGE_API_KEY;
+type S3Config = {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
 
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY (or STORAGE_API_URL and STORAGE_API_KEY)"
-    );
-  }
+  // Optional:
+  // If your bucket is PUBLIC, set this to the public base URL that serves objects, e.g.
+  //   https://<your-public-domain-or-cdn>/<bucket>  (depends on provider)
+  // If set, storageGet/storagePut will return stable public URLs (non-expiring).
+  publicBaseUrl?: string;
+};
 
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-
-function buildUploadUrl(baseUrl: string, relKey: string): URL {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-
-async function buildDownloadUrl(
-  baseUrl: string,
-  relKey: string,
-  apiKey: string
-): Promise<string> {
-  const downloadApiUrl = new URL(
-    "v1/storage/downloadUrl",
-    ensureTrailingSlash(baseUrl)
-  );
-  downloadApiUrl.searchParams.set("path", normalizeKey(relKey));
-  const response = await fetch(downloadApiUrl, {
-    method: "GET",
-    headers: buildAuthHeaders(apiKey),
-  });
-  return (await response.json()).url;
-}
-
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
+function required(name: string) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing env var: ${name}`);
+  return v;
 }
 
 function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "");
 }
 
-function toFormData(
-  data: Buffer | Uint8Array | string,
-  contentType: string,
-  fileName: string
-): FormData {
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
+function stripTrailingSlashes(v: string): string {
+  return v.replace(/\/+$/, "");
 }
 
-function buildAuthHeaders(apiKey: string): HeadersInit {
-  return { Authorization: `Bearer ${apiKey}` };
+function joinUrl(base: string, key: string): string {
+  return `${stripTrailingSlashes(base)}/${normalizeKey(key)}`;
 }
 
+function getS3Config(): S3Config {
+  const endpoint = required("S3_ENDPOINT");
+  const region = process.env.S3_REGION || "auto";
+  const bucket = required("S3_BUCKET");
+  const accessKeyId = required("S3_ACCESS_KEY_ID");
+  const secretAccessKey = required("S3_SECRET_ACCESS_KEY");
+
+  const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL
+    ? stripTrailingSlashes(process.env.S3_PUBLIC_BASE_URL)
+    : undefined;
+
+  return { endpoint, region, bucket, accessKeyId, secretAccessKey, publicBaseUrl };
+}
+
+function makeS3Client() {
+  const { endpoint, region, accessKeyId, secretAccessKey } = getS3Config();
+
+  return new S3Client({
+    region,
+    endpoint, // IMPORTANT for S3-compatible providers
+    credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: true, // IMPORTANT for many S3-compatible providers
+  });
+}
+
+function ensureBuffer(data: Buffer | Uint8Array | string): Buffer {
+  if (Buffer.isBuffer(data)) return data;
+  if (typeof data === "string") return Buffer.from(data, "utf8");
+  return Buffer.from(data);
+}
+
+/**
+ * Uploads data to S3 and returns { key, url }.
+ * - If S3_PUBLIC_BASE_URL is set, returns a stable public URL.
+ * - Otherwise returns a presigned GET URL (default 7 days).
+ */
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
-  });
+  const cfg = getS3Config();
+  const s3 = makeS3Client();
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+  const key = normalizeKey(relKey);
+  const body = ensureBuffer(data);
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+
+  // Public bucket? return stable URL
+  if (cfg.publicBaseUrl) {
+    return { key, url: joinUrl(cfg.publicBaseUrl, key) };
   }
-  const url = (await response.json()).url;
+
+  // Private bucket: return presigned GET URL
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
+    { expiresIn: 60 * 60 * 24 * 7 } // 7 days
+  );
+
   return { key, url };
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
+/**
+ * Returns { key, url } for downloading.
+ * - If S3_PUBLIC_BASE_URL is set, returns stable public URL.
+ * - Otherwise returns a presigned GET URL (default 1 hour).
+ */
+export async function storageGet(
+  relKey: string
+): Promise<{ key: string; url: string }> {
+  const cfg = getS3Config();
+  const s3 = makeS3Client();
+
   const key = normalizeKey(relKey);
-  return {
-    key,
-    url: await buildDownloadUrl(baseUrl, key, apiKey),
-  };
+
+  if (cfg.publicBaseUrl) {
+    return { key, url: joinUrl(cfg.publicBaseUrl, key) };
+  }
+
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
+    { expiresIn: 60 * 60 } // 1 hour
+  );
+
+  return { key, url };
 }
