@@ -15,7 +15,6 @@ import {
   FileText,
   CheckCircle2,
   Loader2,
-  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -188,44 +187,32 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* ✅ Trusted Partners */}
+            {/* ✅ Trusted by strip */}
             <div className="pt-8 border-t border-border">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Trusted partners
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    A selection of organisations we support with corporate transport.
-                  </p>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-                  <BadgeCheck className="w-4 h-4" />
-                  Verified
-                </div>
+              <div className="mb-4">
+                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
+                  Trusted by
+                </p>
               </div>
 
-              {/* Premium logo grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
                 {partners.map((p) => {
                   const failed = !!logoFailed[p.name];
 
                   return (
                     <div
                       key={`${p.name}-${p.logo}`}
-                      className="group rounded-2xl border border-border bg-card px-4 py-5 flex items-center justify-center transition-all duration-200 hover:shadow-sm hover:-translate-y-[1px]"
+                      className="group flex items-center"
                       title={p.name}
                       aria-label={p.name}
                     >
-                      {/* Logo frame gives consistent sizing */}
-                      <div className="h-10 w-full max-w-[160px] flex items-center justify-center">
+                      <div className="h-10 w-[140px] sm:w-[160px] flex items-center justify-center">
                         {!failed ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={p.logo}
                             alt={`${p.name} logo`}
-                            className="max-h-10 max-w-[160px] w-auto object-contain opacity-75 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
+                            className="max-h-10 max-w-[160px] w-auto object-contain opacity-70 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
                             loading="lazy"
                             onError={() => {
                               setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
