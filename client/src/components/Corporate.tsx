@@ -221,17 +221,17 @@ export default function Corporate() {
                   return (
                     <div
                       key={`${p.name}-${p.logo}`}
-                      className="relative overflow-hidden rounded-xl border border-border bg-card px-4 py-6 flex items-center justify-center transition hover:shadow-sm"
+                      className="group relative overflow-hidden rounded-xl border border-border bg-card px-4 py-6 flex items-center justify-center transition hover:shadow-sm"
                       title={p.name}
                       aria-label={p.name}
                     >
-                      {/* Logo */}
+                      {/* Logo (premium hover effect) */}
                       {!failed && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.logo}
                           alt={`${p.name} logo`}
-                          className="max-h-10 w-auto object-contain opacity-90"
+                          className="max-h-10 w-auto object-contain opacity-80 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
                           loading="lazy"
                           onError={() => {
                             setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
