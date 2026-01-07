@@ -9,7 +9,6 @@ import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
 
 // ✅ Drizzle migrations (run on server boot)
-import fs from "fs";
 import path from "path";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 
@@ -62,58 +61,23 @@ export { schema };
  * ✅ Run Drizzle migrations once (call this on server startup)
  * Safe to call multiple times; it only runs once per process.
  *
- * This resolver prevents Railway boot failures when:
- * - drizzle/meta/_journal.json is in one folder
- * - .sql files are in another folder
+ * Your repo layout is:
+ * - drizzle/meta/_journal.json
+ * - drizzle/*.sql
  *
- * It will run migrations only if it finds a folder containing BOTH:
- * - meta/_journal.json
- * - at least one .sql file
+ * So migrationsFolder MUST be the parent folder: "drizzle"
  */
 let migrationsRan = false;
-
-function exists(p: string) {
-  try {
-    return fs.existsSync(p);
-  } catch {
-    return false;
-  }
-}
 
 export async function runMigrations() {
   if (migrationsRan) return;
   migrationsRan = true;
 
-  const candidates = [
-    path.join(process.cwd(), "drizzle"),
-    path.join(process.cwd(), "drizzle", "migrations"),
-  ];
+  const migrationsFolder = path.join(process.cwd(), "drizzle");
+  console.log("🛠️ Running drizzle migrations from:", migrationsFolder);
 
-  const pick = candidates.find((folder) => {
-    const journal = path.join(folder, "meta", "_journal.json");
-    if (!exists(journal)) return false;
+  await migrate(db as any, { migrationsFolder });
 
-    // Ensure SQL files exist alongside the journal
-    let files: string[] = [];
-    try {
-      files = fs.readdirSync(folder);
-    } catch {
-      return false;
-    }
-
-    return files.some((f) => f.endsWith(".sql"));
-  });
-
-  if (!pick) {
-    console.warn(
-      "⚠️ Skipping migrations: could not find a folder containing BOTH meta/_journal.json AND .sql files. " +
-        "Ensure journal + sql live together under either /drizzle or /drizzle/migrations."
-    );
-    return;
-  }
-
-  console.log("🛠️ Running drizzle migrations from:", pick);
-  await migrate(db as any, { migrationsFolder: pick });
   console.log("✅ Drizzle migrations complete");
 }
 
