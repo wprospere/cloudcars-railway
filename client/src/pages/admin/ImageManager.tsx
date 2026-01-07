@@ -22,19 +22,74 @@ import { Upload, Loader2, Image as ImageIcon, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
-// Predefined image slots that can be customised
-const imageSlots = [
-  { key: "hero-background", label: "Hero Background", description: "Main banner background image" },
-  { key: "about-image", label: "About Section Image", description: "Image for the about section" },
-  { key: "services-standard", label: "Standard Service", description: "Image for standard taxi service" },
-  { key: "services-executive", label: "Executive Service", description: "Image for executive car service" },
-  { key: "services-corporate", label: "Corporate Service", description: "Image for corporate accounts" },
-
-  // ✅ Corporate Partner Logos (NEW)
-  { key: "corporate_partner_boots", label: "Corporate Partner – Boots", description: "Boots UK logo (transparent PNG recommended)" },
-  { key: "corporate_partner_speedo", label: "Corporate Partner – Speedo", description: "Speedo logo (transparent PNG recommended)" },
-  { key: "corporate_partner_nhs", label: "Corporate Partner – NHS Nottinghamshire", description: "Nottinghamshire Healthcare Trust logo" },
+/**
+ * ✅ Main site images (used in homepage/services/about)
+ */
+const mainImageSlots = [
+  {
+    key: "hero-background",
+    label: "Hero Background",
+    description: "Main banner background image",
+    kind: "cover" as const,
+  },
+  {
+    key: "about-image",
+    label: "About Section Image",
+    description: "Image for the about section",
+    kind: "cover" as const,
+  },
+  {
+    key: "services-standard",
+    label: "Standard Service",
+    description: "Image for standard taxi service",
+    kind: "cover" as const,
+  },
+  {
+    key: "services-executive",
+    label: "Executive Service",
+    description: "Image for executive car service",
+    kind: "cover" as const,
+  },
+  {
+    key: "services-corporate",
+    label: "Corporate Service",
+    description: "Image for corporate accounts",
+    kind: "cover" as const,
+  },
 ];
+
+/**
+ * ✅ Trusted Partners / Logos
+ * Separate area in admin so homepage never needs CMS helper text
+ */
+const partnerLogoSlots = [
+  {
+    key: "partner-logo-1",
+    label: "Partner Logo 1",
+    description: "Trusted partner logo (transparent PNG recommended)",
+    kind: "logo" as const,
+  },
+  {
+    key: "partner-logo-2",
+    label: "Partner Logo 2",
+    description: "Trusted partner logo (transparent PNG recommended)",
+    kind: "logo" as const,
+  },
+  {
+    key: "partner-logo-3",
+    label: "Partner Logo 3",
+    description: "Trusted partner logo (transparent PNG recommended)",
+    kind: "logo" as const,
+  },
+  {
+    key: "partner-logo-4",
+    label: "Partner Logo 4",
+    description: "Trusted partner logo (transparent PNG recommended)",
+    kind: "logo" as const,
+  },
+];
+
+type SlotKind = "cover" | "logo";
 
 function ImageUploader({
   imageKey,
@@ -42,12 +97,14 @@ function ImageUploader({
   description,
   currentUrl,
   onUploadSuccess,
+  kind = "cover",
 }: {
   imageKey: string;
   label: string;
   description: string;
   currentUrl?: string;
   onUploadSuccess: () => void;
+  kind?: SlotKind;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -103,6 +160,13 @@ function ImageUploader({
     });
   };
 
+  const previewBoxClass =
+    kind === "logo"
+      ? "aspect-square" // logos look better square
+      : "aspect-video"; // covers look better 16:9
+
+  const imgFitClass = kind === "logo" ? "object-contain p-4" : "object-cover";
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -113,9 +177,15 @@ function ImageUploader({
       <CardContent>
         <div className="space-y-4">
           {/* Current Image Preview */}
-          <div className="aspect-video rounded-lg border border-border bg-secondary/30 overflow-hidden flex items-center justify-center">
+          <div
+            className={`${previewBoxClass} rounded-lg border border-border bg-secondary/30 overflow-hidden flex items-center justify-center`}
+          >
             {currentUrl ? (
-              <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
+              <img
+                src={currentUrl}
+                alt={label}
+                className={`w-full h-full ${imgFitClass}`}
+              />
             ) : (
               <div className="text-center text-muted-foreground">
                 <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -137,7 +207,9 @@ function ImageUploader({
               <DialogHeader>
                 <DialogTitle>Upload {label}</DialogTitle>
                 <DialogDescription>
-                  Choose an image to upload. Recommended size: 1920x1080 for backgrounds; smaller for logos.
+                  {kind === "logo"
+                    ? "Choose a logo to upload. Recommended: transparent PNG, or WebP."
+                    : "Choose an image to upload. Recommended size: 1920x1080 for backgrounds."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -158,8 +230,14 @@ function ImageUploader({
                 {preview && (
                   <div className="space-y-2">
                     <Label>Preview</Label>
-                    <div className="aspect-video rounded-lg border border-border overflow-hidden">
-                      <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    <div
+                      className={`${previewBoxClass} rounded-lg border border-border overflow-hidden`}
+                    >
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className={`w-full h-full ${imgFitClass}`}
+                      />
                     </div>
                   </div>
                 )}
@@ -211,19 +289,57 @@ export default function ImageManager() {
   };
 
   return (
-    <AdminLayout title="Manage Images" description="Upload and manage images used across your website">
-      <div className="space-y-6">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {imageSlots.map((slot) => (
-            <ImageUploader
-              key={slot.key}
-              imageKey={slot.key}
-              label={slot.label}
-              description={slot.description}
-              currentUrl={getImageUrl(slot.key)}
-              onUploadSuccess={() => refetch()}
-            />
-          ))}
+    <AdminLayout
+      title="Manage Images"
+      description="Upload and manage images used across your website"
+    >
+      <div className="space-y-10">
+        {/* ✅ Main Website Images */}
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Main Website Images</h2>
+            <p className="text-sm text-muted-foreground">
+              Hero, About, and Services images shown across the site.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mainImageSlots.map((slot) => (
+              <ImageUploader
+                key={slot.key}
+                imageKey={slot.key}
+                label={slot.label}
+                description={slot.description}
+                currentUrl={getImageUrl(slot.key)}
+                onUploadSuccess={() => refetch()}
+                kind={slot.kind}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ✅ Partners Logos (separate place) */}
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Trusted Partners Logos</h2>
+            <p className="text-sm text-muted-foreground">
+              Upload logos shown in the “Trusted partners” section on the website.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {partnerLogoSlots.map((slot) => (
+              <ImageUploader
+                key={slot.key}
+                imageKey={slot.key}
+                label={slot.label}
+                description={slot.description}
+                currentUrl={getImageUrl(slot.key)}
+                onUploadSuccess={() => refetch()}
+                kind={slot.kind}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Tips */}
@@ -237,7 +353,7 @@ export default function ImageManager() {
               <li>• Recommended formats: PNG, JPG, or WebP</li>
               <li>• Maximum file size: 5MB per image</li>
               <li>• Hero backgrounds work best at 1920x1080 pixels or larger</li>
-              <li>• Logos look best as transparent PNG (or SVG if you add SVG support later)</li>
+              <li>• Logos look best as transparent PNG (or WebP)</li>
               <li>• Always add alt text for better accessibility</li>
             </ul>
           </CardContent>
