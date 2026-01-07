@@ -13,7 +13,6 @@ import {
   FileText,
   CheckCircle2,
   Loader2,
-  ExternalLink,
   BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,43 +50,63 @@ const benefits = [
   },
 ];
 
-/**
- * Premium clients list:
- * - name (required)
- * - website (optional): makes it clickable
- * - logoUrl (optional): if you add logos later, it will show them
- */
-type Client = {
-  name: string;
-  website?: string;
-  logoUrl?: string;
-};
+type Partner = { name: string; logo: string };
 
-// ✅ Add another business here:
-const clients: Client[] = [
-  { name: "Boots UK", website: "https://www.boots.com/" },
-  { name: "Speedo", website: "https://www.speedo.com/" },
-  {
-    name: "Nottinghamshire Healthcare Trust",
-    website: "https://www.nottinghamshirehealthcare.nhs.uk/",
-  },
-
-  // EXAMPLE: add a new one like this
-  // { name: "Your Partner Name", website: "https://example.com", logoUrl: "https://..." },
+// ✅ Fallback partners (used if CMS not set / invalid)
+const FALLBACK_PARTNERS: Partner[] = [
+  { name: "Boots UK", logo: "/partners/boots.png" },
+  { name: "Speedo", logo: "/partners/speedo.png" },
+  { name: "Nottinghamshire Healthcare Trust", logo: "/partners/nhs-nottinghamshire.png" },
 ];
 
-function isValidHttpUrl(v?: string) {
-  if (!v) return false;
+function safeParseJson(input: unknown): any | null {
+  if (typeof input !== "string") return null;
   try {
-    const u = new URL(v);
-    return u.protocol === "http:" || u.protocol === "https:";
+    return JSON.parse(input);
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function sanitizePartners(raw: any): Partner[] {
+  const arr = raw?.partners;
+  if (!Array.isArray(arr)) return [];
+  const cleaned: Partner[] = [];
+
+  for (const item of arr) {
+    const name = item?.name;
+    const logo = item?.logo;
+    if (!isNonEmptyString(name) || !isNonEmptyString(logo)) continue;
+    cleaned.push({ name: name.trim(), logo: logo.trim() });
+  }
+
+  // Deduplicate by name
+  const seen = new Set<string>();
+  return cleaned.filter((p) => {
+    const key = p.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export default function Corporate() {
   const content = useCmsContent("corporate");
+
+  // ✅ CMS controlled partners (logos only)
+  // Create this CMS section in admin: sectionKey = "corporate_partners"
+  // Store JSON in extraData: { "partners": [ { "name": "...", "logo": "..." } ] }
+  const partnersContent = useCmsContent("corporate_partners");
+
+  const partners = useMemo(() => {
+    const parsed = safeParseJson(partnersContent?.extraData);
+    const fromCms = sanitizePartners(parsed);
+    return fromCms.length > 0 ? fromCms : FALLBACK_PARTNERS;
+  }, [partnersContent?.extraData]);
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -100,15 +119,6 @@ export default function Corporate() {
 
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
-
-  const safeClients = useMemo(() => {
-    // Guard against bad URLs so we never render broken hrefs
-    return clients.map((c) => ({
-      ...c,
-      website: isValidHttpUrl(c.website) ? c.website : undefined,
-      logoUrl: isValidHttpUrl(c.logoUrl) ? c.logoUrl : undefined,
-    }));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,82 +194,64 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* Premium Client/Partner Strip */}
+            {/* ✅ Trusted Partners (CMS Controlled) */}
             <div className="pt-8 border-t border-border">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Trusted by local and national organisations
+                    Trusted partners
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    A few of the businesses we support in and around Nottingham.
+                    A selection of organisations we support with corporate transport.
                   </p>
                 </div>
 
                 <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
                   <BadgeCheck className="w-4 h-4" />
-                  Verified partners
+                  Verified
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {safeClients.map((client) => {
-                  const CardInner = (
-                    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition hover:shadow-sm hover:border-foreground/30">
-                      {/* Logo (optional) */}
-                      {client.logoUrl ? (
-                        <div className="h-10 w-10 rounded-lg border bg-background flex items-center justify-center overflow-hidden">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={client.logoUrl}
-                            alt={`${client.name} logo`}
-                            className="h-full w-full object-contain"
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-10 w-10 rounded-lg border bg-background flex items-center justify-center">
-                          <Building2 className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-foreground truncate">
-                          {client.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Corporate travel support
-                        </div>
-                      </div>
-
-                      {client.website ? (
-                        <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
-                      ) : null}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-stretch">
+                {partners.map((p) => (
+                  <div
+                    key={p.name}
+                    className="relative overflow-hidden rounded-xl border border-border bg-card px-4 py-6 flex items-center justify-center transition hover:shadow-sm"
+                    title={p.name}
+                    aria-label={p.name}
+                  >
+                    {/* badge */}
+                    <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-border bg-background/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
+                      <BadgeCheck className="w-3 h-3" />
+                      Trusted partner
                     </div>
-                  );
 
-                  if (client.website) {
-                    return (
-                      <a
-                        key={client.name}
-                        href={client.website}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="focus:outline-none focus:ring-2 focus:ring-primary rounded-xl"
-                        aria-label={`Open ${client.name} website`}
-                      >
-                        {CardInner}
-                      </a>
-                    );
-                  }
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.logo}
+                      alt={`${p.name} logo`}
+                      className="max-h-10 w-auto object-contain opacity-90"
+                      loading="lazy"
+                      onError={(e) => {
+                        // graceful fallback if a logo path is wrong
+                        const img = e.currentTarget;
+                        img.style.display = "none";
+                      }}
+                    />
 
-                  return <div key={client.name}>{CardInner}</div>;
-                })}
+                    {/* fallback name if logo doesn't render */}
+                    <div className="absolute inset-0 flex items-center justify-center px-3 text-center">
+                      <span className="text-sm font-medium text-foreground/0">
+                        {p.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-4 text-xs text-muted-foreground">
-                Want your company set up with a business account? Fill the form and we’ll call you
-                within 24 hours.
+                To add or update logos, edit CMS section:{" "}
+                <span className="font-medium">corporate_partners</span>
               </div>
             </div>
           </div>
