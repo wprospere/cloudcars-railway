@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
 
@@ -18,41 +18,45 @@ type DocType =
 
 type DocStatus = "pending" | "approved" | "rejected";
 
-const DOCS: { type: DocType; label: string; hint?: string; requiresExpiry?: boolean }[] =
-  [
-    {
-      type: "LICENSE_FRONT",
-      label: "Driving Licence (Front)",
-      hint: "Make sure your photo, name and licence number are clear.",
-    },
-    {
-      type: "LICENSE_BACK",
-      label: "Driving Licence (Back)",
-      hint: "Make sure categories and dates are readable.",
-    },
-    {
-      type: "BADGE",
-      label: "Taxi Badge",
-      hint: "Front side, not cropped, badge number visible.",
-    },
-    {
-      type: "PLATING",
-      label: "Taxi Plating / Plate",
-      hint: "Certificate/photo showing vehicle + plate details.",
-    },
-    {
-      type: "INSURANCE",
-      label: "Insurance",
-      hint: "Must show your name, reg plate and expiry date.",
-      requiresExpiry: true,
-    },
-    {
-      type: "MOT",
-      label: "MOT",
-      hint: "Pass certificate or screenshot showing reg + expiry.",
-      requiresExpiry: true,
-    },
-  ];
+const DOCS: {
+  type: DocType;
+  label: string;
+  hint?: string;
+  requiresExpiry?: boolean;
+}[] = [
+  {
+    type: "LICENSE_FRONT",
+    label: "Driving Licence (Front)",
+    hint: "Make sure your photo, name and licence number are clear.",
+  },
+  {
+    type: "LICENSE_BACK",
+    label: "Driving Licence (Back)",
+    hint: "Make sure categories and dates are readable.",
+  },
+  {
+    type: "BADGE",
+    label: "Taxi Badge",
+    hint: "Front side, not cropped, badge number visible.",
+  },
+  {
+    type: "PLATING",
+    label: "Taxi Plating / Plate",
+    hint: "Certificate/photo showing vehicle + plate details.",
+  },
+  {
+    type: "INSURANCE",
+    label: "Insurance",
+    hint: "Must show your name, reg plate and expiry date.",
+    requiresExpiry: true,
+  },
+  {
+    type: "MOT",
+    label: "MOT",
+    hint: "Pass certificate or screenshot showing reg + expiry.",
+    requiresExpiry: true,
+  },
+];
 
 // -------------------------
 // Token helpers
@@ -139,6 +143,78 @@ function statusText(status?: DocStatus) {
   return "Pending review";
 }
 
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes)) return "";
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(0)} KB`;
+  return `${(kb / 1024).toFixed(2)} MB`;
+}
+
+function isImageFile(file: File | null | undefined) {
+  return !!file && file.type.startsWith("image/");
+}
+
+function isPdfFile(file: File | null | undefined) {
+  return !!file && file.type === "application/pdf";
+}
+
+// -------------------------
+// Premium: image rotation via canvas
+// -------------------------
+
+async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    // avoid canvas taint issues (not really needed for local blob, but safe)
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = url;
+    });
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function rotateImageFile(file: File, direction: "left" | "right"): Promise<File> {
+  const img = await loadImageFromFile(file);
+
+  const angle = direction === "left" ? -90 : 90;
+  const radians = (angle * Math.PI) / 180;
+
+  // Canvas size swaps width/height for 90-degree rotation
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not supported");
+
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+
+  canvas.width = h;
+  canvas.height = w;
+
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(radians);
+  ctx.drawImage(img, -w / 2, -h / 2);
+
+  const outputType = file.type && file.type.startsWith("image/") ? file.type : "image/jpeg";
+  const quality = 0.92;
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Failed to export rotated image"))),
+      outputType,
+      quality
+    );
+  });
+
+  const newName = file.name.replace(/\.(\w+)$/, "") + `-rotated.${outputType.split("/")[1] || "jpg"}`;
+  return new File([blob], newName, { type: outputType });
+}
+
 export default function DriverOnboardingPage() {
   // wouter
   const [location] = useLocation();
@@ -209,6 +285,54 @@ export default function DriverOnboardingPage() {
 
   const [activeDoc, setActiveDoc] = useState<DocType>("LICENSE_FRONT");
 
+  // Premium: per-doc preview URLs
+  const [previewUrls, setPreviewUrls] = useState<Record<DocType, string | null>>({
+    LICENSE_FRONT: null,
+    LICENSE_BACK: null,
+    BADGE: null,
+    PLATING: null,
+    INSURANCE: null,
+    MOT: null,
+  });
+
+  // Keep track of previous URLs to revoke (memory-safe)
+  const prevPreviewUrlsRef = useRef(previewUrls);
+
+  useEffect(() => {
+    prevPreviewUrlsRef.current = previewUrls;
+  }, [previewUrls]);
+
+  useEffect(() => {
+    // When selectedFiles changes, update preview URL for affected doc(s)
+    // and revoke old URLs to prevent memory leaks.
+    (Object.keys(selectedFiles) as DocType[]).forEach((t) => {
+      const file = selectedFiles[t];
+      const currentUrl = previewUrls[t];
+
+      if (!file) {
+        // If no file, revoke and clear preview
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        if (currentUrl) setPreviewUrls((p) => ({ ...p, [t]: null }));
+        return;
+      }
+
+      // If file exists, ensure preview URL
+      if (!currentUrl) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrls((p) => ({ ...p, [t]: url }));
+      }
+    });
+
+    // Cleanup on unmount: revoke all
+    return () => {
+      (Object.keys(previewUrls) as DocType[]).forEach((t) => {
+        const url = previewUrls[t];
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFiles]);
+
   // -------------------------
   // tRPC calls
   // -------------------------
@@ -264,7 +388,6 @@ export default function DriverOnboardingPage() {
   }, [uploadedDocs]);
 
   const allApproved = useMemo(() => {
-    // Only treat as fully approved if every doc exists AND is approved
     return DOCS.every((d) => uploadedDocs.get(d.type)?.status === "approved");
   }, [uploadedDocs]);
 
@@ -290,7 +413,6 @@ export default function DriverOnboardingPage() {
 
     if (licencePlate) {
       const lp = formatUkReg(licencePlate);
-      // Licence plate is optional, but if present, validate as a UK-style plate too
       if (!isUkReg(lp)) {
         return "Licence Plate doesn't look like a valid UK reg (e.g. AB12CDE).";
       }
@@ -315,7 +437,7 @@ export default function DriverOnboardingPage() {
       model,
       colour,
       year: year || undefined,
-      plateNumber: licencePlate ? formatUkReg(licencePlate) : undefined, // DB field name stays plateNumber
+      plateNumber: licencePlate ? formatUkReg(licencePlate) : undefined,
       capacity: capacity || undefined,
     });
 
@@ -334,6 +456,49 @@ export default function DriverOnboardingPage() {
     return next ?? null;
   }
 
+  function clearSelected(type: DocType) {
+    const url = previewUrls[type];
+    if (url) URL.revokeObjectURL(url);
+
+    setPreviewUrls((p) => ({ ...p, [type]: null }));
+    setSelectedFiles((prev) => ({ ...prev, [type]: null }));
+  }
+
+  async function handleRotate(type: DocType, direction: "left" | "right") {
+    setStatusErr(null);
+    setStatusMsg(null);
+
+    const file = selectedFiles[type];
+    if (!file) return showError("Select an image first.");
+    if (!isImageFile(file)) return showError("Rotate is only available for images.");
+
+    try {
+      setUploading((prev) => ({ ...prev, [type]: true }));
+
+      const rotated = await rotateImageFile(file, direction);
+
+      // Size guard after rotation (still keep under 6MB)
+      const maxBytes = 6 * 1024 * 1024;
+      if (rotated.size > maxBytes) {
+        throw new Error(
+          "Rotated image became too large. Please upload a smaller image (under 6MB)."
+        );
+      }
+
+      // Revoke old preview URL and set new file
+      const oldUrl = previewUrls[type];
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+
+      setSelectedFiles((prev) => ({ ...prev, [type]: rotated }));
+      setPreviewUrls((p) => ({ ...p, [type]: URL.createObjectURL(rotated) }));
+      showMsg("✅ Rotated. Please check preview then upload.");
+    } catch (e: any) {
+      showError(e?.message || "Failed to rotate image.");
+    } finally {
+      setUploading((prev) => ({ ...prev, [type]: false }));
+    }
+  }
+
   async function handleUpload(type: DocType) {
     setStatusErr(null);
     setStatusMsg(null);
@@ -347,13 +512,11 @@ export default function DriverOnboardingPage() {
       return showError("File type not supported. Please upload an image or PDF.");
     }
 
-    // Optional: basic size guard (helps avoid huge payloads)
     const maxBytes = 6 * 1024 * 1024; // 6MB
     if (file.size > maxBytes) {
       return showError("File is too large. Please upload a file under 6MB.");
     }
 
-    // If expiry is required, enforce it (improves data quality)
     if (docExpiryRequired(type)) {
       const exp = (expiryDates[type] ?? "").trim();
       if (!exp) return showError(`Please add an expiry date for ${prettyDocLabel(type)}.`);
@@ -375,7 +538,10 @@ export default function DriverOnboardingPage() {
       });
 
       showMsg(`✅ Uploaded: ${prettyDocLabel(type)} (now pending review)`);
-      setSelectedFiles((prev) => ({ ...prev, [type]: null }));
+
+      // Clear selected + preview
+      clearSelected(type);
+
       await profileQuery.refetch();
 
       const next = nextDocType(type);
@@ -443,7 +609,6 @@ export default function DriverOnboardingPage() {
     );
   }
 
-  // ✅ Support both shapes:
   const driver =
     (profileQuery.data as any)?.driverApplication ||
     (profileQuery.data as any)?.driver ||
@@ -453,7 +618,6 @@ export default function DriverOnboardingPage() {
   const canSubmit =
     !vehicleValidationError && allRequiredUploaded && !submitOnboarding.isPending;
 
-  // Progress percentage (uploaded, not approved — drivers care about completion)
   const progressPct = Math.round((docsProgress.uploaded / docsProgress.total) * 100);
 
   return (
@@ -486,7 +650,7 @@ export default function DriverOnboardingPage() {
           </div>
         </div>
 
-        {/* Progress bar (simple, no extra components) */}
+        {/* Progress bar */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progress</span>
@@ -594,13 +758,13 @@ export default function DriverOnboardingPage() {
         </div>
       </Card>
 
-      {/* Documents - checklist + focused upload */}
+      {/* Documents */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">Documents</h2>
             <div className="text-xs text-muted-foreground">
-              Upload each item below. If rejected, you’ll see the reason and can re-upload.
+              Upload each item below. Preview and rotate images before uploading.
             </div>
           </div>
 
@@ -609,7 +773,7 @@ export default function DriverOnboardingPage() {
           </Badge>
         </div>
 
-        {/* Quick checklist */}
+        {/* Checklist */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {DOCS.map((d) => {
             const existing = uploadedDocs.get(d.type);
@@ -646,12 +810,14 @@ export default function DriverOnboardingPage() {
           })}
         </div>
 
-        {/* Focused uploader for selected doc */}
+        {/* Focused uploader */}
         {(() => {
           const doc = DOCS.find((d) => d.type === activeDoc)!;
           const existing = uploadedDocs.get(activeDoc);
           const status: DocStatus | undefined = existing?.status;
           const isUploading = uploading[activeDoc];
+          const file = selectedFiles[activeDoc];
+          const previewUrl = previewUrls[activeDoc];
 
           return (
             <div className="rounded-lg border p-4 space-y-3">
@@ -695,18 +861,24 @@ export default function DriverOnboardingPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label>Upload file (image or PDF, under 6MB)</Label>
+                  <Label>Choose file (image or PDF, under 6MB)</Label>
                   <Input
                     type="file"
                     accept="image/*,application/pdf"
                     onChange={(e) => {
                       const f = e.target.files?.[0] ?? null;
+                      // clear any previous preview URL for this doc (handled safely in clearSelected too)
+                      if (!f) return;
+                      if (!mimeAllowed(f.type)) {
+                        showError("File type not supported. Please upload an image or PDF.");
+                        return;
+                      }
                       setSelectedFiles((prev) => ({ ...prev, [activeDoc]: f }));
                     }}
                   />
-                  {selectedFiles[activeDoc]?.name && (
+                  {file?.name && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      Selected: {selectedFiles[activeDoc]!.name}
+                      Selected: {file.name} • {formatBytes(file.size)}
                     </div>
                   )}
                 </div>
@@ -733,8 +905,82 @@ export default function DriverOnboardingPage() {
                 </div>
               </div>
 
+              {/* ✅ Premium Preview */}
+              {file && previewUrl && (
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium">Preview</div>
+                    <div className="flex items-center gap-2">
+                      {isImageFile(file) && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => handleRotate(activeDoc, "left")}
+                            disabled={isUploading}
+                          >
+                            Rotate ⟲
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => handleRotate(activeDoc, "right")}
+                            disabled={isUploading}
+                          >
+                            Rotate ⟳
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => clearSelected(activeDoc)}
+                        disabled={isUploading}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+
+                  {isImageFile(file) && (
+                    <div className="overflow-hidden rounded-md border bg-muted">
+                      {/* Image preview */}
+                      <img
+                        src={previewUrl}
+                        alt="Selected document preview"
+                        className="w-full h-auto block"
+                      />
+                    </div>
+                  )}
+
+                  {isPdfFile(file) && (
+                    <div className="overflow-hidden rounded-md border bg-muted">
+                      {/* PDF preview */}
+                      <iframe
+                        src={previewUrl}
+                        title="PDF preview"
+                        className="w-full"
+                        style={{ height: 420 }}
+                      />
+                    </div>
+                  )}
+
+                  {!isImageFile(file) && !isPdfFile(file) && (
+                    <div className="text-xs text-muted-foreground">
+                      Preview not available for this file type.
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    Tip: If text looks blurry here, it will likely be rejected — retake in
+                    better light.
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => handleUpload(activeDoc)}
                   disabled={isUploading || uploadDocument.isPending}
@@ -744,6 +990,7 @@ export default function DriverOnboardingPage() {
 
                 {nextDocType(activeDoc) && (
                   <Button
+                    type="button"
                     variant="secondary"
                     onClick={() => setActiveDoc(nextDocType(activeDoc)!)}
                   >
@@ -753,7 +1000,7 @@ export default function DriverOnboardingPage() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Tip: Use good lighting. Make sure all corners are visible and text is readable.
+                Accepted formats: JPG/PNG/PDF • Max size: 6MB
               </div>
             </div>
           );
