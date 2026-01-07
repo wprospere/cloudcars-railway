@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type DocStatusUI = "approved" | "rejected" | "pending" | string;
 
@@ -21,6 +28,10 @@ function isPdf(mimeType?: string | null, url?: string | null) {
   if (mt.includes("pdf")) return true;
   const u = String(url || "").toLowerCase();
   return u.endsWith(".pdf") || u.includes(".pdf?");
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
 export default function DriverOnboardingReview() {
@@ -48,6 +59,123 @@ export default function DriverOnboardingReview() {
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>(
     {}
   );
+
+  // ✅ Image zoom modal state
+  const [zoom, setZoom] = useState<{
+    open: boolean;
+    url: string;
+    title: string;
+  }>({ open: false, url: "", title: "" });
+
+  // ✅ Pan/zoom state (modal only)
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const panStart = useRef({ x: 0, y: 0 });
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * ✅ Clamp pan so you can't drag the image off-screen into empty space.
+   * We clamp based on viewport size and zoom level:
+   * - At scale 1 => no pan (0,0)
+   * - As scale increases => allowed pan grows, but bounded.
+   */
+  const clampPan = (p: { x: number; y: number }, s: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return p;
+
+    if (s <= 1) return { x: 0, y: 0 };
+
+    // Allow pan up to half the "extra" size introduced by zoom.
+    // This keeps the image covering the viewport without exposing too much empty background.
+    const maxX = ((s - 1) * rect.width) / 2;
+    const maxY = ((s - 1) * rect.height) / 2;
+
+    return {
+      x: clamp(p.x, -maxX, maxX),
+      y: clamp(p.y, -maxY, maxY),
+    };
+  };
+
+  const resetView = () => {
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const setScaleClamped = (nextScale: number) => {
+    const s = clamp(nextScale, 1, 6);
+    setScale(s);
+    setPan((prev) => clampPan(prev, s));
+  };
+
+  const zoomBy = (factor: number) => {
+    setScale((prev) => {
+      const next = clamp(Number((prev * factor).toFixed(3)), 1, 6);
+      setPan((p) => clampPan(p, next));
+      return next;
+    });
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+
+    const delta = e.deltaY;
+    const zoomFactor = delta > 0 ? 0.9 : 1.1;
+
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) {
+      zoomBy(zoomFactor);
+      return;
+    }
+
+    // Cursor position relative to center (for zoom-to-cursor feel)
+    const cx = e.clientX - rect.left - rect.width / 2;
+    const cy = e.clientY - rect.top - rect.height / 2;
+
+    setScale((prevScale) => {
+      const nextScale = clamp(Number((prevScale * zoomFactor).toFixed(3)), 1, 6);
+      const ratio = nextScale / prevScale;
+
+      setPan((prevPan) => {
+        const nextPan = {
+          x: prevPan.x - cx * (ratio - 1),
+          y: prevPan.y - cy * (ratio - 1),
+        };
+        return clampPan(nextPan, nextScale);
+      });
+
+      return nextScale;
+    });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    panStart.current = { ...pan };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+
+    const next = { x: panStart.current.x + dx, y: panStart.current.y + dy };
+    setPan(clampPan(next, scale));
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseLeave = () => setIsDragging(false);
+
+  const statusVariant = (status: DocStatusUI) => {
+    const s = String(status || "pending").toLowerCase();
+    if (s === "approved") return "default";
+    if (s === "rejected") return "destructive";
+    return "secondary";
+  };
 
   if (!Number.isFinite(driverApplicationId) || driverApplicationId <= 0) {
     return (
@@ -87,21 +215,127 @@ export default function DriverOnboardingReview() {
   }
 
   const { driver, vehicle, documents } = profileQuery.data as any;
-
   const docs = Array.isArray(documents) ? documents : [];
-
-  const statusVariant = (status: DocStatusUI) => {
-    const s = String(status || "pending").toLowerCase();
-    if (s === "approved") return "default";
-    if (s === "rejected") return "destructive";
-    return "secondary";
-  };
 
   return (
     <AdminLayout
       title="Driver Onboarding Review"
       description="Review uploaded documents and vehicle details"
     >
+      {/* ✅ Image zoom dialog w/ clamped pan+zoom */}
+      <Dialog
+        open={zoom.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setZoom({ open: false, url: "", title: "" });
+            resetView();
+            return;
+          }
+          setZoom((prev) => ({ ...prev, open }));
+          resetView();
+        }}
+      >
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle>{zoom.title || "Document"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="text-xs text-muted-foreground">
+              Wheel to zoom • Drag to pan • Double-click to reset
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => zoomBy(1.15)}
+                disabled={!zoom.url}
+              >
+                Zoom +
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => zoomBy(0.87)}
+                disabled={!zoom.url}
+              >
+                Zoom −
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  resetView();
+                }}
+                disabled={!zoom.url}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+
+          <div
+            ref={viewportRef}
+            className={[
+              "relative rounded-lg border border-border bg-secondary/20",
+              "h-[75vh] overflow-hidden",
+              isDragging
+                ? "cursor-grabbing"
+                : scale > 1
+                ? "cursor-grab"
+                : "cursor-default",
+            ].join(" ")}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onDoubleClick={() => resetView()}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoom.url}
+                alt={zoom.title}
+                draggable={false}
+                className="select-none max-h-none max-w-none"
+                style={{
+                  transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
+                  transformOrigin: "center center",
+                  transition: isDragging ? "none" : "transform 80ms linear",
+                  willChange: "transform",
+                }}
+              />
+            </div>
+
+            <div className="absolute bottom-3 left-3 rounded-full border border-border bg-background/80 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
+              {Math.round(scale * 100)}%
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-3">
+            <Button variant="outline" asChild disabled={!zoom.url}>
+              <a href={zoom.url} download>
+                Download
+              </a>
+            </Button>
+
+            <Button
+              onClick={() => {
+                setZoom({ open: false, url: "", title: "" });
+                resetView();
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-6">
         <div className="flex justify-end">
           <Button
@@ -145,7 +379,8 @@ export default function DriverOnboardingReview() {
             <div>
               <h2 className="text-lg font-semibold">Documents</h2>
               <p className="text-sm text-muted-foreground">
-                Review each document and approve or reject with a reason.
+                Review each document and approve or reject with a reason. Click
+                images to zoom (pan/zoom is clamped).
               </p>
             </div>
             <Badge variant="secondary">{docs.length} total</Badge>
@@ -189,7 +424,8 @@ export default function DriverOnboardingReview() {
                         ) : pdf ? (
                           <div className="w-full flex flex-col gap-3">
                             <div className="text-sm text-muted-foreground">
-                              PDF document: <span className="font-medium">{filename}</span>
+                              PDF document:{" "}
+                              <span className="font-medium">{filename}</span>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -207,12 +443,28 @@ export default function DriverOnboardingReview() {
                             </div>
                           </div>
                         ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={url}
-                            alt={name}
-                            className="max-h-[320px] w-auto object-contain rounded-md"
-                          />
+                          <button
+                            type="button"
+                            className="group relative"
+                            onClick={() => {
+                              setZoom({ open: true, url, title: name });
+                              resetView();
+                            }}
+                            aria-label={`Zoom ${name}`}
+                            title="Click to zoom"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={name}
+                              className="max-h-[320px] w-auto object-contain rounded-md transition group-hover:opacity-95"
+                              draggable={false}
+                            />
+                            <div className="pointer-events-none absolute inset-0 rounded-md ring-0 ring-primary/30 group-hover:ring-2 transition" />
+                            <div className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-background/80 border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                              Click to zoom
+                            </div>
+                          </button>
                         )}
                       </div>
 
