@@ -11,9 +11,9 @@ import {
   uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
-/**
+/* ============================================================================
  * Team members (admin dashboard staff)
- */
+ * ========================================================================== */
 export const teamMembers = mysqlTable("team_members", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -23,9 +23,9 @@ export const teamMembers = mysqlTable("team_members", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/**
+/* ============================================================================
  * Public users (auth)
- */
+ * ========================================================================== */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
@@ -41,9 +41,9 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/**
+/* ============================================================================
  * Bookings
- */
+ * ========================================================================== */
 export const bookings = mysqlTable("bookings", {
   id: int("id").autoincrement().primaryKey(),
   customerName: varchar("customerName", { length: 255 }).notNull(),
@@ -75,9 +75,9 @@ export const bookings = mysqlTable("bookings", {
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = typeof bookings.$inferInsert;
 
-/**
+/* ============================================================================
  * Driver applications
- */
+ * ========================================================================== */
 export const driverApplications = mysqlTable("driver_applications", {
   id: int("id").autoincrement().primaryKey(),
   fullName: varchar("fullName", { length: 255 }).notNull(),
@@ -108,9 +108,9 @@ export const driverApplications = mysqlTable("driver_applications", {
 export type DriverApplication = typeof driverApplications.$inferSelect;
 export type InsertDriverApplication = typeof driverApplications.$inferInsert;
 
-/**
+/* ============================================================================
  * Corporate inquiries
- */
+ * ========================================================================== */
 export const corporateInquiries = mysqlTable("corporate_inquiries", {
   id: int("id").autoincrement().primaryKey(),
   companyName: varchar("companyName", { length: 255 }).notNull(),
@@ -134,9 +134,9 @@ export const corporateInquiries = mysqlTable("corporate_inquiries", {
 export type CorporateInquiry = typeof corporateInquiries.$inferSelect;
 export type InsertCorporateInquiry = typeof corporateInquiries.$inferInsert;
 
-/**
+/* ============================================================================
  * Contact messages
- */
+ * ========================================================================== */
 export const contactMessages = mysqlTable("contact_messages", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -153,9 +153,9 @@ export const contactMessages = mysqlTable("contact_messages", {
 export type ContactMessage = typeof contactMessages.$inferSelect;
 export type InsertContactMessage = typeof contactMessages.$inferInsert;
 
-/**
- * CMS site content (MATCHES Railway camelCase columns)
- */
+/* ============================================================================
+ * CMS
+ * ========================================================================== */
 export const siteContent = mysqlTable("site_content", {
   id: int("id").autoincrement().primaryKey(),
   sectionKey: varchar("sectionKey", { length: 128 }).notNull().unique(),
@@ -168,12 +168,6 @@ export const siteContent = mysqlTable("site_content", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export type SiteContent = typeof siteContent.$inferSelect;
-export type InsertSiteContent = typeof siteContent.$inferInsert;
-
-/**
- * CMS site images (MATCHES Railway camelCase columns)
- */
 export const siteImages = mysqlTable("site_images", {
   id: int("id").autoincrement().primaryKey(),
   imageKey: varchar("imageKey", { length: 128 }).notNull().unique(),
@@ -183,12 +177,9 @@ export const siteImages = mysqlTable("site_images", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export type SiteImage = typeof siteImages.$inferSelect;
-export type InsertSiteImage = typeof siteImages.$inferInsert;
-
-/**
+/* ============================================================================
  * Admin users
- */
+ * ========================================================================== */
 export const adminUsers = mysqlTable("admin_users", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
@@ -197,90 +188,54 @@ export const adminUsers = mysqlTable("admin_users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export type AdminUser = typeof adminUsers.$inferSelect;
-export type InsertAdminUser = typeof adminUsers.$inferInsert;
-
-export const __schemaVersion = "schema-aligned-with-railway";
-
-/**
- * Driver onboarding tokens (Phase 1.5 - hardened secure link)
- *
- * ✅ Supports:
- * - Auto-expire (expiresAt)
- * - Lock after submit (usedAt)
- * - Prevent re-use (usedAt check)
- * - Resend link (revokedAt + lastSentAt + sendCount)
- *
- * NOTE:
- * - You store tokenHash (good). Your email link contains the RAW token.
- * - On validate/consume, hash(rawToken) and match tokenHash.
- */
+/* ============================================================================
+ * Driver onboarding tokens (Phase 1.5)
+ * ========================================================================== */
 export const driverOnboardingTokens = mysqlTable(
   "driver_onboarding_tokens",
   {
     id: int("id").autoincrement().primaryKey(),
-
     driverApplicationId: int("driverApplicationId").notNull(),
-
-    // store hashed token (safer than raw token)
     tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
-
-    // ✅ hardening fields
     expiresAt: timestamp("expiresAt").notNull(),
     usedAt: timestamp("usedAt"),
     revokedAt: timestamp("revokedAt"),
-
-    // ✅ resend tracking (optional but recommended)
     lastSentAt: timestamp("lastSentAt"),
     sendCount: int("sendCount").default(0).notNull(),
-
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (t) => ({
-    // hashed token must be unique
-    tokenHashUnique: uniqueIndex("ux_driver_onboarding_token_hash").on(t.tokenHash),
-
-    // lookups by application are common in admin
+    tokenHashUnique: uniqueIndex("ux_driver_onboarding_token_hash").on(
+      t.tokenHash
+    ),
     appIdx: index("ix_driver_onboarding_app").on(t.driverApplicationId),
-
-    // optional: useful for cleanup jobs
     expiresIdx: index("ix_driver_onboarding_expires").on(t.expiresAt),
   })
 );
 
-export type DriverOnboardingToken = typeof driverOnboardingTokens.$inferSelect;
-export type InsertDriverOnboardingToken = typeof driverOnboardingTokens.$inferInsert;
-
-/**
- * Driver vehicle details (Phase 1)
- */
+/* ============================================================================
+ * Driver vehicles
+ * ========================================================================== */
 export const driverVehicles = mysqlTable("driver_vehicles", {
   id: int("id").autoincrement().primaryKey(),
   driverApplicationId: int("driverApplicationId").notNull(),
-
   registration: varchar("registration", { length: 32 }).notNull(),
   make: varchar("make", { length: 64 }).notNull(),
   model: varchar("model", { length: 64 }).notNull(),
   colour: varchar("colour", { length: 32 }).notNull(),
-
   year: varchar("year", { length: 8 }),
   plateNumber: varchar("plateNumber", { length: 64 }),
   capacity: varchar("capacity", { length: 8 }),
-
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export type DriverVehicle = typeof driverVehicles.$inferSelect;
-export type InsertDriverVehicle = typeof driverVehicles.$inferInsert;
-
-/**
- * Driver documents (uploads + review + expiry)
- */
+/* ============================================================================
+ * Driver documents
+ * ========================================================================== */
 export const driverDocuments = mysqlTable("driver_documents", {
   id: int("id").autoincrement().primaryKey(),
   driverApplicationId: int("driverApplicationId").notNull(),
-
   type: mysqlEnum("type", [
     "LICENSE_FRONT",
     "LICENSE_BACK",
@@ -289,21 +244,13 @@ export const driverDocuments = mysqlTable("driver_documents", {
     "INSURANCE",
     "MOT",
   ]).notNull(),
-
   fileUrl: text("fileUrl").notNull(),
-
   status: mysqlEnum("status", ["pending", "approved", "rejected"])
     .default("pending")
     .notNull(),
-
-  // use DATE (not timestamp) for expiry clarity
   expiryDate: date("expiryDate"),
-
   rejectionReason: text("rejectionReason"),
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   reviewedAt: timestamp("reviewedAt"),
   reviewedBy: varchar("reviewedBy", { length: 320 }),
 });
-
-export type DriverDocument = typeof driverDocuments.$inferSelect;
-export type InsertDriverDocument = typeof driverDocuments.$inferInsert;
