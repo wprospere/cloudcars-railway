@@ -53,6 +53,7 @@ const benefits = [
 
 type Partner = { name: string; logo: string };
 
+// ✅ The partner logo slots you created in Admin → Manage Images
 const PARTNER_SLOTS: Array<{ key: string; name: string }> = [
   { key: "partner-logo-1", name: "Trusted Partner" },
   { key: "partner-logo-2", name: "Trusted Partner" },
@@ -60,15 +61,34 @@ const PARTNER_SLOTS: Array<{ key: string; name: string }> = [
   { key: "partner-logo-4", name: "Trusted Partner" },
 ];
 
+// ✅ Fallback partners (used if no uploaded logos available)
 const FALLBACK_PARTNERS: Partner[] = [
   { name: "Boots UK", logo: "/partners/boots.png" },
   { name: "Speedo", logo: "/partners/speedo.png" },
   { name: "Nottinghamshire Healthcare Trust", logo: "/partners/nhs-nottinghamshire.png" },
 ];
 
+/**
+ * ✅ Hide scrollbars (safe fallback if Tailwind plugin/classes aren't present)
+ * You can delete this if you already have scrollbar utilities.
+ */
+function ScrollbarHider() {
+  return (
+    <style>{`
+      .scrollbar-none::-webkit-scrollbar { display: none; }
+      .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+    `}</style>
+  );
+}
+
 export default function Corporate() {
   const content = useCmsContent("corporate");
 
+  /**
+   * ✅ Pull uploaded logos from the Images store
+   * If this endpoint is protected on your backend, it may fail on public pages;
+   * we handle that gracefully by falling back to static logos.
+   */
   const imagesQuery = trpc.cms.getAllImages.useQuery(undefined, {
     retry: false,
     staleTime: 60_000,
@@ -99,6 +119,7 @@ export default function Corporate() {
     return uploaded.length > 0 ? uploaded : FALLBACK_PARTNERS;
   }, [imagesQuery.data]);
 
+  // ✅ Track which partner logos failed to load so we can show the name instead
   const [logoFailed, setLogoFailed] = useState<Record<string, boolean>>({});
 
   const [formData, setFormData] = useState({
@@ -149,6 +170,9 @@ export default function Corporate() {
 
   return (
     <section id="corporate" className="py-20 lg:py-32">
+      {/* Safe CSS fallback to hide scrollbars on mobile strip */}
+      <ScrollbarHider />
+
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Left Column - Content */}
@@ -187,7 +211,7 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* ✅ Trusted by strip */}
+            {/* ✅ Trusted by strip (scrollable on mobile) */}
             <div className="pt-8 border-t border-border">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
@@ -198,29 +222,43 @@ export default function Corporate() {
                 <div className="ml-4 h-px flex-1 bg-border/60" />
               </div>
 
-              {/* strip wrapper with soft fade edges */}
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
+                {/* soft fade edges (mobile only) */}
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent sm:hidden" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent sm:hidden" />
 
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 py-1">
+                <div
+                  className="
+                    scrollbar-none
+                    flex items-center gap-x-8 py-2
+                    overflow-x-auto overscroll-x-contain
+                    snap-x snap-mandatory
+                    sm:flex-wrap sm:overflow-visible sm:snap-none
+                  "
+                >
                   {partners.map((p) => {
                     const failed = !!logoFailed[p.name];
 
                     return (
                       <div
                         key={`${p.name}-${p.logo}`}
-                        className="group flex items-center"
+                        className="group flex-shrink-0 flex items-center snap-start"
                         title={p.name}
                         aria-label={p.name}
                       >
+                        {/* consistent frame */}
                         <div className="h-10 w-[140px] sm:w-[160px] flex items-center justify-center">
                           {!failed ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={p.logo}
                               alt={`${p.name} logo`}
-                              className="max-h-10 max-w-[160px] w-auto object-contain opacity-60 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
+                              className="
+                                max-h-10 max-w-[160px] w-auto object-contain
+                                opacity-60 grayscale
+                                transition-all duration-200
+                                group-hover:opacity-100 group-hover:grayscale-0
+                              "
                               loading="lazy"
                               onError={() => {
                                 setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
