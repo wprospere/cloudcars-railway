@@ -3,7 +3,13 @@ import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Upload, Loader2, Trash2, Image as ImageIcon, Check } from "lucide-react";
+import { Upload, Loader2, Image as ImageIcon, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -23,9 +29,20 @@ const imageSlots = [
   { key: "services-standard", label: "Standard Service", description: "Image for standard taxi service" },
   { key: "services-executive", label: "Executive Service", description: "Image for executive car service" },
   { key: "services-corporate", label: "Corporate Service", description: "Image for corporate accounts" },
+
+  // ✅ Corporate Partner Logos (NEW)
+  { key: "corporate_partner_boots", label: "Corporate Partner – Boots", description: "Boots UK logo (transparent PNG recommended)" },
+  { key: "corporate_partner_speedo", label: "Corporate Partner – Speedo", description: "Speedo logo (transparent PNG recommended)" },
+  { key: "corporate_partner_nhs", label: "Corporate Partner – NHS Nottinghamshire", description: "Nottinghamshire Healthcare Trust logo" },
 ];
 
-function ImageUploader({ imageKey, label, description, currentUrl, onUploadSuccess }: {
+function ImageUploader({
+  imageKey,
+  label,
+  description,
+  currentUrl,
+  onUploadSuccess,
+}: {
   imageKey: string;
   label: string;
   description: string;
@@ -65,8 +82,8 @@ function ImageUploader({ imageKey, label, description, currentUrl, onUploadSucce
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string);
+    reader.onload = (ev) => {
+      setPreview(ev.target?.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -92,16 +109,13 @@ function ImageUploader({ imageKey, label, description, currentUrl, onUploadSucce
         <CardTitle className="text-base">{label}</CardTitle>
         <CardDescription className="text-sm">{description}</CardDescription>
       </CardHeader>
+
       <CardContent>
         <div className="space-y-4">
           {/* Current Image Preview */}
           <div className="aspect-video rounded-lg border border-border bg-secondary/30 overflow-hidden flex items-center justify-center">
             {currentUrl ? (
-              <img
-                src={currentUrl}
-                alt={label}
-                className="w-full h-full object-cover"
-              />
+              <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
             ) : (
               <div className="text-center text-muted-foreground">
                 <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -118,11 +132,12 @@ function ImageUploader({ imageKey, label, description, currentUrl, onUploadSucce
                 {currentUrl ? "Replace Image" : "Upload Image"}
               </Button>
             </DialogTrigger>
+
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Upload {label}</DialogTitle>
                 <DialogDescription>
-                  Choose an image to upload. Recommended size: 1920x1080 pixels.
+                  Choose an image to upload. Recommended size: 1920x1080 for backgrounds; smaller for logos.
                 </DialogDescription>
               </DialogHeader>
 
@@ -144,11 +159,7 @@ function ImageUploader({ imageKey, label, description, currentUrl, onUploadSucce
                   <div className="space-y-2">
                     <Label>Preview</Label>
                     <div className="aspect-video rounded-lg border border-border overflow-hidden">
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -200,10 +211,7 @@ export default function ImageManager() {
   };
 
   return (
-    <AdminLayout
-      title="Manage Images"
-      description="Upload and manage images used across your website"
-    >
+    <AdminLayout title="Manage Images" description="Upload and manage images used across your website">
       <div className="space-y-6">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {imageSlots.map((slot) => (
@@ -229,6 +237,7 @@ export default function ImageManager() {
               <li>• Recommended formats: PNG, JPG, or WebP</li>
               <li>• Maximum file size: 5MB per image</li>
               <li>• Hero backgrounds work best at 1920x1080 pixels or larger</li>
+              <li>• Logos look best as transparent PNG (or SVG if you add SVG support later)</li>
               <li>• Always add alt text for better accessibility</li>
             </ul>
           </CardContent>
