@@ -189,44 +189,53 @@ export default function Corporate() {
 
             {/* ✅ Trusted by strip */}
             <div className="pt-8 border-t border-border">
-              <div className="mb-4">
+              <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
                   Trusted by
                 </p>
+
+                {/* subtle divider line */}
+                <div className="ml-4 h-px flex-1 bg-border/60" />
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                {partners.map((p) => {
-                  const failed = !!logoFailed[p.name];
+              {/* strip wrapper with soft fade edges */}
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
 
-                  return (
-                    <div
-                      key={`${p.name}-${p.logo}`}
-                      className="group flex items-center"
-                      title={p.name}
-                      aria-label={p.name}
-                    >
-                      <div className="h-10 w-[140px] sm:w-[160px] flex items-center justify-center">
-                        {!failed ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.logo}
-                            alt={`${p.name} logo`}
-                            className="max-h-10 max-w-[160px] w-auto object-contain opacity-70 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
-                            loading="lazy"
-                            onError={() => {
-                              setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
-                            }}
-                          />
-                        ) : (
-                          <span className="text-sm font-medium text-foreground text-center">
-                            {p.name}
-                          </span>
-                        )}
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 py-1">
+                  {partners.map((p) => {
+                    const failed = !!logoFailed[p.name];
+
+                    return (
+                      <div
+                        key={`${p.name}-${p.logo}`}
+                        className="group flex items-center"
+                        title={p.name}
+                        aria-label={p.name}
+                      >
+                        <div className="h-10 w-[140px] sm:w-[160px] flex items-center justify-center">
+                          {!failed ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.logo}
+                              alt={`${p.name} logo`}
+                              className="max-h-10 max-w-[160px] w-auto object-contain opacity-60 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
+                              loading="lazy"
+                              onError={() => {
+                                setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
+                              }}
+                            />
+                          ) : (
+                            <span className="text-sm font-medium text-foreground text-center">
+                              {p.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
