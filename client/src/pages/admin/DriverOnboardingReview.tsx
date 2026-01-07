@@ -9,24 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-import {
-  DocumentPreviewGrid,
-  type DriverDocument,
-} from "@/components/documents/DocumentPreview";
-
 type DocStatusUI = "approved" | "rejected" | "pending" | string;
-type DocStatusPreview = "APPROVED" | "REJECTED" | "PENDING";
-
-function toPreviewStatus(status: DocStatusUI | undefined | null): DocStatusPreview {
-  const s = String(status || "pending").toLowerCase();
-  if (s === "approved") return "APPROVED";
-  if (s === "rejected") return "REJECTED";
-  return "PENDING";
-}
 
 function filenameFromUrl(url: string) {
   const clean = url.split("?")[0] || url;
   return clean.split("/").pop() || "document";
+}
+
+function isPdf(mimeType?: string | null, url?: string | null) {
+  const mt = String(mimeType || "").toLowerCase();
+  if (mt.includes("pdf")) return true;
+  const u = String(url || "").toLowerCase();
+  return u.endsWith(".pdf") || u.includes(".pdf?");
 }
 
 export default function DriverOnboardingReview() {
@@ -49,6 +43,11 @@ export default function DriverOnboardingReview() {
       "";
     return typeof msg === "string" ? msg : "";
   }, [profileQuery.error, reviewDoc.error]);
+
+  // ✅ Keep rejection reasons keyed by docId so you can type without losing state
+  const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>(
+    {}
+  );
 
   if (!Number.isFinite(driverApplicationId) || driverApplicationId <= 0) {
     return (
@@ -89,23 +88,14 @@ export default function DriverOnboardingReview() {
 
   const { driver, vehicle, documents } = profileQuery.data as any;
 
-  // Map your current docs -> preview component docs
-  const previewDocs: DriverDocument[] = Array.isArray(documents)
-    ? documents
-        .filter((d: any) => !!d?.fileUrl)
-        .map((d: any) => {
-          const url = String(d.fileUrl);
-          return {
-            id: d.id,
-            label: d.type || d.label || "Document",
-            url,
-            filename: d.filename || filenameFromUrl(url),
-            mimeType: d.mimeType || undefined,
-            status: toPreviewStatus(d.status),
-            uploadedAt: d.uploadedAt || undefined,
-          } satisfies DriverDocument;
-        })
-    : [];
+  const docs = Array.isArray(documents) ? documents : [];
+
+  const statusVariant = (status: DocStatusUI) => {
+    const s = String(status || "pending").toLowerCase();
+    if (s === "approved") return "default";
+    if (s === "rejected") return "destructive";
+    return "secondary";
+  };
 
   return (
     <AdminLayout
@@ -155,134 +145,159 @@ export default function DriverOnboardingReview() {
             <div>
               <h2 className="text-lg font-semibold">Documents</h2>
               <p className="text-sm text-muted-foreground">
-                Images preview inline. PDFs can be opened or downloaded.
+                Review each document and approve or reject with a reason.
               </p>
             </div>
-            <Badge variant="secondary">{documents?.length ?? 0} total</Badge>
+            <Badge variant="secondary">{docs.length} total</Badge>
           </div>
 
-          {/* ✅ Preview grid */}
-          <DocumentPreviewGrid documents={previewDocs} />
+          {docs.length === 0 ? (
+            <div className="text-muted-foreground text-sm">
+              No documents uploaded yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {docs.map((doc: any) => {
+                const url = doc?.fileUrl ? String(doc.fileUrl) : "";
+                const name = doc?.type || doc?.label || "Document";
+                const status = doc?.status || "pending";
+                const pdf = isPdf(doc?.mimeType, url);
+                const filename = doc?.filename || filenameFromUrl(url);
 
-          {/* ✅ Approve/Reject controls (kept) */}
-          <div className="pt-2 space-y-3">
-            {Array.isArray(documents) &&
-              documents.map((doc: any) => (
-                <div key={doc.id} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium">{doc.type || "Document"}</div>
-                    <Badge
-                      variant={
-                        String(doc.status).toLowerCase() === "approved"
-                          ? "default"
-                          : String(doc.status).toLowerCase() === "rejected"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {doc.status || "pending"}
-                    </Badge>
-                  </div>
+                const reason = rejectionReasons[doc.id] ?? "";
 
-                  {!doc.fileUrl ? (
-                    <div className="text-sm text-muted-foreground">
-                      No file URL saved.
+                return (
+                  <Card key={doc.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="font-medium">{name}</div>
+                      <Badge variant={statusVariant(status)}>{status}</Badge>
                     </div>
-                  ) : null}
 
-                  {doc.expiryDate ? (
-                    <div className="text-sm text-muted-foreground">
-                      Expiry: {new Date(doc.expiryDate).toLocaleDateString()}
+                    {doc.expiryDate ? (
+                      <div className="text-sm text-muted-foreground mb-3">
+                        Expiry: {new Date(doc.expiryDate).toLocaleDateString()}
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-4 md:grid-cols-[1fr_320px]">
+                      {/* LEFT: preview */}
+                      <div className="rounded-lg border border-border bg-secondary/20 p-3 flex items-center justify-center min-h-[220px]">
+                        {!url ? (
+                          <div className="text-sm text-muted-foreground">
+                            No file URL saved.
+                          </div>
+                        ) : pdf ? (
+                          <div className="w-full flex flex-col gap-3">
+                            <div className="text-sm text-muted-foreground">
+                              PDF document: <span className="font-medium">{filename}</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={url} target="_blank" rel="noreferrer">
+                                  Open
+                                </a>
+                              </Button>
+
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={url} download>
+                                  Download
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={url}
+                            alt={name}
+                            className="max-h-[320px] w-auto object-contain rounded-md"
+                          />
+                        )}
+                      </div>
+
+                      {/* RIGHT: actions */}
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor={`reject-${doc.id}`} className="text-sm">
+                            Rejection reason
+                          </Label>
+                          <Textarea
+                            id={`reject-${doc.id}`}
+                            value={reason}
+                            onChange={(e) =>
+                              setRejectionReasons((prev) => ({
+                                ...prev,
+                                [doc.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Required only if rejecting…"
+                            rows={5}
+                            disabled={reviewDoc.isPending}
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1"
+                            disabled={reviewDoc.isPending || !url}
+                            onClick={() => {
+                              const ok = confirm("Approve this document?");
+                              if (!ok) return;
+
+                              reviewDoc.mutate(
+                                { docId: doc.id, status: "approved" },
+                                { onSuccess: () => profileQuery.refetch() }
+                              );
+                            }}
+                          >
+                            {reviewDoc.isPending ? "Saving..." : "Approve"}
+                          </Button>
+
+                          <Button
+                            className="flex-1"
+                            variant="destructive"
+                            disabled={reviewDoc.isPending || !url}
+                            onClick={() => {
+                              const trimmed = reason.trim();
+                              if (!trimmed) {
+                                alert("Please enter a rejection reason");
+                                return;
+                              }
+
+                              const ok = confirm("Reject this document?");
+                              if (!ok) return;
+
+                              reviewDoc.mutate(
+                                {
+                                  docId: doc.id,
+                                  status: "rejected",
+                                  rejectionReason: trimmed,
+                                },
+                                {
+                                  onSuccess: () => {
+                                    profileQuery.refetch();
+                                    setRejectionReasons((prev) => ({
+                                      ...prev,
+                                      [doc.id]: "",
+                                    }));
+                                  },
+                                }
+                              );
+                            }}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  ) : null}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      disabled={reviewDoc.isPending}
-                      onClick={() => {
-                        const ok = confirm("Approve this document?");
-                        if (!ok) return;
-
-                        reviewDoc.mutate(
-                          { docId: doc.id, status: "approved" },
-                          { onSuccess: () => profileQuery.refetch() }
-                        );
-                      }}
-                    >
-                      {reviewDoc.isPending ? "Saving..." : "Approve"}
-                    </Button>
-
-                    <RejectDoc
-                      docId={doc.id}
-                      disabled={reviewDoc.isPending}
-                      onReject={(reason) => {
-                        const ok = confirm("Reject this document?");
-                        if (!ok) return;
-
-                        reviewDoc.mutate(
-                          {
-                            docId: doc.id,
-                            status: "rejected",
-                            rejectionReason: reason,
-                          },
-                          { onSuccess: () => profileQuery.refetch() }
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-
-            {(!documents || documents.length === 0) && (
-              <div className="text-muted-foreground text-sm">
-                No documents uploaded yet.
-              </div>
-            )}
-          </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
     </AdminLayout>
-  );
-}
-
-function RejectDoc({
-  docId,
-  onReject,
-  disabled,
-}: {
-  docId: number;
-  onReject: (reason: string) => void;
-  disabled?: boolean;
-}) {
-  const [reason, setReason] = useState("");
-
-  return (
-    <div className="flex gap-2 items-end">
-      <div>
-        <Label className="text-xs">Rejection reason</Label>
-        <Textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          className="w-[220px]"
-          disabled={disabled}
-        />
-      </div>
-      <Button
-        size="sm"
-        variant="destructive"
-        disabled={disabled}
-        onClick={() => {
-          if (!reason.trim()) {
-            alert("Please enter a rejection reason");
-            return;
-          }
-          onReject(reason);
-          setReason("");
-        }}
-      >
-        Reject
-      </Button>
-    </div>
   );
 }
