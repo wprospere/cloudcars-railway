@@ -16,14 +16,43 @@ type DocType =
   | "INSURANCE"
   | "MOT";
 
-const DOCS: { type: DocType; label: string; hint?: string }[] = [
-  { type: "LICENSE_FRONT", label: "Driving Licence (Front)" },
-  { type: "LICENSE_BACK", label: "Driving Licence (Back)" },
-  { type: "BADGE", label: "Taxi Badge" },
-  { type: "PLATING", label: "Taxi Plating / Plate" },
-  { type: "INSURANCE", label: "Insurance" },
-  { type: "MOT", label: "MOT" },
-];
+type DocStatus = "pending" | "approved" | "rejected";
+
+const DOCS: { type: DocType; label: string; hint?: string; requiresExpiry?: boolean }[] =
+  [
+    {
+      type: "LICENSE_FRONT",
+      label: "Driving Licence (Front)",
+      hint: "Make sure your photo, name and licence number are clear.",
+    },
+    {
+      type: "LICENSE_BACK",
+      label: "Driving Licence (Back)",
+      hint: "Make sure categories and dates are readable.",
+    },
+    {
+      type: "BADGE",
+      label: "Taxi Badge",
+      hint: "Front side, not cropped, badge number visible.",
+    },
+    {
+      type: "PLATING",
+      label: "Taxi Plating / Plate",
+      hint: "Certificate/photo showing vehicle + plate details.",
+    },
+    {
+      type: "INSURANCE",
+      label: "Insurance",
+      hint: "Must show your name, reg plate and expiry date.",
+      requiresExpiry: true,
+    },
+    {
+      type: "MOT",
+      label: "MOT",
+      hint: "Pass certificate or screenshot showing reg + expiry.",
+      requiresExpiry: true,
+    },
+  ];
 
 // -------------------------
 // Token helpers
@@ -65,7 +94,6 @@ function isUkReg(reg: string): boolean {
 }
 
 function formatUkReg(reg: string): string {
-  // store/display as uppercase with spaces removed (UK regs are often shown without spaces)
   return reg.replace(/\s+/g, "").toUpperCase();
 }
 
@@ -94,6 +122,21 @@ function mimeAllowed(mime: string) {
 
 function prettyDocLabel(type: DocType) {
   return DOCS.find((d) => d.type === type)?.label ?? type;
+}
+
+function statusBadgeVariant(status?: DocStatus) {
+  // Badge variants available: "default" | "secondary" | "destructive" | "outline" (typical shadcn)
+  if (!status) return "secondary";
+  if (status === "approved") return "default";
+  if (status === "rejected") return "destructive";
+  return "secondary"; // pending
+}
+
+function statusText(status?: DocStatus) {
+  if (!status) return "Not uploaded";
+  if (status === "approved") return "Approved";
+  if (status === "rejected") return "Rejected";
+  return "Pending review";
 }
 
 export default function DriverOnboardingPage() {
@@ -164,6 +207,8 @@ export default function DriverOnboardingPage() {
     MOT: false,
   });
 
+  const [activeDoc, setActiveDoc] = useState<DocType>("LICENSE_FRONT");
+
   // -------------------------
   // tRPC calls
   // -------------------------
@@ -202,8 +247,25 @@ export default function DriverOnboardingPage() {
     return map;
   }, [profileQuery.data]);
 
+  const docsProgress = useMemo(() => {
+    const total = DOCS.length;
+    const uploaded = DOCS.filter((d) => uploadedDocs.has(d.type)).length;
+    const approved = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "approved")
+      .length;
+    const rejected = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "rejected")
+      .length;
+    const pending = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "pending")
+      .length;
+    return { total, uploaded, approved, rejected, pending };
+  }, [uploadedDocs]);
+
   const allRequiredUploaded = useMemo(() => {
     return DOCS.every((d) => uploadedDocs.has(d.type));
+  }, [uploadedDocs]);
+
+  const allApproved = useMemo(() => {
+    // Only treat as fully approved if every doc exists AND is approved
+    return DOCS.every((d) => uploadedDocs.get(d.type)?.status === "approved");
   }, [uploadedDocs]);
 
   const showError = (msg: string) => {
@@ -261,6 +323,17 @@ export default function DriverOnboardingPage() {
     profileQuery.refetch();
   }
 
+  function docExpiryRequired(type: DocType) {
+    return DOCS.find((d) => d.type === type)?.requiresExpiry ?? false;
+  }
+
+  function nextDocType(current: DocType): DocType | null {
+    const idx = DOCS.findIndex((d) => d.type === current);
+    if (idx < 0) return null;
+    const next = DOCS[idx + 1]?.type;
+    return next ?? null;
+  }
+
   async function handleUpload(type: DocType) {
     setStatusErr(null);
     setStatusMsg(null);
@@ -280,6 +353,12 @@ export default function DriverOnboardingPage() {
       return showError("File is too large. Please upload a file under 6MB.");
     }
 
+    // If expiry is required, enforce it (improves data quality)
+    if (docExpiryRequired(type)) {
+      const exp = (expiryDates[type] ?? "").trim();
+      if (!exp) return showError(`Please add an expiry date for ${prettyDocLabel(type)}.`);
+    }
+
     try {
       setUploading((prev) => ({ ...prev, [type]: true }));
 
@@ -295,9 +374,12 @@ export default function DriverOnboardingPage() {
           : undefined,
       });
 
-      showMsg(`✅ Uploaded: ${prettyDocLabel(type)}`);
+      showMsg(`✅ Uploaded: ${prettyDocLabel(type)} (now pending review)`);
       setSelectedFiles((prev) => ({ ...prev, [type]: null }));
-      profileQuery.refetch();
+      await profileQuery.refetch();
+
+      const next = nextDocType(type);
+      if (next) setActiveDoc(next);
     } catch (e: any) {
       showError(e?.message || "Upload failed.");
     } finally {
@@ -312,7 +394,8 @@ export default function DriverOnboardingPage() {
     if (!token) return showError("Missing token in URL.");
 
     const validationError = validateVehicle();
-    if (validationError) return showError("Please fix vehicle details first: " + validationError);
+    if (validationError)
+      return showError("Please fix vehicle details first: " + validationError);
 
     if (!allRequiredUploaded) {
       return showError("Please upload all required documents before submitting.");
@@ -366,28 +449,73 @@ export default function DriverOnboardingPage() {
     (profileQuery.data as any)?.driver ||
     (profileQuery.data as any)?.application;
 
+  const vehicleValidationError = validateVehicle();
+  const canSubmit =
+    !vehicleValidationError && allRequiredUploaded && !submitOnboarding.isPending;
+
+  // Progress percentage (uploaded, not approved — drivers care about completion)
+  const progressPct = Math.round((docsProgress.uploaded / docsProgress.total) * 100);
+
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
-      <Card className="p-6 space-y-2">
-        <h1 className="text-2xl font-bold">Driver Onboarding</h1>
-        <p className="text-muted-foreground">
-          Please complete your vehicle details and upload required documents.
-        </p>
+      {/* Header + Status */}
+      <Card className="p-6 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Driver Onboarding</h1>
+            <p className="text-muted-foreground">
+              Complete your vehicle details and upload your documents. Most drivers finish in{" "}
+              <span className="font-medium">5–8 minutes</span>.
+            </p>
 
-        {driver?.fullName && (
-          <div className="pt-2 text-sm">
-            <span className="text-muted-foreground">Driver:</span>{" "}
-            <span className="font-medium">{driver.fullName}</span>
+            {driver?.fullName && (
+              <div className="pt-2 text-sm">
+                <span className="text-muted-foreground">Driver:</span>{" "}
+                <span className="font-medium">{driver.fullName}</span>
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="text-right">
+            <Badge variant={allApproved ? "default" : "secondary"}>
+              {allApproved ? "Approved" : "In progress"}
+            </Badge>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {docsProgress.uploaded}/{docsProgress.total} uploaded
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar (simple, no extra components) */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Progress</span>
+            <span>{progressPct}%</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted">
+            <div
+              className="h-2 rounded-full bg-foreground transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {docsProgress.approved > 0 && (
+              <span className="mr-2">✅ {docsProgress.approved} approved</span>
+            )}
+            {docsProgress.pending > 0 && (
+              <span className="mr-2">⏳ {docsProgress.pending} pending</span>
+            )}
+            {docsProgress.rejected > 0 && <span>❌ {docsProgress.rejected} rejected</span>}
+          </div>
+        </div>
 
         {statusErr && (
-          <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+          <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
             {statusErr}
           </div>
         )}
         {statusMsg && (
-          <div className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+          <div className="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
             {statusMsg}
           </div>
         )}
@@ -396,11 +524,27 @@ export default function DriverOnboardingPage() {
       {/* Vehicle Details */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Vehicle Details</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Vehicle Details</h2>
+            <div className="text-xs text-muted-foreground">
+              Required: Registration, Make, Model, Colour
+            </div>
+          </div>
+
           <Button onClick={handleSaveVehicle} disabled={saveVehicle.isPending}>
             {saveVehicle.isPending ? "Saving..." : "Save Vehicle"}
           </Button>
         </div>
+
+        {vehicleValidationError ? (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+            {vehicleValidationError}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+            ✅ Vehicle details look good
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -445,120 +589,203 @@ export default function DriverOnboardingPage() {
           </div>
         </div>
 
-        {/* Small validation hint */}
         <div className="text-xs text-muted-foreground">
           UK reg example: <span className="font-medium">AB12CDE</span>
         </div>
       </Card>
 
-      {/* Documents */}
+      {/* Documents - checklist + focused upload */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Required Documents</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Documents</h2>
+            <div className="text-xs text-muted-foreground">
+              Upload each item below. If rejected, you’ll see the reason and can re-upload.
+            </div>
+          </div>
+
           <Badge variant={allRequiredUploaded ? "default" : "secondary"}>
-            {allRequiredUploaded ? "All Uploaded" : "Pending Uploads"}
+            {allRequiredUploaded ? "All Uploaded" : "Upload Remaining"}
           </Badge>
         </div>
 
-        <div className="space-y-4">
-          {DOCS.map((doc) => {
-            const existing = uploadedDocs.get(doc.type);
-            const isUploading = uploading[doc.type];
+        {/* Quick checklist */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {DOCS.map((d) => {
+            const existing = uploadedDocs.get(d.type);
+            const status: DocStatus | undefined = existing?.status;
+            const isSelected = activeDoc === d.type;
 
             return (
-              <div key={doc.type} className="rounded-lg border p-4 space-y-2">
+              <button
+                key={d.type}
+                type="button"
+                onClick={() => setActiveDoc(d.type)}
+                className={`rounded-lg border p-3 text-left transition ${
+                  isSelected ? "border-foreground" : "border-border"
+                }`}
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">{doc.label}</div>
-                  {existing?.fileUrl ? (
-                    <Badge>Uploaded</Badge>
-                  ) : (
-                    <Badge variant="secondary">Not uploaded</Badge>
-                  )}
+                  <div className="font-medium">{d.label}</div>
+                  <Badge variant={statusBadgeVariant(status) as any}>
+                    {statusText(status)}
+                  </Badge>
                 </div>
 
-                {existing?.fileUrl && (
-                  <div className="text-sm">
-                    <a
-                      className="underline"
-                      href={existing.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View uploaded file
-                    </a>
-                    {existing?.status && (
-                      <span className="ml-2 text-muted-foreground">
-                        (Status: {existing.status})
-                      </span>
-                    )}
+                {status === "rejected" && existing?.rejectionReason && (
+                  <div className="mt-2 text-xs text-destructive">
+                    Reason: {existing.rejectionReason}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Upload file (image or PDF, under 6MB)</Label>
-                    <Input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] ?? null;
-                        setSelectedFiles((prev) => ({ ...prev, [doc.type]: f }));
-                      }}
-                    />
-                    {selectedFiles[doc.type]?.name && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Selected: {selectedFiles[doc.type]!.name}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label>Expiry date (optional)</Label>
-                    <Input
-                      type="date"
-                      value={expiryDates[doc.type]}
-                      onChange={(e) =>
-                        setExpiryDates((prev) => ({
-                          ...prev,
-                          [doc.type]: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleUpload(doc.type)}
-                    disabled={isUploading || uploadDocument.isPending}
-                  >
-                    {isUploading ? "Uploading..." : "Upload"}
-                  </Button>
-                </div>
-              </div>
+                {d.hint && (
+                  <div className="mt-1 text-xs text-muted-foreground">{d.hint}</div>
+                )}
+              </button>
             );
           })}
         </div>
+
+        {/* Focused uploader for selected doc */}
+        {(() => {
+          const doc = DOCS.find((d) => d.type === activeDoc)!;
+          const existing = uploadedDocs.get(activeDoc);
+          const status: DocStatus | undefined = existing?.status;
+          const isUploading = uploading[activeDoc];
+
+          return (
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-base font-semibold">{doc.label}</div>
+                  {doc.hint && (
+                    <div className="text-xs text-muted-foreground mt-1">{doc.hint}</div>
+                  )}
+                </div>
+                <Badge variant={statusBadgeVariant(status) as any}>
+                  {statusText(status)}
+                </Badge>
+              </div>
+
+              {existing?.fileUrl && (
+                <div className="text-sm">
+                  <a
+                    className="underline"
+                    href={existing.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View uploaded file
+                  </a>
+                  {typeof status === "string" && (
+                    <span className="ml-2 text-muted-foreground">(Status: {status})</span>
+                  )}
+                </div>
+              )}
+
+              {status === "rejected" && existing?.rejectionReason && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+                  <div className="font-medium">Rejected</div>
+                  <div className="text-sm mt-1">{existing.rejectionReason}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Please re-upload a clearer/correct document.
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Upload file (image or PDF, under 6MB)</Label>
+                  <Input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      setSelectedFiles((prev) => ({ ...prev, [activeDoc]: f }));
+                    }}
+                  />
+                  {selectedFiles[activeDoc]?.name && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Selected: {selectedFiles[activeDoc]!.name}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>
+                    Expiry date{" "}
+                    {docExpiryRequired(activeDoc) ? (
+                      <span className="text-destructive">(required)</span>
+                    ) : (
+                      <span className="text-muted-foreground">(optional)</span>
+                    )}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={expiryDates[activeDoc]}
+                    onChange={(e) =>
+                      setExpiryDates((prev) => ({
+                        ...prev,
+                        [activeDoc]: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleUpload(activeDoc)}
+                  disabled={isUploading || uploadDocument.isPending}
+                >
+                  {isUploading ? "Uploading..." : existing?.fileUrl ? "Re-upload" : "Upload"}
+                </Button>
+
+                {nextDocType(activeDoc) && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setActiveDoc(nextDocType(activeDoc)!)}
+                  >
+                    Next
+                  </Button>
+                )}
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Tip: Use good lighting. Make sure all corners are visible and text is readable.
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Submit */}
       <Card className="p-6 space-y-3">
-        <h2 className="text-lg font-semibold">Submit</h2>
-        <p className="text-sm text-muted-foreground">
-          Once you have saved vehicle details and uploaded all documents, submit for review.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Submit for Review</h2>
+            <p className="text-sm text-muted-foreground">
+              When vehicle details are saved and all documents are uploaded, submit for review.
+            </p>
+          </div>
+          <Badge variant={canSubmit ? "default" : "secondary"}>
+            {canSubmit ? "Ready" : "Not ready"}
+          </Badge>
+        </div>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={submitOnboarding.isPending || !allRequiredUploaded}
-        >
-          {submitOnboarding.isPending ? "Submitting..." : "Submit for Review"}
+        <Button onClick={handleSubmit} disabled={!canSubmit}>
+          {submitOnboarding.isPending ? "Submitting..." : "Submit"}
         </Button>
 
         {!allRequiredUploaded && (
           <div className="text-xs text-muted-foreground">
             Upload all required documents to enable submission.
+          </div>
+        )}
+        {vehicleValidationError && (
+          <div className="text-xs text-muted-foreground">
+            Save valid vehicle details to enable submission.
           </div>
         )}
       </Card>
