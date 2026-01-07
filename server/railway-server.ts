@@ -283,7 +283,7 @@ async function safeRunMigrations() {
   }
 
   try {
-    console.log("🛠️ Running drizzle migrations from: /app/drizzle/migrations");
+    console.log("🛠️ Running drizzle migrations...");
     await runMigrations();
     console.log("✅ Migrations complete");
   } catch (e: any) {
