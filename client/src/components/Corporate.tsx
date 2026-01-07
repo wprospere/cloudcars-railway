@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useCmsContent } from "@/hooks/useCmsContent";
 import { trpc } from "@/lib/trpc";
 
@@ -94,16 +94,16 @@ export default function Corporate() {
       if (img?.imageKey && img?.url) byKey.set(img.imageKey, img.url);
     }
 
-    // Build partners from uploaded slots (only those that exist)
     const uploaded: Partner[] = PARTNER_SLOTS.map((slot, idx) => {
       const url = byKey.get(slot.key);
       if (!url) return null;
-      // Give each one a stable label if you want, otherwise generic name is fine
-      const name = slot.name === "Trusted Partner" ? `Trusted Partner ${idx + 1}` : slot.name;
+
+      const name =
+        slot.name === "Trusted Partner" ? `Trusted Partner ${idx + 1}` : slot.name;
+
       return { name, logo: url };
     }).filter(Boolean) as Partner[];
 
-    // If nothing uploaded yet, use fallback logos
     return uploaded.length > 0 ? uploaded : FALLBACK_PARTNERS;
   }, [imagesQuery.data]);
 
@@ -220,17 +220,11 @@ export default function Corporate() {
 
                   return (
                     <div
-                      key={p.name}
+                      key={`${p.name}-${p.logo}`}
                       className="relative overflow-hidden rounded-xl border border-border bg-card px-4 py-6 flex items-center justify-center transition hover:shadow-sm"
                       title={p.name}
                       aria-label={p.name}
                     >
-                      {/* badge */}
-                      <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-border bg-background/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
-                        <BadgeCheck className="w-3 h-3" />
-                        Trusted partner
-                      </div>
-
                       {/* Logo */}
                       {!failed && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -257,8 +251,6 @@ export default function Corporate() {
                   );
                 })}
               </div>
-
-              {/* ✅ No admin/developer message on homepage (removed) */}
             </div>
           </div>
 
