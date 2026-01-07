@@ -22,10 +22,8 @@ import {
   getAllDriverApplications,
   getAllCorporateInquiries,
   getAllContactMessages,
+  runMigrations, // ✅ single import from ./db (avoid duplicate import below)
 } from "./db";
-
-// ✅ migrations live in PROJECT ROOT
-import { runMigrations } from "./db";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -177,25 +175,27 @@ function shouldRunMigrations() {
 }
 
 function drizzleJournalExists() {
-  const journalPath = path.join(
-    process.cwd(),
-    "drizzle",
-    "meta",
-    "_journal.json"
-  );
+  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
   return fs.existsSync(journalPath);
+}
+
+function getDatabaseUrl(): string | undefined {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.MYSQL_URL ||
+    process.env.MYSQLDATABASE_URL ||
+    process.env.DATABASE_PRIVATE_URL
+  );
 }
 
 /**
  * ✅ DB patcher: fixes "Unknown column 'revokedAt'" without needing to run SQL manually.
  * Safe to run on every boot (idempotent).
+ *
+ * IMPORTANT: In ESM/strict mode, do NOT declare functions inside blocks.
  */
 async function patchDatabaseIfNeeded() {
-  const DATABASE_URL =
-    process.env.DATABASE_URL ||
-    process.env.MYSQL_URL ||
-    process.env.MYSQLDATABASE_URL ||
-    process.env.DATABASE_PRIVATE_URL;
+  const DATABASE_URL = getDatabaseUrl();
 
   if (!DATABASE_URL) {
     console.warn(
@@ -205,6 +205,24 @@ async function patchDatabaseIfNeeded() {
   }
 
   let pool: mysql.Pool | null = null;
+
+  // ✅ Define helper OUTSIDE try/catch block (ESM strict-mode safe)
+  const hasColumn = async (table: string, column: string) => {
+    if (!pool) throw new Error("DB pool not initialised");
+
+    const [rows] = await pool.query<any[]>(
+      `
+      SELECT COUNT(*) AS cnt
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+      `,
+      [table, column]
+    );
+
+    return Number(rows?.[0]?.cnt ?? 0) > 0;
+  };
 
   try {
     pool = mysql.createPool({
@@ -216,23 +234,9 @@ async function patchDatabaseIfNeeded() {
       keepAliveInitialDelay: 0,
     });
 
-    async function hasColumn(table: string, column: string) {
-      const [rows] = await pool!.query<any[]>(
-        `
-        SELECT COUNT(*) AS cnt
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = ?
-          AND COLUMN_NAME = ?
-        `,
-        [table, column]
-      );
-      return Number(rows?.[0]?.cnt ?? 0) > 0;
-    }
-
     const table = "driver_onboarding_tokens";
 
-    // ✅ Your code selects revokedAt; prod table is missing it
+    // ✅ Your code selects revokedAt; prod table may be missing it
     if (!(await hasColumn(table, "revokedAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.revokedAt ...`);
       await pool.query(
@@ -241,7 +245,7 @@ async function patchDatabaseIfNeeded() {
       console.log(`✅ DB patch: added ${table}.revokedAt`);
     }
 
-    // These are common alongside your token logic; safe to add if missing
+    // Common alongside your token logic; safe to add if missing
     if (!(await hasColumn(table, "lastSentAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.lastSentAt ...`);
       await pool.query(
