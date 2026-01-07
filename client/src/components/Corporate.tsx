@@ -15,6 +15,7 @@ import {
   FileText,
   CheckCircle2,
   Loader2,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -187,14 +188,25 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* ✅ Trusted by strip */}
+            {/* ✅ Trusted Partners strip */}
             <div className="pt-8 border-t border-border">
-              <div className="mb-4">
-                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
-                  Trusted by
-                </p>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Trusted partners
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    A selection of organisations we support with corporate transport.
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                  <BadgeCheck className="w-4 h-4" />
+                  Verified
+                </div>
               </div>
 
+              {/* Strip */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
                 {partners.map((p) => {
                   const failed = !!logoFailed[p.name];
@@ -206,6 +218,7 @@ export default function Corporate() {
                       title={p.name}
                       aria-label={p.name}
                     >
+                      {/* consistent frame */}
                       <div className="h-10 w-[140px] sm:w-[160px] flex items-center justify-center">
                         {!failed ? (
                           // eslint-disable-next-line @next/next/no-img-element
