@@ -387,10 +387,7 @@ export async function revokeActiveDriverOnboardingTokens(
     .set({ revokedAt: new Date() } as any)
     .where(
       and(
-        eq(
-          schema.driverOnboardingTokens.driverApplicationId,
-          driverApplicationId
-        ),
+        eq(schema.driverOnboardingTokens.driverApplicationId, driverApplicationId),
         isNull(schema.driverOnboardingTokens.usedAt),
         isNull(schema.driverOnboardingTokens.revokedAt)
       )
@@ -556,9 +553,7 @@ export async function upsertDriverVehicle(params: {
   const existing = await db
     .select()
     .from(schema.driverVehicles)
-    .where(
-      eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
-    );
+    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
 
   if ((existing as any[]).length > 0) {
     await db
@@ -573,9 +568,7 @@ export async function upsertDriverVehicle(params: {
         capacity: params.capacity ?? null,
         updatedAt: new Date(),
       } as any)
-      .where(
-        eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
-      );
+      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
 
     return { success: true };
   }
@@ -613,10 +606,7 @@ export async function upsertDriverDocument(params: {
     .from(schema.driverDocuments)
     .where(
       and(
-        eq(
-          schema.driverDocuments.driverApplicationId,
-          params.driverApplicationId
-        ),
+        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
         eq(schema.driverDocuments.type, params.type as any)
       )
     );
@@ -648,6 +638,9 @@ export async function upsertDriverDocument(params: {
   return { success: true };
 }
 
+/**
+ * Existing low-level review by docId (kept)
+ */
 export async function setDriverDocumentReview(params: {
   docId: number;
   status: "approved" | "rejected";
@@ -662,12 +655,73 @@ export async function setDriverDocumentReview(params: {
       reviewedBy: params.reviewedBy,
       rejectionReason:
         params.status === "rejected"
-          ? params.rejectionReason ?? "Rejected"
+          ? (params.rejectionReason ?? "Rejected")
           : null,
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
 }
 
+/**
+ * ✅ NEW: fetch a single doc by (driverApplicationId + type)
+ */
+export async function getDriverDocumentByAppAndType(params: {
+  driverApplicationId: number;
+  type: DriverDocType;
+}) {
+  const rows = await db
+    .select()
+    .from(schema.driverDocuments)
+    .where(
+      and(
+        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
+        eq(schema.driverDocuments.type, params.type as any)
+      )
+    )
+    .limit(1);
+
+  return (rows as any[])[0] ?? null;
+}
+
+/**
+ * ✅ NEW: review doc by (driverApplicationId + type) so your UI doesn’t need docId
+ * This is usually what the Admin page wants when you click "Approve/Reject".
+ */
+export async function reviewDriverDocumentByAppAndType(params: {
+  driverApplicationId: number;
+  type: DriverDocType;
+  status: "approved" | "rejected";
+  reviewedBy: string;
+  rejectionReason?: string | null;
+}) {
+  const doc: any = await getDriverDocumentByAppAndType({
+    driverApplicationId: params.driverApplicationId,
+    type: params.type,
+  });
+
+  if (!doc) {
+    throw new Error(
+      `Document not found for driverApplicationId=${params.driverApplicationId}, type=${params.type}`
+    );
+  }
+
+  await setDriverDocumentReview({
+    docId: Number(doc.id),
+    status: params.status,
+    reviewedBy: params.reviewedBy,
+    rejectionReason: params.rejectionReason ?? null,
+  });
+
+  // return the updated doc for convenience
+  return getDriverDocumentByAppAndType({
+    driverApplicationId: params.driverApplicationId,
+    type: params.type,
+  });
+}
+
+/**
+ * ✅ This is what your frontend calls:
+ * trpc.admin.getDriverOnboardingProfile({ driverApplicationId })
+ */
 export async function getDriverOnboardingProfile(driverApplicationId: number) {
   const app = await db.query.driverApplications.findFirst({
     where: (a, { eq }) => eq(a.id, driverApplicationId),
