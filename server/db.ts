@@ -60,6 +60,12 @@ export { schema };
 /**
  * ✅ Run Drizzle migrations once (call this on server startup)
  * Safe to call multiple times; it only runs once per process.
+ *
+ * IMPORTANT:
+ * Your repo has drizzle/meta/_journal.json
+ * So migrationsFolder must be the parent folder: "drizzle"
+ * (NOT "drizzle/migrations"), otherwise Drizzle looks for
+ * drizzle/migrations/meta/_journal.json and fails.
  */
 let migrationsRan = false;
 
@@ -67,7 +73,7 @@ export async function runMigrations() {
   if (migrationsRan) return;
   migrationsRan = true;
 
-  const migrationsFolder = path.join(process.cwd(), "drizzle", "migrations");
+  const migrationsFolder = path.join(process.cwd(), "drizzle"); // ✅ correct
   console.log("🛠️ Running drizzle migrations from:", migrationsFolder);
 
   await migrate(db as any, { migrationsFolder });
@@ -491,8 +497,6 @@ export async function markDriverOnboardingTokenUsed(rawToken: string) {
  * Admin resend helper:
  * - revokes old active tokens
  * - inserts new token with lastSentAt/sendCount
- *
- * (You still send the email in your mailer layer.)
  */
 export async function resendDriverOnboardingToken(params: {
   driverApplicationId: number;
@@ -680,13 +684,9 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
 
   // ✅ Return ALL common shapes so your UI never breaks:
   return {
-    // what your DriverOnboarding.tsx expects:
     driverApplication: app ?? null,
-
-    // aliases (keep for backwards compatibility):
     driver: app ?? null,
     application: app ?? null,
-
     vehicle: vehicle ?? null,
     documents,
   };
