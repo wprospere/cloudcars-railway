@@ -71,37 +71,61 @@ export default function DriverOnboardingReview() {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
-  /**
-   * ✅ Clamp pan so you can't drag the image off-screen into empty space.
-   * We clamp based on viewport size and zoom level:
-   * - At scale 1 => no pan (0,0)
-   * - As scale increases => allowed pan grows, but bounded.
-   */
-  const clampPan = (p: { x: number; y: number }, s: number) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    if (!rect) return p;
-
-    if (s <= 1) return { x: 0, y: 0 };
-
-    // Allow pan up to half the "extra" size introduced by zoom.
-    // This keeps the image covering the viewport without exposing too much empty background.
-    const maxX = ((s - 1) * rect.width) / 2;
-    const maxY = ((s - 1) * rect.height) / 2;
-
-    return {
-      x: clamp(p.x, -maxX, maxX),
-      y: clamp(p.y, -maxY, maxY),
-    };
-  };
+  // ✅ Track the actual rendered base size (contain-fit) and natural size for accurate clamping
+  const imgNaturalRef = useRef({ w: 0, h: 0 });
+  const imgBaseRef = useRef({ w: 0, h: 0 }); // size at scale=1 (contain fit inside viewport)
+  const imgElRef = useRef<HTMLImageElement | null>(null);
 
   const resetView = () => {
     setScale(1);
     setPan({ x: 0, y: 0 });
     setIsDragging(false);
+  };
+
+  const computeBaseSize = () => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const nat = imgNaturalRef.current;
+
+    if (!rect || !nat.w || !nat.h) return;
+
+    // contain fit inside viewport
+    const fit = Math.min(rect.width / nat.w, rect.height / nat.h);
+    imgBaseRef.current = { w: nat.w * fit, h: nat.h * fit };
+  };
+
+  /**
+   * ✅ Perfect clamp: clamp based on true image edges at current scale.
+   * Pan is in viewport pixels. Base size is already in viewport pixels.
+   */
+  const clampPan = (p: { x: number; y: number }, s: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return p;
+
+    // ensure base is computed
+    if (!imgBaseRef.current.w || !imgBaseRef.current.h) {
+      computeBaseSize();
+    }
+
+    const base = imgBaseRef.current;
+    if (!base.w || !base.h) return p;
+
+    // final displayed image size at current scale
+    const scaledW = base.w * s;
+    const scaledH = base.h * s;
+
+    // If the scaled image is smaller than viewport on an axis, keep centered on that axis.
+    const maxX = Math.max(0, (scaledW - rect.width) / 2);
+    const maxY = Math.max(0, (scaledH - rect.height) / 2);
+
+    return {
+      x: clamp(p.x, -maxX, maxX),
+      y: clamp(p.y, -maxY, maxY),
+    };
   };
 
   const setScaleClamped = (nextScale: number) => {
@@ -121,16 +145,12 @@ export default function DriverOnboardingReview() {
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
 
-    const delta = e.deltaY;
-    const zoomFactor = delta > 0 ? 0.9 : 1.1;
-
     const rect = viewportRef.current?.getBoundingClientRect();
-    if (!rect) {
-      zoomBy(zoomFactor);
-      return;
-    }
+    if (!rect) return;
 
-    // Cursor position relative to center (for zoom-to-cursor feel)
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+
+    // cursor relative to center
     const cx = e.clientX - rect.left - rect.width / 2;
     const cy = e.clientY - rect.top - rect.height / 2;
 
@@ -139,6 +159,7 @@ export default function DriverOnboardingReview() {
       const ratio = nextScale / prevScale;
 
       setPan((prevPan) => {
+        // keep the point under cursor stable
         const nextPan = {
           x: prevPan.x - cx * (ratio - 1),
           y: prevPan.y - cy * (ratio - 1),
@@ -177,6 +198,19 @@ export default function DriverOnboardingReview() {
     return "secondary";
   };
 
+  const openZoom = (url: string, title: string) => {
+    // clear sizing refs so we recalc accurately per-image
+    imgNaturalRef.current = { w: 0, h: 0 };
+    imgBaseRef.current = { w: 0, h: 0 };
+    imgElRef.current = null;
+
+    setZoom({ open: true, url, title });
+    resetView();
+  };
+
+  // -----------------------------
+  // Guard states
+  // -----------------------------
   if (!Number.isFinite(driverApplicationId) || driverApplicationId <= 0) {
     return (
       <AdminLayout title="Driver Onboarding">
@@ -222,7 +256,7 @@ export default function DriverOnboardingReview() {
       title="Driver Onboarding Review"
       description="Review uploaded documents and vehicle details"
     >
-      {/* ✅ Image zoom dialog w/ clamped pan+zoom */}
+      {/* ✅ Image zoom dialog w/ perfectly accurate clamped pan+zoom */}
       <Dialog
         open={zoom.open}
         onOpenChange={(open) => {
@@ -269,6 +303,8 @@ export default function DriverOnboardingReview() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
+                  // recalc base (in case viewport size changed) and reset
+                  computeBaseSize();
                   resetView();
                 }}
                 disabled={!zoom.url}
@@ -294,16 +330,38 @@ export default function DriverOnboardingReview() {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
-            onDoubleClick={() => resetView()}
+            onDoubleClick={() => {
+              computeBaseSize();
+              resetView();
+            }}
           >
             <div className="absolute inset-0 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
+                ref={(el) => {
+                  imgElRef.current = el;
+                }}
                 src={zoom.url}
                 alt={zoom.title}
                 draggable={false}
                 className="select-none max-h-none max-w-none"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+
+                  // natural size
+                  imgNaturalRef.current = {
+                    w: img.naturalWidth || 0,
+                    h: img.naturalHeight || 0,
+                  };
+
+                  // compute base size inside viewport and clamp current pan
+                  computeBaseSize();
+                  setPan((p) => clampPan(p, scale));
+                }}
                 style={{
+                  // Base size is "contain" fitted, and we scale from there.
+                  width: imgBaseRef.current.w ? `${imgBaseRef.current.w}px` : "auto",
+                  height: imgBaseRef.current.h ? `${imgBaseRef.current.h}px` : "auto",
                   transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
                   transformOrigin: "center center",
                   transition: isDragging ? "none" : "transform 80ms linear",
@@ -380,7 +438,7 @@ export default function DriverOnboardingReview() {
               <h2 className="text-lg font-semibold">Documents</h2>
               <p className="text-sm text-muted-foreground">
                 Review each document and approve or reject with a reason. Click
-                images to zoom (pan/zoom is clamped).
+                images to zoom (perfect edge clamping).
               </p>
             </div>
             <Badge variant="secondary">{docs.length} total</Badge>
@@ -398,7 +456,6 @@ export default function DriverOnboardingReview() {
                 const status = doc?.status || "pending";
                 const pdf = isPdf(doc?.mimeType, url);
                 const filename = doc?.filename || filenameFromUrl(url);
-
                 const reason = rejectionReasons[doc.id] ?? "";
 
                 return (
@@ -446,10 +503,7 @@ export default function DriverOnboardingReview() {
                           <button
                             type="button"
                             className="group relative"
-                            onClick={() => {
-                              setZoom({ open: true, url, title: name });
-                              resetView();
-                            }}
+                            onClick={() => openZoom(url, name)}
                             aria-label={`Zoom ${name}`}
                             title="Click to zoom"
                           >
