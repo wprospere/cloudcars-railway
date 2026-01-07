@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCmsContent } from "@/hooks/useCmsContent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import {
   FileText,
   CheckCircle2,
   Loader2,
+  ExternalLink,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,7 +51,40 @@ const benefits = [
   },
 ];
 
-const clients = ["Boots UK", "Speedo", "Nottinghamshire Healthcare Trust"];
+/**
+ * Premium clients list:
+ * - name (required)
+ * - website (optional): makes it clickable
+ * - logoUrl (optional): if you add logos later, it will show them
+ */
+type Client = {
+  name: string;
+  website?: string;
+  logoUrl?: string;
+};
+
+// ✅ Add another business here:
+const clients: Client[] = [
+  { name: "Boots UK", website: "https://www.boots.com/" },
+  { name: "Speedo", website: "https://www.speedo.com/" },
+  {
+    name: "Nottinghamshire Healthcare Trust",
+    website: "https://www.nottinghamshirehealthcare.nhs.uk/",
+  },
+
+  // EXAMPLE: add a new one like this
+  // { name: "Your Partner Name", website: "https://example.com", logoUrl: "https://..." },
+];
+
+function isValidHttpUrl(v?: string) {
+  if (!v) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export default function Corporate() {
   const content = useCmsContent("corporate");
@@ -66,9 +101,17 @@ export default function Corporate() {
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  const safeClients = useMemo(() => {
+    // Guard against bad URLs so we never render broken hrefs
+    return clients.map((c) => ({
+      ...c,
+      website: isValidHttpUrl(c.website) ? c.website : undefined,
+      logoUrl: isValidHttpUrl(c.logoUrl) ? c.logoUrl : undefined,
+    }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (isSending) return;
 
     setIsSending(true);
@@ -141,20 +184,82 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* Client Logos */}
+            {/* Premium Client/Partner Strip */}
             <div className="pt-8 border-t border-border">
-              <p className="text-sm text-muted-foreground mb-4">
-                Some of the Nottingham businesses we work with
-              </p>
-              <div className="flex flex-wrap gap-4">
-                {clients.map((client, index) => (
-                  <span
-                    key={index}
-                    className="px-4 py-2 bg-secondary rounded-lg text-sm text-muted-foreground"
-                  >
-                    {client}
-                  </span>
-                ))}
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Trusted by local and national organisations
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    A few of the businesses we support in and around Nottingham.
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                  <BadgeCheck className="w-4 h-4" />
+                  Verified partners
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {safeClients.map((client) => {
+                  const CardInner = (
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition hover:shadow-sm hover:border-foreground/30">
+                      {/* Logo (optional) */}
+                      {client.logoUrl ? (
+                        <div className="h-10 w-10 rounded-lg border bg-background flex items-center justify-center overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={client.logoUrl}
+                            alt={`${client.name} logo`}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg border bg-background flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-foreground truncate">
+                          {client.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Corporate travel support
+                        </div>
+                      </div>
+
+                      {client.website ? (
+                        <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                      ) : null}
+                    </div>
+                  );
+
+                  if (client.website) {
+                    return (
+                      <a
+                        key={client.name}
+                        href={client.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="focus:outline-none focus:ring-2 focus:ring-primary rounded-xl"
+                        aria-label={`Open ${client.name} website`}
+                      >
+                        {CardInner}
+                      </a>
+                    );
+                  }
+
+                  return <div key={client.name}>{CardInner}</div>;
+                })}
+              </div>
+
+              <div className="mt-4 text-xs text-muted-foreground">
+                Want your company set up with a business account? Fill the form and we’ll call you
+                within 24 hours.
               </div>
             </div>
           </div>
