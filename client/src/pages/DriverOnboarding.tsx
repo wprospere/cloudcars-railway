@@ -159,14 +159,13 @@ function isPdfFile(file: File | null | undefined) {
 }
 
 // -------------------------
-// Premium: image rotation via canvas
+// Premium: image rotation + compression via canvas
 // -------------------------
 
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
-    // avoid canvas taint issues (not really needed for local blob, but safe)
     img.crossOrigin = "anonymous";
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
@@ -177,6 +176,99 @@ async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * ✅ Auto-compress images (Option 1):
+ * - target ~4MB for fast uploads
+ * - hard max 6MB
+ * - keep quality >= 0.60 (protects small text)
+ * - if still too big: shrink dimensions instead of nuking quality
+ * - PDFs are not compressed (returned unchanged)
+ */
+async function compressImageFile(
+  file: File,
+  opts?: {
+    targetBytes?: number; // aim for this (recommended 4MB)
+    hardMaxBytes?: number; // never exceed this (hard limit 6MB)
+    maxSidePx?: number; // first-pass max dimension
+    minSidePx?: number; // fallback smaller dimension if still too big
+    initialQuality?: number;
+    minQuality?: number; // keep text readable
+    qualityStep?: number;
+  }
+): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  const targetBytes = opts?.targetBytes ?? 4 * 1024 * 1024;
+  const hardMaxBytes = opts?.hardMaxBytes ?? 6 * 1024 * 1024;
+  const maxSidePx = opts?.maxSidePx ?? 2200;
+  const minSidePx = opts?.minSidePx ?? 1600;
+
+  const initialQuality = opts?.initialQuality ?? 0.85;
+  const minQuality = opts?.minQuality ?? 0.6;
+  const qualityStep = opts?.qualityStep ?? 0.07;
+
+  const img = await loadImageFromFile(file);
+
+  const srcW = img.naturalWidth || img.width;
+  const srcH = img.naturalHeight || img.height;
+
+  async function renderToJpegBlob(sideLimit: number, quality: number): Promise<Blob> {
+    const maxSide = Math.max(srcW, srcH);
+    const scale = maxSide > sideLimit ? sideLimit / maxSide : 1;
+
+    const targetW = Math.max(1, Math.round(srcW * scale));
+    const targetH = Math.max(1, Math.round(srcH * scale));
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Failed to compress image"))),
+        "image/jpeg",
+        quality
+      );
+    });
+  }
+
+  const isOversizeBytes = file.size > targetBytes;
+  const isOversizeDims = Math.max(srcW, srcH) > maxSidePx;
+  if (!isOversizeBytes && !isOversizeDims) return file;
+
+  // Pass 1: resize to maxSidePx, reduce quality (down to minQuality) to hit targetBytes
+  let side = maxSidePx;
+  let q = initialQuality;
+  let blob = await renderToJpegBlob(side, q);
+
+  while (blob.size > targetBytes && q > minQuality) {
+    q = Math.max(minQuality, q - qualityStep);
+    blob = await renderToJpegBlob(side, q);
+  }
+
+  // Pass 2: if still above HARD cap, shrink dimensions (preferred) and only then drop quality a bit
+  if (blob.size > hardMaxBytes) {
+    side = minSidePx;
+    q = Math.max(q, minQuality);
+    blob = await renderToJpegBlob(side, q);
+
+    while (blob.size > hardMaxBytes && q > minQuality) {
+      q = Math.max(minQuality, q - qualityStep);
+      blob = await renderToJpegBlob(side, q);
+    }
+  }
+
+  const newName = file.name.replace(/\.(\w+)$/, "") + "-optimised.jpg";
+  return new File([blob], newName, { type: "image/jpeg" });
 }
 
 async function rotateImageFile(file: File, direction: "left" | "right"): Promise<File> {
@@ -200,7 +292,8 @@ async function rotateImageFile(file: File, direction: "left" | "right"): Promise
   ctx.rotate(radians);
   ctx.drawImage(img, -w / 2, -h / 2);
 
-  const outputType = file.type && file.type.startsWith("image/") ? file.type : "image/jpeg";
+  // Rotate output as JPEG to avoid PNG bloat + ensure future compression is consistent
+  const outputType = "image/jpeg";
   const quality = 0.92;
 
   const blob: Blob = await new Promise((resolve, reject) => {
@@ -211,7 +304,7 @@ async function rotateImageFile(file: File, direction: "left" | "right"): Promise
     );
   });
 
-  const newName = file.name.replace(/\.(\w+)$/, "") + `-rotated.${outputType.split("/")[1] || "jpg"}`;
+  const newName = file.name.replace(/\.(\w+)$/, "") + `-rotated.jpg`;
   return new File([blob], newName, { type: outputType });
 }
 
@@ -310,13 +403,11 @@ export default function DriverOnboardingPage() {
       const currentUrl = previewUrls[t];
 
       if (!file) {
-        // If no file, revoke and clear preview
         if (currentUrl) URL.revokeObjectURL(currentUrl);
         if (currentUrl) setPreviewUrls((p) => ({ ...p, [t]: null }));
         return;
       }
 
-      // If file exists, ensure preview URL
       if (!currentUrl) {
         const url = URL.createObjectURL(file);
         setPreviewUrls((p) => ({ ...p, [t]: url }));
@@ -475,23 +566,39 @@ export default function DriverOnboardingPage() {
     try {
       setUploading((prev) => ({ ...prev, [type]: true }));
 
+      const before = file.size;
+
       const rotated = await rotateImageFile(file, direction);
 
-      // Size guard after rotation (still keep under 6MB)
-      const maxBytes = 6 * 1024 * 1024;
-      if (rotated.size > maxBytes) {
-        throw new Error(
-          "Rotated image became too large. Please upload a smaller image (under 6MB)."
-        );
+      // ✅ compress after rotate (target 4MB, hard max 6MB)
+      const optimised = await compressImageFile(rotated, {
+        targetBytes: 4 * 1024 * 1024,
+        hardMaxBytes: 6 * 1024 * 1024,
+        maxSidePx: 2200,
+        minSidePx: 1600,
+        initialQuality: 0.85,
+        minQuality: 0.6,
+        qualityStep: 0.07,
+      });
+
+      // Hard guard (should rarely happen now)
+      const hardMax = 6 * 1024 * 1024;
+      if (optimised.size > hardMax) {
+        throw new Error("This image is still too large after optimisation. Please use a smaller photo.");
       }
 
       // Revoke old preview URL and set new file
       const oldUrl = previewUrls[type];
       if (oldUrl) URL.revokeObjectURL(oldUrl);
 
-      setSelectedFiles((prev) => ({ ...prev, [type]: rotated }));
-      setPreviewUrls((p) => ({ ...p, [type]: URL.createObjectURL(rotated) }));
-      showMsg("✅ Rotated. Please check preview then upload.");
+      setSelectedFiles((prev) => ({ ...prev, [type]: optimised }));
+      setPreviewUrls((p) => ({ ...p, [type]: URL.createObjectURL(optimised) }));
+
+      if (optimised.size < before) {
+        showMsg(`✅ Rotated & optimised (${formatBytes(before)} → ${formatBytes(optimised.size)}).`);
+      } else {
+        showMsg("✅ Rotated. Please check preview then upload.");
+      }
     } catch (e: any) {
       showError(e?.message || "Failed to rotate image.");
     } finally {
@@ -512,11 +619,6 @@ export default function DriverOnboardingPage() {
       return showError("File type not supported. Please upload an image or PDF.");
     }
 
-    const maxBytes = 6 * 1024 * 1024; // 6MB
-    if (file.size > maxBytes) {
-      return showError("File is too large. Please upload a file under 6MB.");
-    }
-
     if (docExpiryRequired(type)) {
       const exp = (expiryDates[type] ?? "").trim();
       if (!exp) return showError(`Please add an expiry date for ${prettyDocLabel(type)}.`);
@@ -525,19 +627,58 @@ export default function DriverOnboardingPage() {
     try {
       setUploading((prev) => ({ ...prev, [type]: true }));
 
-      const base64Data = await fileToBase64(file);
+      const hardMaxBytes = 6 * 1024 * 1024;
+
+      let fileToSend = file;
+      const before = file.size;
+
+      // ✅ Auto-compress images (PDF untouched)
+      if (fileToSend.type.startsWith("image/")) {
+        fileToSend = await compressImageFile(fileToSend, {
+          targetBytes: 4 * 1024 * 1024,
+          hardMaxBytes: 6 * 1024 * 1024,
+          maxSidePx: 2200,
+          minSidePx: 1600,
+          initialQuality: 0.85,
+          minQuality: 0.6,
+          qualityStep: 0.07,
+        });
+
+        // Sync UI file + preview to what will actually be uploaded
+        if (fileToSend !== file) {
+          const oldUrl = previewUrls[type];
+          if (oldUrl) URL.revokeObjectURL(oldUrl);
+          setSelectedFiles((prev) => ({ ...prev, [type]: fileToSend }));
+          setPreviewUrls((p) => ({ ...p, [type]: URL.createObjectURL(fileToSend) }));
+        }
+      }
+
+      // Hard size guard
+      if (fileToSend.size > hardMaxBytes) {
+        return showError("File is too large. Please upload a file under 6MB.");
+      }
+
+      const base64Data = await fileToBase64(fileToSend);
 
       await uploadDocument.mutateAsync({
         token,
         type,
         base64Data,
-        mimeType: file.type || "application/octet-stream",
+        mimeType: fileToSend.type || "application/octet-stream",
         expiryDate: expiryDates[type]
           ? new Date(expiryDates[type]).toISOString()
           : undefined,
       });
 
-      showMsg(`✅ Uploaded: ${prettyDocLabel(type)} (now pending review)`);
+      if (fileToSend.size < before) {
+        showMsg(
+          `✅ Uploaded: ${prettyDocLabel(type)} (optimised ${formatBytes(before)} → ${formatBytes(
+            fileToSend.size
+          )}, now pending review)`
+        );
+      } else {
+        showMsg(`✅ Uploaded: ${prettyDocLabel(type)} (now pending review)`);
+      }
 
       // Clear selected + preview
       clearSelected(type);
@@ -765,6 +906,7 @@ export default function DriverOnboardingPage() {
             <h2 className="text-lg font-semibold">Documents</h2>
             <div className="text-xs text-muted-foreground">
               Upload each item below. Preview and rotate images before uploading.
+              <span className="ml-1">Large photos are automatically optimised.</span>
             </div>
           </div>
 
@@ -867,18 +1009,22 @@ export default function DriverOnboardingPage() {
                     accept="image/*,application/pdf"
                     onChange={(e) => {
                       const f = e.target.files?.[0] ?? null;
-                      // clear any previous preview URL for this doc (handled safely in clearSelected too)
                       if (!f) return;
+
                       if (!mimeAllowed(f.type)) {
                         showError("File type not supported. Please upload an image or PDF.");
                         return;
                       }
+
                       setSelectedFiles((prev) => ({ ...prev, [activeDoc]: f }));
                     }}
                   />
                   {file?.name && (
                     <div className="text-xs text-muted-foreground mt-1">
                       Selected: {file.name} • {formatBytes(file.size)}
+                      {isImageFile(file) && file.size > 4 * 1024 * 1024 ? (
+                        <span className="ml-1">(will be optimised)</span>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -944,7 +1090,6 @@ export default function DriverOnboardingPage() {
 
                   {isImageFile(file) && (
                     <div className="overflow-hidden rounded-md border bg-muted">
-                      {/* Image preview */}
                       <img
                         src={previewUrl}
                         alt="Selected document preview"
@@ -955,7 +1100,6 @@ export default function DriverOnboardingPage() {
 
                   {isPdfFile(file) && (
                     <div className="overflow-hidden rounded-md border bg-muted">
-                      {/* PDF preview */}
                       <iframe
                         src={previewUrl}
                         title="PDF preview"
@@ -1000,7 +1144,7 @@ export default function DriverOnboardingPage() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Accepted formats: JPG/PNG/PDF • Max size: 6MB
+                Accepted formats: JPG/PNG/PDF • Images auto-optimised to ~4MB • Max size: 6MB
               </div>
             </div>
           );
