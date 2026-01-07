@@ -49,6 +49,7 @@ import {
   upsertDriverDocument,
   getDriverOnboardingProfile,
   setDriverDocumentReview,
+  reviewDriverDocumentByAppAndType, // ✅ NEW (from db.ts)
 } from "./db";
 
 import { storagePut } from "./storage";
@@ -482,7 +483,9 @@ export const appRouter = router({
   /* ---------- ADMIN ---------- */
   admin: router({
     getDriverApplications: adminProcedure
-      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
       .query(async ({ input }) => {
         const rows: any[] = await getAllDriverApplications();
         const limit = input?.limit ?? 200;
@@ -496,7 +499,8 @@ export const appRouter = router({
           yearsExperience: r.yearsExperience,
           vehicleOwner: r.vehicleOwner,
           availability: r.availability,
-          message: typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+          message:
+            typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
           status: r.status,
           assignedTo: r.assignedTo,
           internalNotes:
@@ -534,7 +538,9 @@ export const appRouter = router({
       }),
 
     getCorporateInquiries: adminProcedure
-      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
       .query(async ({ input }) => {
         const rows: any[] = await getAllCorporateInquiries();
         const limit = input?.limit ?? 200;
@@ -587,7 +593,9 @@ export const appRouter = router({
       }),
 
     getContactMessages: adminProcedure
-      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
       .query(async ({ input }) => {
         const rows: any[] = await getAllContactMessages();
         const limit = input?.limit ?? 200;
@@ -598,7 +606,8 @@ export const appRouter = router({
           email: r.email,
           phone: r.phone,
           subject: r.subject,
-          message: typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+          message:
+            typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
           isRead: r.isRead,
           assignedTo: r.assignedTo,
           internalNotes:
@@ -721,9 +730,7 @@ export const appRouter = router({
       .input(z.object({ driverApplicationId: z.number() }))
       .mutation(async ({ input }) => {
         const apps: any[] = await getAllDriverApplications();
-        const app = apps.find(
-          (a) => Number(a.id) === Number(input.driverApplicationId)
-        );
+        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
 
         if (!app) {
           throw new TRPCError({
@@ -775,23 +782,72 @@ export const appRouter = router({
         return await getDriverOnboardingProfile(input.driverApplicationId);
       }),
 
+    /**
+     * ✅ Review driver document
+     * Supports BOTH:
+     * - legacy: docId
+     * - recommended: driverApplicationId + type
+     */
     reviewDriverDocument: adminProcedure
       .input(
-        z.object({
-          docId: z.number(),
-          status: z.enum(["approved", "rejected"]),
-          rejectionReason: z.string().optional(),
-        })
+        z
+          .object({
+            // legacy path
+            docId: z.number().optional(),
+
+            // recommended path
+            driverApplicationId: z.number().optional(),
+            type: z.enum(DRIVER_DOC_TYPES).optional(),
+
+            status: z.enum(["approved", "rejected"]),
+            rejectionReason: z.string().optional(),
+          })
+          .refine(
+            (v) =>
+              typeof v.docId === "number" ||
+              (typeof v.driverApplicationId === "number" && !!v.type),
+            {
+              message:
+                "Provide either docId OR (driverApplicationId + type) to review a document.",
+            }
+          )
       )
       .mutation(async ({ input, ctx }) => {
-        await setDriverDocumentReview({
-          docId: input.docId,
+        const reviewedBy =
+          (ctx.user as any)?.email ||
+          (ctx.user as any)?.username ||
+          String((ctx.user as any)?.id ?? "") ||
+          "admin";
+
+        // If rejecting, require a reason
+        if (input.status === "rejected") {
+          const reason = (input.rejectionReason ?? "").trim();
+          if (!reason) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Rejection reason is required when rejecting a document.",
+            });
+          }
+        }
+
+        // ✅ legacy: docId
+        if (typeof input.docId === "number") {
+          await setDriverDocumentReview({
+            docId: input.docId,
+            status: input.status,
+            reviewedBy,
+            rejectionReason: input.rejectionReason ?? null,
+          });
+
+          return { success: true };
+        }
+
+        // ✅ recommended: driverApplicationId + type
+        await reviewDriverDocumentByAppAndType({
+          driverApplicationId: Number(input.driverApplicationId),
+          type: input.type as any,
           status: input.status,
-          reviewedBy:
-  (ctx.user as any)?.email ||
-  (ctx.user as any)?.username ||
-  String((ctx.user as any)?.id ?? "") ||
-  "admin",
+          reviewedBy,
           rejectionReason: input.rejectionReason ?? null,
         });
 
