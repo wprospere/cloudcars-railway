@@ -54,6 +54,7 @@ const benefits = [
 
 type Partner = { name: string; logo: string };
 
+// ✅ The partner logo slots you created in Admin → Manage Images
 const PARTNER_SLOTS: Array<{ key: string; name: string }> = [
   { key: "partner-logo-1", name: "Trusted Partner" },
   { key: "partner-logo-2", name: "Trusted Partner" },
@@ -61,6 +62,7 @@ const PARTNER_SLOTS: Array<{ key: string; name: string }> = [
   { key: "partner-logo-4", name: "Trusted Partner" },
 ];
 
+// ✅ Fallback partners (used if no uploaded logos available)
 const FALLBACK_PARTNERS: Partner[] = [
   { name: "Boots UK", logo: "/partners/boots.png" },
   { name: "Speedo", logo: "/partners/speedo.png" },
@@ -70,6 +72,11 @@ const FALLBACK_PARTNERS: Partner[] = [
 export default function Corporate() {
   const content = useCmsContent("corporate");
 
+  /**
+   * ✅ Pull uploaded logos from the Images store
+   * If this endpoint is protected on your backend, it may fail on public pages;
+   * we handle that gracefully by falling back to static logos.
+   */
   const imagesQuery = trpc.cms.getAllImages.useQuery(undefined, {
     retry: false,
     staleTime: 60_000,
@@ -100,6 +107,7 @@ export default function Corporate() {
     return uploaded.length > 0 ? uploaded : FALLBACK_PARTNERS;
   }, [imagesQuery.data]);
 
+  // ✅ Track which partner logos failed to load so we can show the name instead
   const [logoFailed, setLogoFailed] = useState<Record<string, boolean>>({});
 
   const [formData, setFormData] = useState({
@@ -188,7 +196,7 @@ export default function Corporate() {
               ))}
             </div>
 
-            {/* ✅ Trusted Partners */}
+            {/* ✅ Trusted Partners (from Admin → Manage Images) */}
             <div className="pt-8 border-t border-border">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
@@ -206,37 +214,39 @@ export default function Corporate() {
                 </div>
               </div>
 
-              {/* Premium logo grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-stretch">
                 {partners.map((p) => {
                   const failed = !!logoFailed[p.name];
 
                   return (
                     <div
                       key={`${p.name}-${p.logo}`}
-                      className="group rounded-2xl border border-border bg-card px-4 py-5 flex items-center justify-center transition-all duration-200 hover:shadow-sm hover:-translate-y-[1px]"
+                      className="group relative overflow-hidden rounded-xl border border-border bg-card px-4 py-6 flex items-center justify-center transition hover:shadow-sm"
                       title={p.name}
                       aria-label={p.name}
                     >
-                      {/* Logo frame gives consistent sizing */}
-                      <div className="h-10 w-full max-w-[160px] flex items-center justify-center">
-                        {!failed ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.logo}
-                            alt={`${p.name} logo`}
-                            className="max-h-10 max-w-[160px] w-auto object-contain opacity-75 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
-                            loading="lazy"
-                            onError={() => {
-                              setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
-                            }}
-                          />
-                        ) : (
-                          <span className="text-sm font-medium text-foreground text-center">
+                      {/* Logo (premium hover effect) */}
+                      {!failed && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.logo}
+                          alt={`${p.name} logo`}
+                          className="max-h-10 w-auto object-contain opacity-80 grayscale transition-all duration-200 group-hover:opacity-100 group-hover:grayscale-0"
+                          loading="lazy"
+                          onError={() => {
+                            setLogoFailed((prev) => ({ ...prev, [p.name]: true }));
+                          }}
+                        />
+                      )}
+
+                      {/* Fallback name if logo doesn't render */}
+                      {failed && (
+                        <div className="px-3 text-center">
+                          <span className="text-sm font-medium text-foreground">
                             {p.name}
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
