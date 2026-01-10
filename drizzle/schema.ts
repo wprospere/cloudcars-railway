@@ -78,32 +78,42 @@ export type InsertBooking = typeof bookings.$inferInsert;
 /* ============================================================================
  * Driver applications
  * ========================================================================== */
-export const driverApplications = mysqlTable("driver_applications", {
-  id: int("id").autoincrement().primaryKey(),
-  fullName: varchar("fullName", { length: 255 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
-  phone: varchar("phone", { length: 32 }).notNull(),
-  licenseNumber: varchar("licenseNumber", { length: 64 }).notNull(),
-  yearsExperience: int("yearsExperience").notNull(),
-  vehicleOwner: boolean("vehicleOwner").default(false).notNull(),
-  vehicleType: varchar("vehicleType", { length: 128 }),
-  availability: mysqlEnum("availability", [
-    "fulltime",
-    "parttime",
-    "weekends",
-  ]).notNull(),
-  message: text("message"),
-  internalNotes: text("internalNotes"),
-  assignedTo: varchar("assignedTo", { length: 255 }),
-  status: mysqlEnum("status", [
-    "pending",
-    "reviewing",
-    "approved",
-    "rejected",
-  ]).default("pending").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const driverApplications = mysqlTable(
+  "driver_applications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    fullName: varchar("fullName", { length: 255 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    licenseNumber: varchar("licenseNumber", { length: 64 }).notNull(),
+    yearsExperience: int("yearsExperience").notNull(),
+    vehicleOwner: boolean("vehicleOwner").default(false).notNull(),
+    vehicleType: varchar("vehicleType", { length: 128 }),
+    availability: mysqlEnum("availability", [
+      "fulltime",
+      "parttime",
+      "weekends",
+    ]).notNull(),
+    message: text("message"),
+    internalNotes: text("internalNotes"),
+    assignedTo: varchar("assignedTo", { length: 255 }),
+    status: mysqlEnum("status", [
+      "pending",
+      "reviewing",
+      "approved",
+      "rejected",
+    ]).default("pending").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("ix_driver_app_status").on(t.status),
+    createdIdx: index("ix_driver_app_created").on(t.createdAt),
+    assignedIdx: index("ix_driver_app_assigned").on(t.assignedTo),
+    emailIdx: index("ix_driver_app_email").on(t.email),
+    phoneIdx: index("ix_driver_app_phone").on(t.phone),
+  })
+);
 
 export type DriverApplication = typeof driverApplications.$inferSelect;
 export type InsertDriverApplication = typeof driverApplications.$inferInsert;
@@ -111,25 +121,34 @@ export type InsertDriverApplication = typeof driverApplications.$inferInsert;
 /* ============================================================================
  * Corporate inquiries
  * ========================================================================== */
-export const corporateInquiries = mysqlTable("corporate_inquiries", {
-  id: int("id").autoincrement().primaryKey(),
-  companyName: varchar("companyName", { length: 255 }).notNull(),
-  contactName: varchar("contactName", { length: 255 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
-  phone: varchar("phone", { length: 32 }).notNull(),
-  estimatedMonthlyTrips: varchar("estimatedMonthlyTrips", { length: 64 }),
-  requirements: text("requirements"),
-  internalNotes: text("internalNotes"),
-  assignedTo: varchar("assignedTo", { length: 255 }),
-  status: mysqlEnum("status", [
-    "pending",
-    "contacted",
-    "converted",
-    "declined",
-  ]).default("pending").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const corporateInquiries = mysqlTable(
+  "corporate_inquiries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    companyName: varchar("companyName", { length: 255 }).notNull(),
+    contactName: varchar("contactName", { length: 255 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    estimatedMonthlyTrips: varchar("estimatedMonthlyTrips", { length: 64 }),
+    requirements: text("requirements"),
+    internalNotes: text("internalNotes"),
+    assignedTo: varchar("assignedTo", { length: 255 }),
+    status: mysqlEnum("status", [
+      "pending",
+      "contacted",
+      "converted",
+      "declined",
+    ]).default("pending").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("ix_corp_status").on(t.status),
+    createdIdx: index("ix_corp_created").on(t.createdAt),
+    assignedIdx: index("ix_corp_assigned").on(t.assignedTo),
+    emailIdx: index("ix_corp_email").on(t.email),
+  })
+);
 
 export type CorporateInquiry = typeof corporateInquiries.$inferSelect;
 export type InsertCorporateInquiry = typeof corporateInquiries.$inferInsert;
@@ -137,18 +156,27 @@ export type InsertCorporateInquiry = typeof corporateInquiries.$inferInsert;
 /* ============================================================================
  * Contact messages
  * ========================================================================== */
-export const contactMessages = mysqlTable("contact_messages", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
-  phone: varchar("phone", { length: 32 }),
-  subject: varchar("subject", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  internalNotes: text("internalNotes"),
-  assignedTo: varchar("assignedTo", { length: 255 }),
-  isRead: boolean("isRead").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const contactMessages = mysqlTable(
+  "contact_messages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 32 }),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    message: text("message").notNull(),
+    internalNotes: text("internalNotes"),
+    assignedTo: varchar("assignedTo", { length: 255 }),
+    isRead: boolean("isRead").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    createdIdx: index("ix_msg_created").on(t.createdAt),
+    isReadIdx: index("ix_msg_isread").on(t.isRead),
+    assignedIdx: index("ix_msg_assigned").on(t.assignedTo),
+    emailIdx: index("ix_msg_email").on(t.email),
+  })
+);
 
 export type ContactMessage = typeof contactMessages.$inferSelect;
 export type InsertContactMessage = typeof contactMessages.$inferInsert;
@@ -180,13 +208,19 @@ export const siteImages = mysqlTable("site_images", {
 /* ============================================================================
  * Admin users
  * ========================================================================== */
-export const adminUsers = mysqlTable("admin_users", {
-  id: int("id").autoincrement().primaryKey(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  role: mysqlEnum("role", ["admin", "staff"]).default("admin").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const adminUsers = mysqlTable(
+  "admin_users",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    email: varchar("email", { length: 320 }).notNull().unique(),
+    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    role: mysqlEnum("role", ["admin", "staff"]).default("admin").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    roleIdx: index("ix_admin_users_role").on(t.role),
+  })
+);
 
 /* ============================================================================
  * Driver onboarding tokens (Phase 1.5)
@@ -210,47 +244,105 @@ export const driverOnboardingTokens = mysqlTable(
     ),
     appIdx: index("ix_driver_onboarding_app").on(t.driverApplicationId),
     expiresIdx: index("ix_driver_onboarding_expires").on(t.expiresAt),
+    lastSentIdx: index("ix_driver_onboarding_last_sent").on(t.lastSentAt),
   })
 );
 
 /* ============================================================================
  * Driver vehicles
  * ========================================================================== */
-export const driverVehicles = mysqlTable("driver_vehicles", {
-  id: int("id").autoincrement().primaryKey(),
-  driverApplicationId: int("driverApplicationId").notNull(),
-  registration: varchar("registration", { length: 32 }).notNull(),
-  make: varchar("make", { length: 64 }).notNull(),
-  model: varchar("model", { length: 64 }).notNull(),
-  colour: varchar("colour", { length: 32 }).notNull(),
-  year: varchar("year", { length: 8 }),
-  plateNumber: varchar("plateNumber", { length: 64 }),
-  capacity: varchar("capacity", { length: 8 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const driverVehicles = mysqlTable(
+  "driver_vehicles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    driverApplicationId: int("driverApplicationId").notNull(),
+    registration: varchar("registration", { length: 32 }).notNull(),
+    make: varchar("make", { length: 64 }).notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    colour: varchar("colour", { length: 32 }).notNull(),
+    year: varchar("year", { length: 8 }),
+    plateNumber: varchar("plateNumber", { length: 64 }),
+    capacity: varchar("capacity", { length: 8 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    appIdx: index("ix_driver_vehicle_app").on(t.driverApplicationId),
+    regIdx: index("ix_driver_vehicle_reg").on(t.registration),
+  })
+);
 
 /* ============================================================================
  * Driver documents
  * ========================================================================== */
-export const driverDocuments = mysqlTable("driver_documents", {
-  id: int("id").autoincrement().primaryKey(),
-  driverApplicationId: int("driverApplicationId").notNull(),
-  type: mysqlEnum("type", [
-    "LICENSE_FRONT",
-    "LICENSE_BACK",
-    "BADGE",
-    "PLATING",
-    "INSURANCE",
-    "MOT",
-  ]).notNull(),
-  fileUrl: text("fileUrl").notNull(),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"])
-    .default("pending")
-    .notNull(),
-  expiryDate: date("expiryDate"),
-  rejectionReason: text("rejectionReason"),
-  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
-  reviewedAt: timestamp("reviewedAt"),
-  reviewedBy: varchar("reviewedBy", { length: 320 }),
-});
+export const driverDocuments = mysqlTable(
+  "driver_documents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    driverApplicationId: int("driverApplicationId").notNull(),
+    type: mysqlEnum("type", [
+      "LICENSE_FRONT",
+      "LICENSE_BACK",
+      "BADGE",
+      "PLATING",
+      "INSURANCE",
+      "MOT",
+    ]).notNull(),
+    fileUrl: text("fileUrl").notNull(),
+    status: mysqlEnum("status", ["pending", "approved", "rejected"])
+      .default("pending")
+      .notNull(),
+    expiryDate: date("expiryDate"),
+    rejectionReason: text("rejectionReason"),
+    uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+    reviewedAt: timestamp("reviewedAt"),
+    reviewedBy: varchar("reviewedBy", { length: 320 }),
+  },
+  (t) => ({
+    appIdx: index("ix_driver_docs_app").on(t.driverApplicationId),
+    typeIdx: index("ix_driver_docs_type").on(t.type),
+    statusIdx: index("ix_driver_docs_status").on(t.status),
+    uploadedIdx: index("ix_driver_docs_uploaded").on(t.uploadedAt),
+  })
+);
+
+/* ============================================================================
+ * Admin activity timeline (audit + notes + events)
+ * - powers the "timeline" in the drawer + helps with accountability
+ * ========================================================================== */
+export const adminActivity = mysqlTable(
+  "admin_activity",
+  {
+    id: int("id").autoincrement().primaryKey(),
+
+    entityType: mysqlEnum("entityType", [
+      "driver_application",
+      "corporate_inquiry",
+      "contact_message",
+    ]).notNull(),
+
+    entityId: int("entityId").notNull(),
+
+    action: mysqlEnum("action", [
+      "CREATED",
+      "STATUS_CHANGED",
+      "ASSIGNED",
+      "NOTE_ADDED",
+      "LINK_SENT",
+      "DOC_REVIEWED",
+    ]).notNull(),
+
+    // JSON stored as text for max compatibility (e.g. {"to":"approved"})
+    meta: text("meta"),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+
+    // keep as email to match your existing reviewedBy pattern
+    adminEmail: varchar("adminEmail", { length: 320 }),
+  },
+  (t) => ({
+    entityIdx: index("ix_admin_activity_entity").on(t.entityType, t.entityId),
+    createdIdx: index("ix_admin_activity_created").on(t.createdAt),
+    actionIdx: index("ix_admin_activity_action").on(t.action),
+  })
+);
