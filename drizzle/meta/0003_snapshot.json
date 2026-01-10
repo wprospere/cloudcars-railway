@@ -1,9 +1,168 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "fd5d049f-39af-499d-9eda-442fef80dee0",
-  "prevId": "9ff0a5b0-e197-409c-9a11-a3486c5f7cfb",
+  "id": "dced5f3a-4198-4356-a7be-248eda1ea2e8",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "admin_activity": {
+      "name": "admin_activity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "entityType": {
+          "name": "entityType",
+          "type": "enum('driver_application','corporate_inquiry','contact_message')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entityId": {
+          "name": "entityId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "enum('CREATED','STATUS_CHANGED','ASSIGNED','NOTE_ADDED','LINK_SENT','DOC_REVIEWED')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "meta": {
+          "name": "meta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "adminEmail": {
+          "name": "adminEmail",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ix_admin_activity_entity": {
+          "name": "ix_admin_activity_entity",
+          "columns": [
+            "entityType",
+            "entityId"
+          ],
+          "isUnique": false
+        },
+        "ix_admin_activity_created": {
+          "name": "ix_admin_activity_created",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "ix_admin_activity_action": {
+          "name": "ix_admin_activity_action",
+          "columns": [
+            "action"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "admin_activity_id": {
+          "name": "admin_activity_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "admin_users": {
+      "name": "admin_users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "enum('admin','staff')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'admin'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "ix_admin_users_role": {
+          "name": "ix_admin_users_role",
+          "columns": [
+            "role"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "admin_users_id": {
+          "name": "admin_users_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "admin_users_email_unique": {
+          "name": "admin_users_email_unique",
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
     "bookings": {
       "name": "bookings",
       "columns": {
@@ -176,6 +335,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "internalNotes": {
+          "name": "internalNotes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assignedTo": {
+          "name": "assignedTo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "isRead": {
           "name": "isRead",
           "type": "boolean",
@@ -193,7 +366,36 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ix_msg_created": {
+          "name": "ix_msg_created",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "ix_msg_isread": {
+          "name": "ix_msg_isread",
+          "columns": [
+            "isRead"
+          ],
+          "isUnique": false
+        },
+        "ix_msg_assigned": {
+          "name": "ix_msg_assigned",
+          "columns": [
+            "assignedTo"
+          ],
+          "isUnique": false
+        },
+        "ix_msg_email": {
+          "name": "ix_msg_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "contact_messages_id": {
@@ -258,6 +460,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "internalNotes": {
+          "name": "internalNotes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assignedTo": {
+          "name": "assignedTo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "status": {
           "name": "status",
           "type": "enum('pending','contacted','converted','declined')",
@@ -284,7 +500,36 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ix_corp_status": {
+          "name": "ix_corp_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "ix_corp_created": {
+          "name": "ix_corp_created",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "ix_corp_assigned": {
+          "name": "ix_corp_assigned",
+          "columns": [
+            "assignedTo"
+          ],
+          "isUnique": false
+        },
+        "ix_corp_email": {
+          "name": "ix_corp_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "corporate_inquiries_id": {
@@ -371,6 +616,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "internalNotes": {
+          "name": "internalNotes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "assignedTo": {
+          "name": "assignedTo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "status": {
           "name": "status",
           "type": "enum('pending','reviewing','approved','rejected')",
@@ -397,11 +656,388 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ix_driver_app_status": {
+          "name": "ix_driver_app_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_app_created": {
+          "name": "ix_driver_app_created",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_app_assigned": {
+          "name": "ix_driver_app_assigned",
+          "columns": [
+            "assignedTo"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_app_email": {
+          "name": "ix_driver_app_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_app_phone": {
+          "name": "ix_driver_app_phone",
+          "columns": [
+            "phone"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "driver_applications_id": {
           "name": "driver_applications_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "driver_documents": {
+      "name": "driver_documents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "driverApplicationId": {
+          "name": "driverApplicationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('LICENSE_FRONT','LICENSE_BACK','BADGE','PLATING','INSURANCE','MOT')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fileUrl": {
+          "name": "fileUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('pending','approved','rejected')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "expiryDate": {
+          "name": "expiryDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rejectionReason": {
+          "name": "rejectionReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "uploadedAt": {
+          "name": "uploadedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "reviewedAt": {
+          "name": "reviewedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reviewedBy": {
+          "name": "reviewedBy",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ix_driver_docs_app": {
+          "name": "ix_driver_docs_app",
+          "columns": [
+            "driverApplicationId"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_docs_type": {
+          "name": "ix_driver_docs_type",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_docs_status": {
+          "name": "ix_driver_docs_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_docs_uploaded": {
+          "name": "ix_driver_docs_uploaded",
+          "columns": [
+            "uploadedAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "driver_documents_id": {
+          "name": "driver_documents_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "driver_onboarding_tokens": {
+      "name": "driver_onboarding_tokens",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "driverApplicationId": {
+          "name": "driverApplicationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tokenHash": {
+          "name": "tokenHash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usedAt": {
+          "name": "usedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revokedAt": {
+          "name": "revokedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lastSentAt": {
+          "name": "lastSentAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sendCount": {
+          "name": "sendCount",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "ux_driver_onboarding_token_hash": {
+          "name": "ux_driver_onboarding_token_hash",
+          "columns": [
+            "tokenHash"
+          ],
+          "isUnique": true
+        },
+        "ix_driver_onboarding_app": {
+          "name": "ix_driver_onboarding_app",
+          "columns": [
+            "driverApplicationId"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_onboarding_expires": {
+          "name": "ix_driver_onboarding_expires",
+          "columns": [
+            "expiresAt"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_onboarding_last_sent": {
+          "name": "ix_driver_onboarding_last_sent",
+          "columns": [
+            "lastSentAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "driver_onboarding_tokens_id": {
+          "name": "driver_onboarding_tokens_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "driver_vehicles": {
+      "name": "driver_vehicles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "driverApplicationId": {
+          "name": "driverApplicationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "registration": {
+          "name": "registration",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "make": {
+          "name": "make",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "model": {
+          "name": "model",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "colour": {
+          "name": "colour",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "year": {
+          "name": "year",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "plateNumber": {
+          "name": "plateNumber",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "capacity": {
+          "name": "capacity",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "ix_driver_vehicle_app": {
+          "name": "ix_driver_vehicle_app",
+          "columns": [
+            "driverApplicationId"
+          ],
+          "isUnique": false
+        },
+        "ix_driver_vehicle_reg": {
+          "name": "ix_driver_vehicle_reg",
+          "columns": [
+            "registration"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "driver_vehicles_id": {
+          "name": "driver_vehicles_id",
           "columns": [
             "id"
           ]
@@ -565,6 +1201,67 @@
           ]
         }
       },
+      "checkConstraint": {}
+    },
+    "team_members": {
+      "name": "team_members",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "team_members_id": {
+          "name": "team_members_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "checkConstraint": {}
     },
     "users": {
