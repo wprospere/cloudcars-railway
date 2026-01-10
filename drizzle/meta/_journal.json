@@ -28,6 +28,13 @@
       "when": 1768072879238,
       "tag": "0003_omniscient_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1768073091746,
+      "tag": "0004_lumpy_stone_men",
+      "breakpoints": true
     }
   ]
 }
