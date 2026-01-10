@@ -96,9 +96,90 @@ async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
   return { id: Number(id) };
 }
 
+// ============================================================================
+// Admin Activity (audit trail)
+// ============================================================================
+
+export type AdminEntityType =
+  | "driver_application"
+  | "corporate_inquiry"
+  | "contact_message";
+
+export type AdminActionType =
+  | "CREATED"
+  | "STATUS_CHANGED"
+  | "ASSIGNED"
+  | "NOTE_ADDED"
+  | "LINK_SENT"
+  | "DOC_REVIEWED";
+
+/**
+ * Writes to admin_activity for audit trail.
+ * - meta is stored as JSON string when provided
+ * - adminEmail can be null (system / unknown)
+ */
+export async function logAdminActivity(params: {
+  entityType: AdminEntityType;
+  entityId: number;
+  action: AdminActionType;
+  adminEmail?: string | null;
+  meta?: unknown;
+  createdAt?: Date;
+}) {
+  const metaText =
+    typeof params.meta === "undefined"
+      ? null
+      : JSON.stringify(params.meta ?? null);
+
+  await db.insert(schema.adminActivity).values({
+    entityType: params.entityType as any,
+    entityId: params.entityId,
+    action: params.action as any,
+    adminEmail: params.adminEmail ?? null,
+    meta: metaText,
+    createdAt: params.createdAt ?? new Date(),
+  } as any);
+
+  return { success: true };
+}
+
+/**
+ * Fetch audit timeline for a given entity.
+ * Newest first.
+ */
+export async function getAdminActivityForEntity(params: {
+  entityType: AdminEntityType;
+  entityId: number;
+  limit?: number;
+}) {
+  const limit = Math.max(1, Math.min(Number(params.limit ?? 50), 200));
+
+  const rows = await db.query.adminActivity.findMany({
+    where: (a, { eq, and }) =>
+      and(
+        eq(a.entityType as any, params.entityType as any),
+        eq(a.entityId as any, params.entityId as any)
+      ),
+    orderBy: (a, { desc }) => [desc(a.createdAt)],
+    limit,
+  });
+
+  return (rows as any[]).map((r) => {
+    let meta: any = null;
+    try {
+      meta = r.meta ? JSON.parse(String(r.meta)) : null;
+    } catch {
+      meta = r.meta ?? null;
+    }
+    return { ...r, meta };
+  });
+}
+
 // -------------------- Bookings --------------------
 
-export async function createBooking(data: typeof schema.bookings.$inferInsert) {
+export async function createBooking(
+  data: typeof schema.bookings.$inferInsert
+) {
   return insertAndReturnId(db.insert(schema.bookings).values(data));
 }
 
@@ -107,7 +188,20 @@ export async function createBooking(data: typeof schema.bookings.$inferInsert) {
 export async function createDriverApplication(
   data: typeof schema.driverApplications.$inferInsert
 ) {
-  return insertAndReturnId(db.insert(schema.driverApplications).values(data));
+  const res = await insertAndReturnId(
+    db.insert(schema.driverApplications).values(data)
+  );
+
+  // Optional audit event (adminEmail unknown at public creation time)
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: res.id,
+    action: "CREATED",
+    adminEmail: null,
+    meta: { source: "public_form" },
+  });
+
+  return res;
 }
 
 /**
@@ -149,30 +243,68 @@ export async function getAllDriverApplications() {
 
 export async function updateDriverApplicationStatus(
   id: number,
-  status: "pending" | "reviewing" | "approved" | "rejected"
+  status: "pending" | "reviewing" | "approved" | "rejected",
+  adminEmail?: string | null
 ) {
+  const existing = await db.query.driverApplications.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
   await db
     .update(schema.driverApplications)
     .set({ status } as any)
     .where(eq(schema.driverApplications.id, id));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.status ?? null, to: status },
+  });
 }
 
-export async function updateDriverApplicationNotes(id: number, notes: string) {
+export async function updateDriverApplicationNotes(
+  id: number,
+  notes: string,
+  adminEmail?: string | null
+) {
   // Schema field is internalNotes
   await db
     .update(schema.driverApplications)
     .set({ internalNotes: notes } as any)
     .where(eq(schema.driverApplications.id, id));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: id,
+    action: "NOTE_ADDED",
+    adminEmail: adminEmail ?? null,
+    meta: { length: Number(notes?.length ?? 0) },
+  });
 }
 
 export async function updateDriverApplicationAssignment(
   id: number,
-  assignedTo: string | null
+  assignedTo: string | null,
+  adminEmail?: string | null
 ) {
+  const existing = await db.query.driverApplications.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
   await db
     .update(schema.driverApplications)
     .set({ assignedTo } as any)
     .where(eq(schema.driverApplications.id, id));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: id,
+    action: "ASSIGNED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.assignedTo ?? null, to: assignedTo },
+  });
 }
 
 // -------------------- Corporate Inquiries --------------------
@@ -180,7 +312,19 @@ export async function updateDriverApplicationAssignment(
 export async function createCorporateInquiry(
   data: typeof schema.corporateInquiries.$inferInsert
 ) {
-  return insertAndReturnId(db.insert(schema.corporateInquiries).values(data));
+  const res = await insertAndReturnId(
+    db.insert(schema.corporateInquiries).values(data)
+  );
+
+  await logAdminActivity({
+    entityType: "corporate_inquiry",
+    entityId: res.id,
+    action: "CREATED",
+    adminEmail: null,
+    meta: { source: "public_form" },
+  });
+
+  return res;
 }
 
 export async function getAllCorporateInquiries() {
@@ -191,30 +335,68 @@ export async function getAllCorporateInquiries() {
 
 export async function updateCorporateInquiryStatus(
   id: number,
-  status: "pending" | "contacted" | "converted" | "declined"
+  status: "pending" | "contacted" | "converted" | "declined",
+  adminEmail?: string | null
 ) {
+  const existing = await db.query.corporateInquiries.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
   await db
     .update(schema.corporateInquiries)
     .set({ status } as any)
     .where(eq(schema.corporateInquiries.id, id));
+
+  await logAdminActivity({
+    entityType: "corporate_inquiry",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.status ?? null, to: status },
+  });
 }
 
-export async function updateCorporateInquiryNotes(id: number, notes: string) {
+export async function updateCorporateInquiryNotes(
+  id: number,
+  notes: string,
+  adminEmail?: string | null
+) {
   // Schema field is internalNotes
   await db
     .update(schema.corporateInquiries)
     .set({ internalNotes: notes } as any)
     .where(eq(schema.corporateInquiries.id, id));
+
+  await logAdminActivity({
+    entityType: "corporate_inquiry",
+    entityId: id,
+    action: "NOTE_ADDED",
+    adminEmail: adminEmail ?? null,
+    meta: { length: Number(notes?.length ?? 0) },
+  });
 }
 
 export async function updateCorporateInquiryAssignment(
   id: number,
-  assignedTo: string | null
+  assignedTo: string | null,
+  adminEmail?: string | null
 ) {
+  const existing = await db.query.corporateInquiries.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
   await db
     .update(schema.corporateInquiries)
     .set({ assignedTo } as any)
     .where(eq(schema.corporateInquiries.id, id));
+
+  await logAdminActivity({
+    entityType: "corporate_inquiry",
+    entityId: id,
+    action: "ASSIGNED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.assignedTo ?? null, to: assignedTo },
+  });
 }
 
 // -------------------- Contact Messages --------------------
@@ -222,7 +404,19 @@ export async function updateCorporateInquiryAssignment(
 export async function createContactMessage(
   data: typeof schema.contactMessages.$inferInsert
 ) {
-  return insertAndReturnId(db.insert(schema.contactMessages).values(data));
+  const res = await insertAndReturnId(
+    db.insert(schema.contactMessages).values(data)
+  );
+
+  await logAdminActivity({
+    entityType: "contact_message",
+    entityId: res.id,
+    action: "CREATED",
+    adminEmail: null,
+    meta: { source: "public_form" },
+  });
+
+  return res;
 }
 
 export async function getAllContactMessages() {
@@ -231,30 +425,65 @@ export async function getAllContactMessages() {
   });
 }
 
-export async function markContactMessageAsRead(id: number) {
-  // Schema field is isRead
+export async function markContactMessageAsRead(
+  id: number,
+  adminEmail?: string | null
+) {
   await db
     .update(schema.contactMessages)
     .set({ isRead: true } as any)
     .where(eq(schema.contactMessages.id, id));
+
+  await logAdminActivity({
+    entityType: "contact_message",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { field: "isRead", to: true },
+  });
 }
 
-export async function updateContactMessageNotes(id: number, notes: string) {
+export async function updateContactMessageNotes(
+  id: number,
+  notes: string,
+  adminEmail?: string | null
+) {
   // Schema field is internalNotes
   await db
     .update(schema.contactMessages)
     .set({ internalNotes: notes } as any)
     .where(eq(schema.contactMessages.id, id));
+
+  await logAdminActivity({
+    entityType: "contact_message",
+    entityId: id,
+    action: "NOTE_ADDED",
+    adminEmail: adminEmail ?? null,
+    meta: { length: Number(notes?.length ?? 0) },
+  });
 }
 
 export async function updateContactMessageAssignment(
   id: number,
-  assignedTo: string | null
+  assignedTo: string | null,
+  adminEmail?: string | null
 ) {
+  const existing = await db.query.contactMessages.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
   await db
     .update(schema.contactMessages)
     .set({ assignedTo } as any)
     .where(eq(schema.contactMessages.id, id));
+
+  await logAdminActivity({
+    entityType: "contact_message",
+    entityId: id,
+    action: "ASSIGNED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.assignedTo ?? null, to: assignedTo },
+  });
 }
 
 // -------------------- Team Members --------------------
@@ -336,9 +565,7 @@ export async function getAllSiteImages() {
   });
 }
 
-export async function upsertSiteImage(
-  data: typeof schema.siteImages.$inferInsert
-) {
+export async function upsertSiteImage(data: typeof schema.siteImages.$inferInsert) {
   const existing = await getSiteImage(String(data.imageKey));
   if (existing) {
     await db
@@ -407,6 +634,7 @@ export async function createDriverOnboardingToken(params: {
   rawToken: string;
   expiresAt?: Date; // optional; defaults to now + 7 days
   sentNow?: boolean; // if true, sets lastSentAt and sendCount
+  adminEmail?: string | null;
 }) {
   const tokenHash = sha256(params.rawToken);
   const now = new Date();
@@ -425,6 +653,16 @@ export async function createDriverOnboardingToken(params: {
     lastSentAt: params.sentNow ? now : null,
     sendCount: params.sentNow ? 1 : 0,
   } as any);
+
+  if (params.sentNow) {
+    await logAdminActivity({
+      entityType: "driver_application",
+      entityId: params.driverApplicationId,
+      action: "LINK_SENT",
+      adminEmail: params.adminEmail ?? null,
+      meta: { expiresAt: expiresAt.toISOString(), sendCount: 1 },
+    });
+  }
 
   return { success: true, expiresAt };
 }
@@ -499,6 +737,7 @@ export async function resendDriverOnboardingToken(params: {
   driverApplicationId: number;
   rawToken: string;
   expiresAt?: Date;
+  adminEmail?: string | null;
 }) {
   const now = new Date();
   const tokenHash = sha256(params.rawToken);
@@ -516,6 +755,14 @@ export async function resendDriverOnboardingToken(params: {
     lastSentAt: now,
     sendCount: 1,
   } as any);
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: params.driverApplicationId,
+    action: "LINK_SENT",
+    adminEmail: params.adminEmail ?? null,
+    meta: { expiresAt: expiresAt.toISOString(), resend: true, sendCount: 1 },
+  });
 
   return { success: true, expiresAt };
 }
@@ -646,6 +893,8 @@ export async function setDriverDocumentReview(params: {
   status: "approved" | "rejected";
   reviewedBy: string;
   rejectionReason?: string | null;
+  driverApplicationId?: number | null; // optional for activity logging
+  docType?: DriverDocType | null; // optional for activity logging
 }) {
   await db
     .update(schema.driverDocuments)
@@ -659,6 +908,22 @@ export async function setDriverDocumentReview(params: {
           : null,
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
+
+  // Optional: audit
+  if (params.driverApplicationId) {
+    await logAdminActivity({
+      entityType: "driver_application",
+      entityId: Number(params.driverApplicationId),
+      action: "DOC_REVIEWED",
+      adminEmail: params.reviewedBy ?? null,
+      meta: {
+        docId: params.docId,
+        type: params.docType ?? null,
+        status: params.status,
+        rejectionReason: params.rejectionReason ?? null,
+      },
+    });
+  }
 }
 
 /**
@@ -709,6 +974,8 @@ export async function reviewDriverDocumentByAppAndType(params: {
     status: params.status,
     reviewedBy: params.reviewedBy,
     rejectionReason: params.rejectionReason ?? null,
+    driverApplicationId: params.driverApplicationId,
+    docType: params.type,
   });
 
   // return the updated doc for convenience
