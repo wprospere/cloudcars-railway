@@ -26,6 +26,9 @@ import {
   updateContactMessageNotes,
   updateContactMessageAssignment,
 
+  // Admin activity (audit trail)
+  getAdminActivityForEntity,
+
   // CMS
   getSiteContent,
   getAllSiteContent,
@@ -111,6 +114,20 @@ function getPublicBaseUrl() {
     process.env.PUBLIC_BASE_URL ||
     process.env.VITE_PUBLIC_BASE_URL ||
     "https://www.cloudcarsltd.com"
+  );
+}
+
+/**
+ * ✅ Pull best-available admin identifier for audit log attribution.
+ */
+function getAdminEmail(ctx: any): string | null {
+  return (
+    (ctx.user as any)?.email ||
+    (ctx.user as any)?.username ||
+    (typeof (ctx.user as any)?.id !== "undefined"
+      ? String((ctx.user as any).id)
+      : null) ||
+    null
   );
 }
 
@@ -482,6 +499,9 @@ export const appRouter = router({
 
   /* ---------- ADMIN ---------- */
   admin: router({
+    /* ============================
+       Inquiries lists
+    ============================ */
     getDriverApplications: adminProcedure
       .input(
         z.object({ limit: z.number().min(1).max(500).optional() }).optional()
@@ -518,22 +538,29 @@ export const appRouter = router({
           status: z.enum(["pending", "reviewing", "approved", "rejected"]),
         })
       )
-      .mutation(async ({ input }) => {
-        await updateDriverApplicationStatus(input.id, input.status);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateDriverApplicationStatus(input.id, input.status, adminEmail);
         return { success: true };
       }),
 
     updateDriverNotes: adminProcedure
       .input(z.object({ id: z.number(), notes: z.string() }))
-      .mutation(async ({ input }) => {
-        await updateDriverApplicationNotes(input.id, input.notes);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateDriverApplicationNotes(input.id, input.notes, adminEmail);
         return { success: true };
       }),
 
     updateDriverAssignment: adminProcedure
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
-      .mutation(async ({ input }) => {
-        await updateDriverApplicationAssignment(input.id, input.assignedTo);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateDriverApplicationAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -573,22 +600,29 @@ export const appRouter = router({
           status: z.enum(["pending", "contacted", "converted", "declined"]),
         })
       )
-      .mutation(async ({ input }) => {
-        await updateCorporateInquiryStatus(input.id, input.status);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateCorporateInquiryStatus(input.id, input.status, adminEmail);
         return { success: true };
       }),
 
     updateCorporateNotes: adminProcedure
       .input(z.object({ id: z.number(), notes: z.string() }))
-      .mutation(async ({ input }) => {
-        await updateCorporateInquiryNotes(input.id, input.notes);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateCorporateInquiryNotes(input.id, input.notes, adminEmail);
         return { success: true };
       }),
 
     updateCorporateAssignment: adminProcedure
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
-      .mutation(async ({ input }) => {
-        await updateCorporateInquiryAssignment(input.id, input.assignedTo);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateCorporateInquiryAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -620,25 +654,58 @@ export const appRouter = router({
 
     markContactRead: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await markContactMessageAsRead(input.id);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await markContactMessageAsRead(input.id, adminEmail);
         return { success: true };
       }),
 
     updateContactNotes: adminProcedure
       .input(z.object({ id: z.number(), notes: z.string() }))
-      .mutation(async ({ input }) => {
-        await updateContactMessageNotes(input.id, input.notes);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateContactMessageNotes(input.id, input.notes, adminEmail);
         return { success: true };
       }),
 
     updateContactAssignment: adminProcedure
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
-      .mutation(async ({ input }) => {
-        await updateContactMessageAssignment(input.id, input.assignedTo);
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateContactMessageAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
+    /* ============================
+       Admin activity timeline
+    ============================ */
+    getActivity: adminProcedure
+      .input(
+        z.object({
+          entityType: z.enum([
+            "driver_application",
+            "corporate_inquiry",
+            "contact_message",
+          ]),
+          entityId: z.number(),
+          limit: z.number().min(1).max(200).optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return await getAdminActivityForEntity({
+          entityType: input.entityType,
+          entityId: input.entityId,
+          limit: input.limit ?? 50,
+        });
+      }),
+
+    /* ============================
+       Email tools
+    ============================ */
     sendEmail: adminProcedure
       .input(
         z.object({
@@ -686,6 +753,9 @@ export const appRouter = router({
         };
       }),
 
+    /* ============================
+       Team
+    ============================ */
     getTeamMembers: adminProcedure.query(getAllTeamMembers),
 
     createTeamMember: adminProcedure
@@ -728,9 +798,11 @@ export const appRouter = router({
 
     sendDriverOnboardingLink: adminProcedure
       .input(z.object({ driverApplicationId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const apps: any[] = await getAllDriverApplications();
-        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
+        const app = apps.find(
+          (a) => Number(a.id) === Number(input.driverApplicationId)
+        );
 
         if (!app) {
           throw new TRPCError({
@@ -741,11 +813,14 @@ export const appRouter = router({
 
         const rawToken = nanoid(32);
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const adminEmail = getAdminEmail(ctx);
 
         await createDriverOnboardingToken({
           driverApplicationId: Number(app.id),
           rawToken,
           expiresAt,
+          sentNow: true,
+          adminEmail,
         });
 
         const link = `${getPublicBaseUrl()}/driver/onboarding?token=${rawToken}`;
@@ -813,11 +888,7 @@ export const appRouter = router({
           )
       )
       .mutation(async ({ input, ctx }) => {
-        const reviewedBy =
-          (ctx.user as any)?.email ||
-          (ctx.user as any)?.username ||
-          String((ctx.user as any)?.id ?? "") ||
-          "admin";
+        const reviewedBy = getAdminEmail(ctx) || "admin";
 
         // If rejecting, require a reason
         if (input.status === "rejected") {
@@ -830,7 +901,7 @@ export const appRouter = router({
           }
         }
 
-        // ✅ legacy: docId
+        // ✅ legacy: docId (kept)
         if (typeof input.docId === "number") {
           await setDriverDocumentReview({
             docId: input.docId,
@@ -842,13 +913,14 @@ export const appRouter = router({
           return { success: true };
         }
 
-        // ✅ recommended: driverApplicationId + type
+        // ✅ recommended: driverApplicationId + type (preferred)
         await reviewDriverDocumentByAppAndType({
           driverApplicationId: Number(input.driverApplicationId),
           type: input.type as any,
           status: input.status,
           reviewedBy,
           rejectionReason: input.rejectionReason ?? null,
+          adminEmail: reviewedBy,
         });
 
         return { success: true };
