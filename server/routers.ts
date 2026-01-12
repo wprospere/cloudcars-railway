@@ -26,7 +26,7 @@ import {
   updateContactMessageNotes,
   updateContactMessageAssignment,
 
-  // Admin activity (audit trail)
+  // Admin activity (timeline)
   getAdminActivityForEntity,
 
   // CMS
@@ -46,13 +46,14 @@ import {
 
   // ✅ Phase 1 onboarding (DB helpers)
   createDriverOnboardingToken,
+  resendDriverOnboardingToken, // ✅ NEW (option 1: fresh secure link)
   getDriverOnboardingByToken,
   markDriverOnboardingTokenUsed,
   upsertDriverVehicle,
   upsertDriverDocument,
   getDriverOnboardingProfile,
   setDriverDocumentReview,
-  reviewDriverDocumentByAppAndType, // ✅ NEW (from db.ts)
+  reviewDriverDocumentByAppAndType,
 } from "./db";
 
 import { storagePut } from "./storage";
@@ -105,6 +106,15 @@ const DRIVER_DOC_TYPES = [
   "PLATING",
   "INSURANCE",
   "MOT",
+] as const;
+
+const DRIVER_APP_STATUSES = [
+  "pending",
+  "reviewing",
+  "link_sent",
+  "docs_received",
+  "approved",
+  "rejected",
 ] as const;
 
 function getPublicBaseUrl() {
@@ -523,11 +533,20 @@ export const appRouter = router({
             typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
           status: r.status,
           assignedTo: r.assignedTo,
+
+          // ✅ new (safe even if null)
+          assignedToEmail: r.assignedToEmail ?? null,
+          assignedToAdminId: r.assignedToAdminId ?? null,
+          lastTouchedAt: r.lastTouchedAt ?? null,
+          lastTouchedByEmail: r.lastTouchedByEmail ?? null,
+
           internalNotes:
             typeof r.internalNotes === "string"
               ? r.internalNotes.slice(0, 5000)
               : r.internalNotes,
           createdAt: r.createdAt,
+
+          documents: Array.isArray(r.documents) ? r.documents : [],
         }));
       }),
 
@@ -535,7 +554,7 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number(),
-          status: z.enum(["pending", "reviewing", "approved", "rejected"]),
+          status: z.enum(DRIVER_APP_STATUSES),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -795,7 +814,6 @@ export const appRouter = router({
     /* ==============================
        ✅ Phase 1 - Admin Onboarding
        ============================== */
-
     sendDriverOnboardingLink: adminProcedure
       .input(z.object({ driverApplicationId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -839,12 +857,82 @@ export const appRouter = router({
           html,
         });
 
-        // ✅ IMPORTANT: if Mailgun fails, throw so the frontend shows an error
         if (!ok) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message:
               "Mailgun failed to send onboarding email. Check Railway variables.",
+          });
+        }
+
+        return { success: true, link };
+      }),
+
+    /**
+     * ✅ RESEND onboarding link (Option 1)
+     * - generates NEW secure token
+     * - revokes prior tokens (db helper does this)
+     * - emails the new link
+     * - logs LINK_SENT with resend:true (db helper should do this)
+     */
+    resendDriverOnboardingLink: adminProcedure
+      .input(
+        z.object({
+          driverApplicationId: z.number(),
+          message: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const apps: any[] = await getAllDriverApplications();
+        const app = apps.find(
+          (a) => Number(a.id) === Number(input.driverApplicationId)
+        );
+
+        if (!app) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Driver application not found",
+          });
+        }
+
+        const adminEmail = getAdminEmail(ctx);
+
+        const rawToken = nanoid(32);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        await resendDriverOnboardingToken({
+          driverApplicationId: Number(app.id),
+          rawToken,
+          expiresAt,
+          adminEmail,
+        });
+
+        const link = `${getPublicBaseUrl()}/driver/onboarding?token=${rawToken}`;
+
+        const html = `
+          <p>Hi ${app.fullName || "Driver"},</p>
+          <p>Here is your updated secure onboarding link (this replaces any previous link):</p>
+          <p><a href="${link}">${link}</a></p>
+          <p>This link expires in 7 days.</p>
+          ${
+            input.message
+              ? `<p>${String(input.message).replace(/\n/g, "<br/>")}</p>`
+              : ""
+          }
+          <p>Cloud Cars</p>
+        `;
+
+        const ok = await sendEmail({
+          to: app.email,
+          subject: "Your updated driver onboarding link",
+          html,
+        });
+
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Failed to send onboarding email. Check Railway Mailgun variables.",
           });
         }
 
@@ -867,13 +955,9 @@ export const appRouter = router({
       .input(
         z
           .object({
-            // legacy path
             docId: z.number().optional(),
-
-            // recommended path
             driverApplicationId: z.number().optional(),
             type: z.enum(DRIVER_DOC_TYPES).optional(),
-
             status: z.enum(["approved", "rejected"]),
             rejectionReason: z.string().optional(),
           })
@@ -890,7 +974,6 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const reviewedBy = getAdminEmail(ctx) || "admin";
 
-        // If rejecting, require a reason
         if (input.status === "rejected") {
           const reason = (input.rejectionReason ?? "").trim();
           if (!reason) {
@@ -901,7 +984,7 @@ export const appRouter = router({
           }
         }
 
-        // ✅ legacy: docId (kept)
+        // legacy path
         if (typeof input.docId === "number") {
           await setDriverDocumentReview({
             docId: input.docId,
@@ -909,18 +992,16 @@ export const appRouter = router({
             reviewedBy,
             rejectionReason: input.rejectionReason ?? null,
           });
-
           return { success: true };
         }
 
-        // ✅ recommended: driverApplicationId + type (preferred)
+        // recommended path
         await reviewDriverDocumentByAppAndType({
           driverApplicationId: Number(input.driverApplicationId),
           type: input.type as any,
           status: input.status,
           reviewedBy,
           rejectionReason: input.rejectionReason ?? null,
-          adminEmail: reviewedBy,
         });
 
         return { success: true };
