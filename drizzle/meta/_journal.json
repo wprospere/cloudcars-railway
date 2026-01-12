@@ -35,6 +35,13 @@
       "when": 1768073091746,
       "tag": "0004_lumpy_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1768250184830,
+      "tag": "0005_gifted_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }

@@ -1,15 +1,45 @@
 import {
-  int,
-  mysqlEnum,
   mysqlTable,
-  text,
-  timestamp,
+  int,
   varchar,
+  text,
+  datetime,
+  json,
+  mysqlEnum,
+  timestamp,
   boolean,
   date,
   index,
   uniqueIndex,
 } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
+
+/* ============================================================================
+ * Admin audit log (request-level audit trail)
+ * ========================================================================== */
+export const adminAuditLog = mysqlTable("admin_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+
+  adminUserId: int("admin_user_id").notNull(),
+
+  // e.g. "DRIVER_APP:STATUS_UPDATE", "CONTACT:MARK_READ"
+  action: varchar("action", { length: 80 }).notNull(),
+
+  // target entity info (optional but very useful)
+  entityType: varchar("entity_type", { length: 40 }).notNull(), // "driver_application" | "corporate_inquiry" etc.
+  entityId: int("entity_id"), // nullable
+
+  // store extra details (old/new values etc.)
+  metadata: json("metadata"),
+
+  // request context (good for investigations)
+  ip: varchar("ip", { length: 64 }),
+  userAgent: text("user_agent"),
+
+  createdAt: datetime("created_at", { mode: "date" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
 
 /* ============================================================================
  * Team members (admin dashboard staff)
