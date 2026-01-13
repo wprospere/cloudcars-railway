@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import type React from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
 import { AdminActivityTimeline } from "@/components/admin/AdminActivityTimeline";
+import { toast } from "sonner";
 
 type DocStatusUI = "approved" | "rejected" | "pending" | string;
 
@@ -24,20 +26,21 @@ function isPdf(mimeType?: string | null, url?: string | null) {
   return u.endsWith(".pdf") || u.includes(".pdf?");
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
 export default function DriverOnboardingReview() {
-  // ✅ wouter param: /admin/driver-onboarding/:id
   const [, params] = useRoute("/admin/driver-onboarding/:id");
   const driverApplicationId = params?.id ? Number(params.id) : NaN;
+  const enabled = Number.isFinite(driverApplicationId) && driverApplicationId > 0;
 
-  const enabled =
-    Number.isFinite(driverApplicationId) && driverApplicationId > 0;
-
+  // ---- Queries
   const profileQuery = trpc.admin.getDriverOnboardingProfile.useQuery(
     { driverApplicationId },
     { enabled }
   );
 
-  // ✅ Activity timeline (separate endpoint)
   const activityQuery = trpc.admin.getActivity.useQuery(
     {
       entityType: "driver_application",
@@ -47,20 +50,44 @@ export default function DriverOnboardingReview() {
     { enabled }
   );
 
+  // ---- Mutations
   const reviewDoc = trpc.admin.reviewDriverDocument.useMutation();
+  const sendReminder = trpc.admin.sendDriverOnboardingReminder.useMutation();
 
-  const apiErrorMessage = useMemo(() => {
-    const msg =
-      (profileQuery.error as any)?.message ||
-      (activityQuery.error as any)?.message ||
-      (reviewDoc.error as any)?.message ||
-      "";
-    return typeof msg === "string" ? msg : "";
-  }, [profileQuery.error, activityQuery.error, reviewDoc.error]);
+  // ---- UI state
+  const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>(
+    {}
+  );
 
-  const [rejectionReasons, setRejectionReasons] = useState<
-    Record<number, string>
-  >({});
+  const [reminderMessage, setReminderMessage] = useState("");
+
+  // (your existing zoom/pan state kept, even if not used yet)
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const dragStart = useRef({ x: 0, y: 0 });
+  const panStart = useRef({ x: 0, y: 0 });
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  const clampPan = (p: { x: number; y: number }, s: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect || s <= 1) return { x: 0, y: 0 };
+
+    const maxX = ((s - 1) * rect.width) / 2;
+    const maxY = ((s - 1) * rect.height) / 2;
+
+    return {
+      x: clamp(p.x, -maxX, maxX),
+      y: clamp(p.y, -maxY, maxY),
+    };
+  };
+
+  const resetView = () => {
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
 
   const statusVariant = (status: DocStatusUI) => {
     const s = String(status || "pending").toLowerCase();
@@ -68,6 +95,33 @@ export default function DriverOnboardingReview() {
     if (s === "rejected") return "destructive";
     return "secondary";
   };
+
+  const apiErrorMessage = useMemo(() => {
+    const msg =
+      (profileQuery.error as any)?.message ||
+      (activityQuery.error as any)?.message ||
+      (reviewDoc.error as any)?.message ||
+      (sendReminder.error as any)?.message ||
+      "";
+    return typeof msg === "string" ? msg : "";
+  }, [
+    profileQuery.error,
+    activityQuery.error,
+    reviewDoc.error,
+    sendReminder.error,
+  ]);
+
+  const refetchAll = async () => {
+    await Promise.allSettled([profileQuery.refetch(), activityQuery.refetch()]);
+  };
+
+  if (!enabled) {
+    return (
+      <AdminLayout title="Driver Onboarding Review">
+        <Card className="p-6 text-destructive">Invalid driver application id.</Card>
+      </AdminLayout>
+    );
+  }
 
   if (profileQuery.isLoading) {
     return (
@@ -80,24 +134,77 @@ export default function DriverOnboardingReview() {
   if (profileQuery.error || !profileQuery.data) {
     return (
       <AdminLayout title="Driver Onboarding Review">
-        <Card className="p-6 text-destructive">
-          Failed to load onboarding profile.
+        <Card className="p-6 text-destructive space-y-2">
+          <div>Failed to load onboarding profile.</div>
+          {apiErrorMessage ? (
+            <div className="text-sm text-muted-foreground">{apiErrorMessage}</div>
+          ) : null}
         </Card>
       </AdminLayout>
     );
   }
 
-  const { documents } = profileQuery.data as any;
+  const { driver, vehicle, documents } = profileQuery.data as any;
   const docs = Array.isArray(documents) ? documents : [];
+  const activity = (activityQuery.data as any[]) || [];
+
+  const busy =
+    reviewDoc.isPending || sendReminder.isPending || profileQuery.isFetching;
 
   return (
     <AdminLayout title="Driver Onboarding Review">
-      <div className="grid gap-4 md:grid-cols-[1fr_380px]">
-        {/* LEFT: Documents */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+        {/* LEFT: documents */}
         <Card className="p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <h2 className="text-lg font-semibold">Documents</h2>
-            <Badge variant="secondary">{docs.length} total</Badge>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Documents</h2>
+              <div className="text-sm text-muted-foreground">
+                {driver?.fullName ? String(driver.fullName) : "Driver"}{" "}
+                {driver?.email ? `• ${String(driver.email)}` : ""}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{docs.length} total</Badge>
+
+              <Button
+                disabled={sendReminder.isPending}
+                onClick={() => {
+                  sendReminder.mutate(
+                    {
+                      driverApplicationId,
+                      message: reminderMessage?.trim() ? reminderMessage.trim() : undefined,
+                    },
+                    {
+                      onSuccess: async () => {
+                        toast.success("Reminder sent");
+                        setReminderMessage("");
+                        await refetchAll();
+                      },
+                      onError: (e: any) => {
+                        toast.error(e?.message || "Failed to send reminder");
+                      },
+                    }
+                  );
+                }}
+              >
+                {sendReminder.isPending ? "Sending…" : "Send reminder"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Optional reminder message */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Optional reminder note</div>
+            <Textarea
+              value={reminderMessage}
+              onChange={(e) => setReminderMessage(e.target.value)}
+              placeholder="Add a short message (optional)…"
+            />
+            <div className="text-xs text-muted-foreground">
+              This will email the driver and log <b>REMINDER_SENT</b> in the timeline.
+            </div>
           </div>
 
           {apiErrorMessage ? (
@@ -153,13 +260,17 @@ export default function DriverOnboardingReview() {
                         <div className="flex gap-2">
                           <Button
                             className="flex-1"
+                            disabled={reviewDoc.isPending}
                             onClick={() =>
                               reviewDoc.mutate(
                                 { docId: doc.id, status: "approved" },
                                 {
-                                  onSuccess: () => {
-                                    profileQuery.refetch();
-                                    activityQuery.refetch();
+                                  onSuccess: async () => {
+                                    toast.success("Document approved");
+                                    await refetchAll();
+                                  },
+                                  onError: (e: any) => {
+                                    toast.error(e?.message || "Approve failed");
                                   },
                                 }
                               )
@@ -171,6 +282,7 @@ export default function DriverOnboardingReview() {
                           <Button
                             className="flex-1"
                             variant="destructive"
+                            disabled={reviewDoc.isPending}
                             onClick={() =>
                               reviewDoc.mutate(
                                 {
@@ -179,9 +291,12 @@ export default function DriverOnboardingReview() {
                                   rejectionReason: reason,
                                 },
                                 {
-                                  onSuccess: () => {
-                                    profileQuery.refetch();
-                                    activityQuery.refetch();
+                                  onSuccess: async () => {
+                                    toast.success("Document rejected");
+                                    await refetchAll();
+                                  },
+                                  onError: (e: any) => {
+                                    toast.error(e?.message || "Reject failed");
                                   },
                                 }
                               )
@@ -199,23 +314,27 @@ export default function DriverOnboardingReview() {
           )}
         </Card>
 
-        {/* RIGHT: Activity timeline */}
-        <div className="space-y-4">
+        {/* RIGHT: activity timeline */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">Activity</h3>
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => refetchAll()}
+            >
+              Refresh
+            </Button>
+          </div>
+
+          <AdminActivityTimeline items={activity} />
+
           {activityQuery.isLoading ? (
-            <Card className="p-4 text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground mt-3">
               Loading activity…
-            </Card>
-          ) : activityQuery.error ? (
-            <Card className="p-4 text-sm text-destructive">
-              Failed to load activity.
-            </Card>
-          ) : (
-            <AdminActivityTimeline
-              title="Admin Activity"
-              rows={(activityQuery.data as any) || []}
-            />
-          )}
-        </div>
+            </div>
+          ) : null}
+        </Card>
       </div>
     </AdminLayout>
   );
