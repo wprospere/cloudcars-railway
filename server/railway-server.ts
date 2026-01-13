@@ -3,7 +3,6 @@ import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import fs from "fs";
-import { fileURLToPath } from "url";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import mysql from "mysql2/promise";
@@ -23,24 +22,11 @@ import {
   runMigrations,
 } from "./db.js";
 
-// ✅ Preferred: your new “migrations once” helper (if you created it)
-let runMigrationsOnce: undefined | (() => Promise<void>);
-try {
-  // dynamic import so builds don't fail if file missing
-  const mod = await import("./db/migrate.js");
-  runMigrationsOnce = mod.runMigrationsOnce;
-} catch {
-  // ignore — we'll use safeRunMigrations() instead
-}
-
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
 // Railway / reverse proxy
 app.set("trust proxy", 1);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // --------------------
 // Middleware
@@ -100,7 +86,7 @@ app.use(
   })
 );
 
-// Example public form endpoints (if you use them)
+// Example public form endpoints (optional)
 app.post("/api/driver-apply", async (req, res) => {
   try {
     const result = await createDriverApplication(req.body);
@@ -125,7 +111,7 @@ app.post("/api/corporate-inquiry", async (req, res) => {
   }
 });
 
-// Admin exports (if your UI calls these)
+// Admin exports (optional)
 app.get("/api/admin/driver-applications", async (_req, res) => {
   try {
     const rows = await getAllDriverApplications();
@@ -169,30 +155,28 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
 const clientDist = path.join(process.cwd(), "dist", "public");
 app.use(express.static(clientDist));
 
-// SPA fallback (keep LAST)
-app.get("*", (_req, res) => {
+// SPA fallback (keep LAST) — but don't break API routes
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/trpc")) {
+    return res.status(404).json({ ok: false, error: "Not found" });
+  }
   res.sendFile(path.join(clientDist, "index.html"));
 });
 
 // --------------------
 // Startup helpers
 // --------------------
-
 function shouldRunMigrations() {
   return String(process.env.RUN_MIGRATIONS || "").toLowerCase() === "true";
 }
 
 function drizzleJournalExists() {
-  const journalPath = path.join(
-    process.cwd(),
-    "drizzle",
-    "meta",
-    "_journal.json"
-  );
+  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
   return fs.existsSync(journalPath);
 }
 
 function getDatabaseUrl(): string | undefined {
+  // Your db.ts REQUIRES DATABASE_URL, but patcher can accept common variants too
   return (
     process.env.DATABASE_URL ||
     process.env.MYSQL_URL ||
@@ -202,8 +186,13 @@ function getDatabaseUrl(): string | undefined {
 }
 
 /**
- * ✅ DB patcher: fixes "Unknown column 'revokedAt'" without needing to run SQL manually.
+ * ✅ DB patcher: fixes missing columns without running SQL manually.
  * Safe to run on every boot (idempotent).
+ *
+ * NOTE:
+ * Your schema uses snake_case columns (revokedAt -> revoked_at) only IF you
+ * defined it that way. In your current schema you used "revokedAt".
+ * This patch matches your CURRENT schema naming.
  */
 async function patchDatabaseIfNeeded() {
   const DATABASE_URL = getDatabaseUrl();
@@ -246,6 +235,7 @@ async function patchDatabaseIfNeeded() {
 
     const table = "driver_onboarding_tokens";
 
+    // ✅ match your schema field names exactly
     if (!(await hasColumn(table, "revokedAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.revokedAt ...`);
       await pool.query(
@@ -303,24 +293,16 @@ async function safeRunMigrations() {
 }
 
 // --------------------
-// Startup (single source of truth)
+// Startup
 // --------------------
 async function bootstrap() {
-  // ✅ Patch DB first so endpoints don't crash (revokedAt missing)
+  // ✅ Patch DB first so endpoints don't crash if a column is missing
   await patchDatabaseIfNeeded();
 
-  // ✅ Preferred migrations once (if available)
-  if (runMigrationsOnce) {
-    try {
-      await runMigrationsOnce();
-    } catch (e: any) {
-      console.error("❌ runMigrationsOnce failed:", e?.message || e);
-    }
-  } else {
-    // fallback to env-controlled migrations
-    await safeRunMigrations();
-  }
+  // ✅ Migrations (opt-in via env)
+  await safeRunMigrations();
 
+  // ✅ Ensure admin exists
   try {
     await ensureDefaultAdmin();
   } catch (e: any) {
