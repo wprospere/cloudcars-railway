@@ -1,3 +1,4 @@
+// server/routers.ts
 import { publicProcedure, protectedProcedure, router } from "./railway-trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -46,7 +47,7 @@ import {
 
   // ✅ Phase 1 onboarding (DB helpers)
   createDriverOnboardingToken,
-  resendDriverOnboardingToken, // ✅ NEW (option 1: fresh secure link)
+  resendDriverOnboardingToken, // ✅ NEW (fresh secure link)
   getDriverOnboardingByToken,
   markDriverOnboardingTokenUsed,
   upsertDriverVehicle,
@@ -54,6 +55,9 @@ import {
   getDriverOnboardingProfile,
   setDriverDocumentReview,
   reviewDriverDocumentByAppAndType,
+
+  // ✅ NEW: reminder event (no token re-issue)
+  logDriverOnboardingReminder,
 } from "./db";
 
 import { storagePut } from "./storage";
@@ -64,12 +68,10 @@ import { emailTemplates, EmailTemplateType } from "./emailTemplates";
    Admin-only middleware
 ---------------------------------------- */
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const role = ctx.user?.role;
-
+  const role = (ctx.user as any)?.role;
   if (role !== "admin" && role !== "staff") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
   }
-
   return next({ ctx });
 });
 
@@ -118,8 +120,6 @@ const DRIVER_APP_STATUSES = [
 ] as const;
 
 function getPublicBaseUrl() {
-  // ✅ Put this in Railway env for reliability:
-  // PUBLIC_BASE_URL=https://www.cloudcarsltd.com
   return (
     process.env.PUBLIC_BASE_URL ||
     process.env.VITE_PUBLIC_BASE_URL ||
@@ -128,7 +128,7 @@ function getPublicBaseUrl() {
 }
 
 /**
- * ✅ Pull best-available admin identifier for audit log attribution.
+ * ✅ Pull best-available admin identifier for audit attribution.
  */
 function getAdminEmail(ctx: any): string | null {
   return (
@@ -174,7 +174,8 @@ export const appRouter = router({
           ...input,
           specialRequests: input.specialRequests ?? null,
           estimatedPrice: input.estimatedPrice ?? null,
-        });
+        } as any);
+
         return {
           success: true,
           bookingId: (result as any).id ?? (result as any).insertId,
@@ -222,7 +223,7 @@ export const appRouter = router({
             message: input.message ?? null,
             internalNotes: null,
             assignedTo: null,
-          });
+          } as any);
 
           notifyOwner({
             title: "New Driver Application",
@@ -263,7 +264,7 @@ export const appRouter = router({
           requirements: input.requirements ?? null,
           internalNotes: null,
           assignedTo: null,
-        });
+        } as any);
 
         await notifyOwner({
           title: "New Corporate Inquiry",
@@ -295,7 +296,7 @@ export const appRouter = router({
           phone: input.phone ?? null,
           internalNotes: null,
           assignedTo: null,
-        });
+        } as any);
 
         await notifyOwner({
           title: "New Contact Message",
@@ -361,7 +362,7 @@ export const appRouter = router({
           buttonText: input.buttonText ?? null,
           buttonLink: input.buttonLink ?? null,
           extraData: input.extraData ?? null,
-        });
+        } as any);
         return { success: true };
       }),
 
@@ -386,7 +387,7 @@ export const appRouter = router({
           url,
           altText: input.altText ?? null,
           caption: input.caption ?? null,
-        });
+        } as any);
 
         return { success: true, url };
       }),
@@ -400,7 +401,7 @@ export const appRouter = router({
   }),
 
   /* =======================================================================
-     ✅ DRIVER ONBOARDING (Phase 1) - Public (token based)
+     ✅ DRIVER ONBOARDING (Public token-based)
      ======================================================================= */
   driverOnboarding: router({
     getByToken: publicProcedure
@@ -449,7 +450,7 @@ export const appRouter = router({
           year: input.year ?? null,
           plateNumber: input.plateNumber ?? null,
           capacity: input.capacity ?? null,
-        });
+        } as any);
 
         return { success: true };
       }),
@@ -486,7 +487,7 @@ export const appRouter = router({
           type: input.type as any,
           fileUrl: url,
           expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-        });
+        } as any);
 
         return { success: true, url };
       }),
@@ -534,7 +535,6 @@ export const appRouter = router({
           status: r.status,
           assignedTo: r.assignedTo,
 
-          // ✅ new (safe even if null)
           assignedToEmail: r.assignedToEmail ?? null,
           assignedToAdminId: r.assignedToAdminId ?? null,
           lastTouchedAt: r.lastTouchedAt ?? null,
@@ -559,7 +559,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateDriverApplicationStatus(input.id, input.status, adminEmail);
+        await updateDriverApplicationStatus(input.id, input.status as any, adminEmail);
         return { success: true };
       }),
 
@@ -575,11 +575,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateDriverApplicationAssignment(
-          input.id,
-          input.assignedTo,
-          adminEmail
-        );
+        await updateDriverApplicationAssignment(input.id, input.assignedTo, adminEmail);
         return { success: true };
       }),
 
@@ -637,11 +633,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateCorporateInquiryAssignment(
-          input.id,
-          input.assignedTo,
-          adminEmail
-        );
+        await updateCorporateInquiryAssignment(input.id, input.assignedTo, adminEmail);
         return { success: true };
       }),
 
@@ -691,11 +683,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateContactMessageAssignment(
-          input.id,
-          input.assignedTo,
-          adminEmail
-        );
+        await updateContactMessageAssignment(input.id, input.assignedTo, adminEmail);
         return { success: true };
       }),
 
@@ -800,7 +788,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
-        await updateTeamMember(id, data);
+        await updateTeamMember(id, data as any);
         return { success: true };
       }),
 
@@ -818,9 +806,7 @@ export const appRouter = router({
       .input(z.object({ driverApplicationId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const apps: any[] = await getAllDriverApplications();
-        const app = apps.find(
-          (a) => Number(a.id) === Number(input.driverApplicationId)
-        );
+        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
 
         if (!app) {
           throw new TRPCError({
@@ -860,8 +846,7 @@ export const appRouter = router({
         if (!ok) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message:
-              "Mailgun failed to send onboarding email. Check Railway variables.",
+            message: "Mailgun failed to send onboarding email. Check Railway variables.",
           });
         }
 
@@ -869,11 +854,7 @@ export const appRouter = router({
       }),
 
     /**
-     * ✅ RESEND onboarding link (Option 1)
-     * - generates NEW secure token
-     * - revokes prior tokens (db helper does this)
-     * - emails the new link
-     * - logs LINK_SENT with resend:true (db helper should do this)
+     * ✅ RESEND onboarding link (fresh token)
      */
     resendDriverOnboardingLink: adminProcedure
       .input(
@@ -884,9 +865,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         const apps: any[] = await getAllDriverApplications();
-        const app = apps.find(
-          (a) => Number(a.id) === Number(input.driverApplicationId)
-        );
+        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
 
         if (!app) {
           throw new TRPCError({
@@ -931,12 +910,73 @@ export const appRouter = router({
         if (!ok) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message:
-              "Failed to send onboarding email. Check Railway Mailgun variables.",
+            message: "Failed to send onboarding email. Check Railway Mailgun variables.",
           });
         }
 
         return { success: true, link };
+      }),
+
+    /**
+     * ✅ FIX: this is the missing tRPC procedure your UI is calling:
+     * trpc.admin.sendDriverOnboardingReminder.useMutation()
+     *
+     * - DOES NOT create a new token
+     * - Sends a generic reminder email (no link)
+     * - Logs REMINDER_SENT in timeline (db helper)
+     */
+    sendDriverOnboardingReminder: adminProcedure
+      .input(
+        z.object({
+          driverApplicationId: z.number(),
+          message: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const apps: any[] = await getAllDriverApplications();
+        const app = apps.find((a) => Number(a.id) === Number(input.driverApplicationId));
+
+        if (!app) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Driver application not found",
+          });
+        }
+
+        const adminEmail = getAdminEmail(ctx);
+
+        // ✅ log timeline event (no token re-issue)
+        await logDriverOnboardingReminder({
+          driverApplicationId: Number(app.id),
+          adminEmail,
+          channel: "email",
+        });
+
+        const html = `
+          <p>Hi ${app.fullName || "Driver"},</p>
+          <p>This is a quick reminder to complete your driver onboarding documents.</p>
+          ${
+            input.message
+              ? `<p>${String(input.message).replace(/\n/g, "<br/>")}</p>`
+              : ""
+          }
+          <p>Cloud Cars</p>
+        `;
+
+        const ok = await sendEmail({
+          to: app.email,
+          subject: "Reminder: complete your driver onboarding",
+          html,
+        });
+
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to send reminder email.",
+          });
+        }
+
+        return { success: true };
       }),
 
     getDriverOnboardingProfile: adminProcedure
@@ -991,7 +1031,7 @@ export const appRouter = router({
             status: input.status,
             reviewedBy,
             rejectionReason: input.rejectionReason ?? null,
-          });
+          } as any);
           return { success: true };
         }
 
