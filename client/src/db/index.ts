@@ -1,50 +1,20 @@
 /**
- * Railway LIVE ONLY database bootstrap.
- * - Requires DATABASE_URL
- * - Single pool for the whole app
- * - Optional ping helper for health checks
+ * CLIENT-SIDE DB PLACEHOLDER
  *
- * ⚠️ IMPORTANT:
- * This file is imported by the CLIENT build.
- * Therefore we must use TYPE-ONLY imports for drizzle schema
- * to avoid bundling server-only code into the browser.
+ * ❌ No drizzle
+ * ❌ No mysql
+ * ❌ No schema imports
+ *
+ * The client NEVER talks directly to the database.
+ * All data access happens via:
+ *   - tRPC
+ *   - REST APIs
  */
 
-import "dotenv/config";
-import mysql from "mysql2/promise";
-import { drizzle } from "drizzle-orm/mysql2";
+export type ClientDB = never;
 
-// ✅ TYPE-ONLY import + correct relative path
-import type * as schema from "../../../drizzle/schema";
-
-function requiredEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required env var: ${name}`);
-  return v;
-}
-
-// ✅ Railway standard
-const DATABASE_URL = requiredEnv("DATABASE_URL");
-
-// ✅ Pool (stable for Railway + long-lived connections)
-export const pool = mysql.createPool({
-  uri: DATABASE_URL,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 10_000,
-});
-
-// ✅ Drizzle instance (schema used only for typing)
-export const db = drizzle(pool, { schema: schema as any, mode: "default" });
-
-// ✅ Simple health-check helper
-export async function dbPing() {
-  const conn = await pool.getConnection();
-  try {
-    await conn.ping();
-  } finally {
-    conn.release();
-  }
-}
+/**
+ * This file exists only to prevent accidental DB usage
+ * in the browser and to keep imports explicit.
+ */
+export const db = null as unknown as ClientDB;
