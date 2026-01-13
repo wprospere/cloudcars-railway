@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import type React from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -24,10 +23,6 @@ function isPdf(mimeType?: string | null, url?: string | null) {
   if (mt.includes("pdf")) return true;
   const u = String(url || "").toLowerCase();
   return u.endsWith(".pdf") || u.includes(".pdf?");
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
 }
 
 export default function DriverOnboardingReview() {
@@ -58,36 +53,24 @@ export default function DriverOnboardingReview() {
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>(
     {}
   );
-
   const [reminderMessage, setReminderMessage] = useState("");
 
-  // (your existing zoom/pan state kept, even if not used yet)
+  // (kept from your version; not used yet but harmless)
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  void viewportRef; // avoid unused warning if you aren't using it yet
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-
+  void scale;
+  void pan;
+  void isDragging;
+  void setScale;
+  void setPan;
+  void setIsDragging;
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-
-  const clampPan = (p: { x: number; y: number }, s: number) => {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    if (!rect || s <= 1) return { x: 0, y: 0 };
-
-    const maxX = ((s - 1) * rect.width) / 2;
-    const maxY = ((s - 1) * rect.height) / 2;
-
-    return {
-      x: clamp(p.x, -maxX, maxX),
-      y: clamp(p.y, -maxY, maxY),
-    };
-  };
-
-  const resetView = () => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-    setIsDragging(false);
-  };
+  void dragStart;
+  void panStart;
 
   const statusVariant = (status: DocStatusUI) => {
     const s = String(status || "pending").toLowerCase();
@@ -144,12 +127,15 @@ export default function DriverOnboardingReview() {
     );
   }
 
-  const { driver, vehicle, documents } = profileQuery.data as any;
+  const { driver, documents } = profileQuery.data as any;
   const docs = Array.isArray(documents) ? documents : [];
   const activity = (activityQuery.data as any[]) || [];
 
   const busy =
-    reviewDoc.isPending || sendReminder.isPending || profileQuery.isFetching;
+    reviewDoc.isPending ||
+    sendReminder.isPending ||
+    profileQuery.isFetching ||
+    activityQuery.isFetching;
 
   return (
     <AdminLayout title="Driver Onboarding Review">
@@ -174,7 +160,9 @@ export default function DriverOnboardingReview() {
                   sendReminder.mutate(
                     {
                       driverApplicationId,
-                      message: reminderMessage?.trim() ? reminderMessage.trim() : undefined,
+                      message: reminderMessage?.trim()
+                        ? reminderMessage.trim()
+                        : undefined,
                     },
                     {
                       onSuccess: async () => {
@@ -283,12 +271,17 @@ export default function DriverOnboardingReview() {
                             className="flex-1"
                             variant="destructive"
                             disabled={reviewDoc.isPending}
-                            onClick={() =>
+                            onClick={() => {
+                              const r = (reason || "").trim();
+                              if (!r) {
+                                toast.error("Rejection reason is required");
+                                return;
+                              }
                               reviewDoc.mutate(
                                 {
                                   docId: doc.id,
                                   status: "rejected",
-                                  rejectionReason: reason,
+                                  rejectionReason: r,
                                 },
                                 {
                                   onSuccess: async () => {
@@ -299,8 +292,8 @@ export default function DriverOnboardingReview() {
                                     toast.error(e?.message || "Reject failed");
                                   },
                                 }
-                              )
-                            }
+                              );
+                            }}
                           >
                             Reject
                           </Button>
@@ -318,22 +311,18 @@ export default function DriverOnboardingReview() {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold">Activity</h3>
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() => refetchAll()}
-            >
-              Refresh
+            <Button variant="secondary" disabled={busy} onClick={refetchAll}>
+              {busy ? "Refreshing…" : "Refresh"}
             </Button>
           </div>
 
-          <AdminActivityTimeline items={activity} />
-
           {activityQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground mt-3">
-              Loading activity…
-            </div>
-          ) : null}
+            <div className="text-sm text-muted-foreground">Loading activity…</div>
+          ) : activity.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No activity yet.</div>
+          ) : (
+            <AdminActivityTimeline items={activity} />
+          )}
         </Card>
       </div>
     </AdminLayout>
