@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { adminAuditLog } from "../drizzle/schema";
+// server/auth/adminAudit.ts
+import { db, schema } from "../db";
 
 type AuditEntityType =
   | "driver_application"
@@ -12,7 +12,7 @@ type AuditEntityType =
   | "other";
 
 export async function logAdminAudit(params: {
-  adminUserId: number;
+  adminUserId?: number | null;
   action: string;
   entityType: AuditEntityType;
   entityId?: number | null;
@@ -21,7 +21,7 @@ export async function logAdminAudit(params: {
   userAgent?: string | null;
 }) {
   const {
-    adminUserId,
+    adminUserId = null,
     action,
     entityType,
     entityId = null,
@@ -30,13 +30,18 @@ export async function logAdminAudit(params: {
     userAgent = null,
   } = params;
 
-  await db.insert(adminAuditLog).values({
-    adminUserId,
+  // ⚠️ Your drizzle table uses snake_case column names:
+  // admin_user_id, entity_type, entity_id, user_agent, created_at
+  await db.insert(schema.adminAuditLog).values({
+    adminUserId, // maps to admin_user_id
     action,
-    entityType,
-    entityId,
+    entityType, // maps to entity_type
+    entityId, // maps to entity_id
     metadata,
     ip,
-    userAgent,
-  });
+    userAgent, // maps to user_agent
+    // createdAt is default CURRENT_TIMESTAMP in schema
+  } as any);
+
+  return { success: true };
 }
