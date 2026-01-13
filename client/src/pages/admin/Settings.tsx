@@ -1,95 +1,42 @@
 import AdminLayout from "@/components/AdminLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-export default function AdminSettings() {
+export default function Settings() {
   const { user } = useAuth();
 
   return (
-    <AdminLayout
-      title="Settings"
-      description="Manage your account and website settings"
-    >
-      <div className="space-y-6 max-w-2xl">
-        {/* Account Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>Your admin account details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium text-foreground">{user?.name || "Not set"}</p>
+    <AdminLayout title="Settings">
+      <div className="space-y-4">
+        <Card className="p-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Admin Profile</h2>
+
+            <div className="text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Email</span>
+                <span className="font-medium text-foreground">
+                  {(user as any)?.email || "Not set"}
+                </span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium text-foreground">{user?.email || "Not set"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Role</p>
-                <p className="font-medium text-foreground capitalize">{user?.role || "User"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Last Sign In</p>
-                <p className="font-medium text-foreground">
-                  {user?.lastSignedIn 
-                    ? new Date(user.lastSignedIn).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "Unknown"}
-                </p>
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Role</span>
+                <span className="font-medium text-foreground">
+                  {(user as any)?.role || "Not set"}
+                </span>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Website Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Website Information</CardTitle>
-            <CardDescription>Details about your Cloud Cars website</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Website Name</p>
-                <p className="font-medium text-foreground">Cloud Cars</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-medium text-foreground">Nottingham, UK</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium text-foreground">0118 8 244 244</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium text-foreground">info@cloudcarsltd.com</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Help */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Need Help?</CardTitle>
-            <CardDescription>Resources and support options</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Card className="p-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">System</h2>
             <p className="text-sm text-muted-foreground">
-              If you need assistance with your website or have questions about 
-              the content management system, please contact your website administrator 
-              or development team.
+              More settings will appear here as we expand admin features.
             </p>
-          </CardContent>
+          </div>
         </Card>
       </div>
     </AdminLayout>

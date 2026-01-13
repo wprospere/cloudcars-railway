@@ -1,6 +1,11 @@
 /**
- * Database query helpers (Railway-safe)
+ * Database query helpers (Railway LIVE only)
+ * - Requires DATABASE_URL
+ * - Drizzle mysql2
+ * - Includes migrations + admin activity audit trail
  */
+
+import "dotenv/config";
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
@@ -8,50 +13,30 @@ import { eq, asc, desc, and, isNull, inArray } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
 
-// ✅ Drizzle migrations (run on server boot)
 import path from "path";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 
 /**
- * Prefer DATABASE_URL (Railway standard).
- * Accept common Railway-provided variants.
- * Fallback to MYSQL* for non-Railway hosts.
+ * Railway LIVE ONLY:
+ * We REQUIRE DATABASE_URL and do not fall back to MYSQLHOST/MYSQLUSER/etc.
  */
-function required(name: string) {
+function requiredEnv(name: string) {
   const v = process.env[name];
-  if (!v) throw new Error(`Missing env var: ${name}`);
+  if (!v) throw new Error(`Missing required env var: ${name}`);
   return v;
 }
 
-// ✅ Railway-safe DATABASE_URL resolution
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  process.env.MYSQL_URL ||
-  process.env.MYSQLDATABASE_URL ||
-  process.env.DATABASE_PRIVATE_URL;
+const DATABASE_URL = requiredEnv("DATABASE_URL");
 
-// ✅ Connection pool
-const pool = DATABASE_URL
-  ? mysql.createPool({
-      uri: DATABASE_URL,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-    })
-  : mysql.createPool({
-      host: required("MYSQLHOST"),
-      port: Number(process.env.MYSQLPORT ?? "3306"),
-      user: required("MYSQLUSER"),
-      password: required("MYSQLPASSWORD"),
-      database: required("MYSQLDATABASE"),
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-    });
+// ✅ Connection pool (single pool per process)
+const pool = mysql.createPool({
+  uri: DATABASE_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
+});
 
 // ✅ Drizzle instance
 export const db = drizzle(pool, { schema, mode: "default" });
@@ -65,7 +50,7 @@ export { schema };
  * - drizzle/meta/_journal.json
  * - drizzle/*.sql
  *
- * So migrationsFolder MUST be the parent folder: "drizzle"
+ * So migrationsFolder MUST be: "drizzle"
  */
 let migrationsRan = false;
 
@@ -97,7 +82,7 @@ async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
 }
 
 // ============================================================================
-// Admin Activity (audit trail)
+// ✅ Admin Activity (audit trail) — SINGLE implementation
 // ============================================================================
 
 export type AdminEntityType =
@@ -105,23 +90,21 @@ export type AdminEntityType =
   | "corporate_inquiry"
   | "contact_message";
 
-export type AdminActionType =
+export type AdminActivityAction =
   | "CREATED"
   | "STATUS_CHANGED"
   | "ASSIGNED"
   | "NOTE_ADDED"
   | "LINK_SENT"
+  | "REMINDER_SENT"
   | "DOC_REVIEWED";
 
-/**
- * Writes to admin_activity for audit trail.
- * - meta is stored as JSON string when provided
- * - adminEmail can be null (system / unknown)
- */
+const adminActivityTable = schema.adminActivity;
+
 export async function logAdminActivity(params: {
   entityType: AdminEntityType;
   entityId: number;
-  action: AdminActionType;
+  action: AdminActivityAction;
   adminEmail?: string | null;
   meta?: unknown;
   createdAt?: Date;
@@ -131,7 +114,7 @@ export async function logAdminActivity(params: {
       ? null
       : JSON.stringify(params.meta ?? null);
 
-  await db.insert(schema.adminActivity).values({
+  await db.insert(adminActivityTable).values({
     entityType: params.entityType as any,
     entityId: params.entityId,
     action: params.action as any,
@@ -175,15 +158,65 @@ export async function getAdminActivityForEntity(params: {
   });
 }
 
+// ============================================================================
+// ✅ Helpers for "last touched" + lightweight ownership
+// ============================================================================
+
+async function touchDriverApplication(params: {
+  id: number;
+  adminEmail?: string | null;
+}) {
+  await db
+    .update(schema.driverApplications)
+    .set({
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: params.adminEmail ?? null,
+    } as any)
+    .where(eq(schema.driverApplications.id, params.id));
+}
+
+/**
+ * Optionally auto-fill assignedToEmail/AdminId for queue workflows.
+ * Safe to call even if fields are not used by UI yet.
+ */
+async function setDriverAssignmentFields(params: {
+  id: number;
+  assignedToEmail?: string | null;
+  assignedToAdminId?: number | null;
+  legacyAssignedTo?: string | null;
+  adminEmail?: string | null; // actor
+}) {
+  await db
+    .update(schema.driverApplications)
+    .set({
+      // legacy (kept)
+      assignedTo: params.legacyAssignedTo ?? null,
+
+      // new
+      assignedToEmail: params.assignedToEmail ?? null,
+      assignedToAdminId: params.assignedToAdminId ?? null,
+
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: params.adminEmail ?? null,
+    } as any)
+    .where(eq(schema.driverApplications.id, params.id));
+}
+
 // -------------------- Bookings --------------------
 
-export async function createBooking(
-  data: typeof schema.bookings.$inferInsert
-) {
+export async function createBooking(data: typeof schema.bookings.$inferInsert) {
   return insertAndReturnId(db.insert(schema.bookings).values(data));
 }
 
 // -------------------- Driver Applications --------------------
+
+export type DriverAppStatus =
+  | "pending"
+  | "reviewing"
+  | "link_sent"
+  | "docs_received"
+  | "approved"
+  | "rejected";
 
 export async function createDriverApplication(
   data: typeof schema.driverApplications.$inferInsert
@@ -192,7 +225,7 @@ export async function createDriverApplication(
     db.insert(schema.driverApplications).values(data)
   );
 
-  // Optional audit event (adminEmail unknown at public creation time)
+  // Audit (public form)
   await logAdminActivity({
     entityType: "driver_application",
     entityId: res.id,
@@ -218,7 +251,6 @@ export async function getAllDriverApplications() {
     .filter((n) => Number.isFinite(n));
 
   if (ids.length === 0) {
-    // attach empty docs so UI doesn't break
     return (apps as any[]).map((a) => ({ ...a, documents: [] }));
   }
 
@@ -227,7 +259,6 @@ export async function getAllDriverApplications() {
     .from(schema.driverDocuments)
     .where(inArray(schema.driverDocuments.driverApplicationId, ids));
 
-  // Group documents by application id
   const byAppId = new Map<number, any[]>();
   for (const d of docs as any[]) {
     const appId = Number((d as any).driverApplicationId);
@@ -243,7 +274,7 @@ export async function getAllDriverApplications() {
 
 export async function updateDriverApplicationStatus(
   id: number,
-  status: "pending" | "reviewing" | "approved" | "rejected",
+  status: DriverAppStatus,
   adminEmail?: string | null
 ) {
   const existing = await db.query.driverApplications.findFirst({
@@ -252,7 +283,11 @@ export async function updateDriverApplicationStatus(
 
   await db
     .update(schema.driverApplications)
-    .set({ status } as any)
+    .set({
+      status,
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: adminEmail ?? null,
+    } as any)
     .where(eq(schema.driverApplications.id, id));
 
   await logAdminActivity({
@@ -269,10 +304,13 @@ export async function updateDriverApplicationNotes(
   notes: string,
   adminEmail?: string | null
 ) {
-  // Schema field is internalNotes
   await db
     .update(schema.driverApplications)
-    .set({ internalNotes: notes } as any)
+    .set({
+      internalNotes: notes,
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: adminEmail ?? null,
+    } as any)
     .where(eq(schema.driverApplications.id, id));
 
   await logAdminActivity({
@@ -284,26 +322,45 @@ export async function updateDriverApplicationNotes(
   });
 }
 
+/**
+ * Legacy assignment (kept): assignedTo string
+ * New queue fields are optional: assignedToEmail + assignedToAdminId
+ *
+ * If you only have `assignedTo` in the UI right now, keep using this.
+ * Later: pass assignedToEmail/adminUserId from your admin session.
+ */
 export async function updateDriverApplicationAssignment(
   id: number,
   assignedTo: string | null,
-  adminEmail?: string | null
+  adminEmail?: string | null,
+  opts?: {
+    assignedToEmail?: string | null;
+    assignedToAdminId?: number | null;
+  }
 ) {
   const existing = await db.query.driverApplications.findFirst({
     where: (a, { eq }) => eq(a.id, id),
   });
 
-  await db
-    .update(schema.driverApplications)
-    .set({ assignedTo } as any)
-    .where(eq(schema.driverApplications.id, id));
+  await setDriverAssignmentFields({
+    id,
+    legacyAssignedTo: assignedTo ?? null,
+    assignedToEmail: opts?.assignedToEmail ?? null,
+    assignedToAdminId: opts?.assignedToAdminId ?? null,
+    adminEmail: adminEmail ?? null,
+  });
 
   await logAdminActivity({
     entityType: "driver_application",
     entityId: id,
     action: "ASSIGNED",
     adminEmail: adminEmail ?? null,
-    meta: { from: existing?.assignedTo ?? null, to: assignedTo },
+    meta: {
+      from: existing?.assignedTo ?? null,
+      to: assignedTo,
+      assignedToEmail: opts?.assignedToEmail ?? null,
+      assignedToAdminId: opts?.assignedToAdminId ?? null,
+    },
   });
 }
 
@@ -361,7 +418,6 @@ export async function updateCorporateInquiryNotes(
   notes: string,
   adminEmail?: string | null
 ) {
-  // Schema field is internalNotes
   await db
     .update(schema.corporateInquiries)
     .set({ internalNotes: notes } as any)
@@ -448,7 +504,6 @@ export async function updateContactMessageNotes(
   notes: string,
   adminEmail?: string | null
 ) {
-  // Schema field is internalNotes
   await db
     .update(schema.contactMessages)
     .set({ internalNotes: notes } as any)
@@ -565,7 +620,9 @@ export async function getAllSiteImages() {
   });
 }
 
-export async function upsertSiteImage(data: typeof schema.siteImages.$inferInsert) {
+export async function upsertSiteImage(
+  data: typeof schema.siteImages.$inferInsert
+) {
   const existing = await getSiteImage(String(data.imageKey));
   if (existing) {
     await db
@@ -614,7 +671,10 @@ export async function revokeActiveDriverOnboardingTokens(
     .set({ revokedAt: new Date() } as any)
     .where(
       and(
-        eq(schema.driverOnboardingTokens.driverApplicationId, driverApplicationId),
+        eq(
+          schema.driverOnboardingTokens.driverApplicationId,
+          driverApplicationId
+        ),
         isNull(schema.driverOnboardingTokens.usedAt),
         isNull(schema.driverOnboardingTokens.revokedAt)
       )
@@ -623,24 +683,22 @@ export async function revokeActiveDriverOnboardingTokens(
 
 /**
  * ✅ Create a fresh onboarding token.
- * - Revokes existing active tokens for that driverApplicationId
- * - Stores only tokenHash
- * - Sets expiry (default 7 days if not provided)
- *
- * You email the RAW token in the link. You store ONLY the hash.
+ * Also:
+ * - logs LINK_SENT
+ * - updates driverApplications.status -> link_sent
+ * - touches lastTouched fields
  */
 export async function createDriverOnboardingToken(params: {
   driverApplicationId: number;
   rawToken: string;
-  expiresAt?: Date; // optional; defaults to now + 7 days
-  sentNow?: boolean; // if true, sets lastSentAt and sendCount
+  expiresAt?: Date;
+  sentNow?: boolean;
   adminEmail?: string | null;
 }) {
   const tokenHash = sha256(params.rawToken);
   const now = new Date();
   const expiresAt = params.expiresAt ?? addDays(now, 7);
 
-  // Ensure only one active token at a time
   await revokeActiveDriverOnboardingTokens(params.driverApplicationId);
 
   await db.insert(schema.driverOnboardingTokens).values({
@@ -655,6 +713,16 @@ export async function createDriverOnboardingToken(params: {
   } as any);
 
   if (params.sentNow) {
+    // ✅ update app status + touch
+    await db
+      .update(schema.driverApplications)
+      .set({
+        status: "link_sent",
+        lastTouchedAt: now,
+        lastTouchedByEmail: params.adminEmail ?? null,
+      } as any)
+      .where(eq(schema.driverApplications.id, params.driverApplicationId));
+
     await logAdminActivity({
       entityType: "driver_application",
       entityId: params.driverApplicationId,
@@ -667,10 +735,6 @@ export async function createDriverOnboardingToken(params: {
   return { success: true, expiresAt };
 }
 
-/**
- * Low-level lookup:
- * Returns the token row even if expired/used/revoked (so UI can be friendly).
- */
 export async function getDriverOnboardingTokenRow(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
@@ -683,10 +747,6 @@ export async function getDriverOnboardingTokenRow(rawToken: string) {
   return (rows as any[])[0] ?? null;
 }
 
-/**
- * Friendly validation for UI:
- * Returns {ok:true,row} OR {ok:false, reason}
- */
 export async function checkDriverOnboardingToken(
   rawToken: string
 ): Promise<
@@ -705,20 +765,12 @@ export async function checkDriverOnboardingToken(
   return { ok: true, row };
 }
 
-/**
- * Backwards compatible:
- * Valid = exists AND not used AND not revoked AND not expired, else null.
- */
 export async function getDriverOnboardingByToken(rawToken: string) {
   const res = await checkDriverOnboardingToken(rawToken);
   if (!res.ok) return null;
   return res.row;
 }
 
-/**
- * Lock token after submit (prevent re-use).
- * Call this ONLY after successful onboarding save.
- */
 export async function markDriverOnboardingTokenUsed(rawToken: string) {
   const tokenHash = sha256(rawToken);
 
@@ -729,9 +781,8 @@ export async function markDriverOnboardingTokenUsed(rawToken: string) {
 }
 
 /**
- * Admin resend helper:
- * - revokes old active tokens
- * - inserts new token with lastSentAt/sendCount
+ * Resend onboarding link (logs LINK_SENT)
+ * NOTE: This creates a fresh token (revoking previous)
  */
 export async function resendDriverOnboardingToken(params: {
   driverApplicationId: number;
@@ -756,6 +807,15 @@ export async function resendDriverOnboardingToken(params: {
     sendCount: 1,
   } as any);
 
+  await db
+    .update(schema.driverApplications)
+    .set({
+      status: "link_sent",
+      lastTouchedAt: now,
+      lastTouchedByEmail: params.adminEmail ?? null,
+    } as any)
+    .where(eq(schema.driverApplications.id, params.driverApplicationId));
+
   await logAdminActivity({
     entityType: "driver_application",
     entityId: params.driverApplicationId,
@@ -768,9 +828,29 @@ export async function resendDriverOnboardingToken(params: {
 }
 
 /**
- * Optional: if you ever re-send the SAME token (not recommended),
- * this bumps lastSentAt + sendCount.
+ * ✅ Use this when you send a reminder (without issuing a new token),
+ * so the timeline shows REMINDER_SENT instead of LINK_SENT.
  */
+export async function logDriverOnboardingReminder(params: {
+  driverApplicationId: number;
+  adminEmail?: string | null;
+  channel?: "email" | "sms" | "whatsapp" | "unknown";
+}) {
+  const now = new Date();
+
+  await touchDriverApplication({ id: params.driverApplicationId, adminEmail: params.adminEmail ?? null });
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: params.driverApplicationId,
+    action: "REMINDER_SENT",
+    adminEmail: params.adminEmail ?? null,
+    meta: { channel: params.channel ?? "unknown" },
+  });
+
+  return { success: true };
+}
+
 export async function bumpOnboardingTokenSent(rawToken: string) {
   const row: any = await getDriverOnboardingTokenRow(rawToken);
   if (!row) return { success: false };
@@ -871,6 +951,12 @@ export async function upsertDriverDocument(params: {
       } as any)
       .where(eq(schema.driverDocuments.id, (existing as any[])[0].id));
 
+    // if any upload happens, status can move to docs_received (optional)
+    await db
+      .update(schema.driverApplications)
+      .set({ status: "docs_received" } as any)
+      .where(eq(schema.driverApplications.id, params.driverApplicationId));
+
     return { success: true };
   }
 
@@ -882,19 +968,21 @@ export async function upsertDriverDocument(params: {
     status: "pending",
   } as any);
 
+  await db
+    .update(schema.driverApplications)
+    .set({ status: "docs_received" } as any)
+    .where(eq(schema.driverApplications.id, params.driverApplicationId));
+
   return { success: true };
 }
 
-/**
- * Existing low-level review by docId (kept)
- */
 export async function setDriverDocumentReview(params: {
   docId: number;
   status: "approved" | "rejected";
   reviewedBy: string;
   rejectionReason?: string | null;
-  driverApplicationId?: number | null; // optional for activity logging
-  docType?: DriverDocType | null; // optional for activity logging
+  driverApplicationId?: number | null;
+  docType?: DriverDocType | null;
 }) {
   await db
     .update(schema.driverDocuments)
@@ -909,8 +997,12 @@ export async function setDriverDocumentReview(params: {
     } as any)
     .where(eq(schema.driverDocuments.id, params.docId));
 
-  // Optional: audit
   if (params.driverApplicationId) {
+    await touchDriverApplication({
+      id: Number(params.driverApplicationId),
+      adminEmail: params.reviewedBy ?? null,
+    });
+
     await logAdminActivity({
       entityType: "driver_application",
       entityId: Number(params.driverApplicationId),
@@ -926,9 +1018,6 @@ export async function setDriverDocumentReview(params: {
   }
 }
 
-/**
- * ✅ NEW: fetch a single doc by (driverApplicationId + type)
- */
 export async function getDriverDocumentByAppAndType(params: {
   driverApplicationId: number;
   type: DriverDocType;
@@ -947,10 +1036,6 @@ export async function getDriverDocumentByAppAndType(params: {
   return (rows as any[])[0] ?? null;
 }
 
-/**
- * ✅ NEW: review doc by (driverApplicationId + type) so your UI doesn’t need docId
- * This is usually what the Admin page wants when you click "Approve/Reject".
- */
 export async function reviewDriverDocumentByAppAndType(params: {
   driverApplicationId: number;
   type: DriverDocType;
@@ -978,17 +1063,12 @@ export async function reviewDriverDocumentByAppAndType(params: {
     docType: params.type,
   });
 
-  // return the updated doc for convenience
   return getDriverDocumentByAppAndType({
     driverApplicationId: params.driverApplicationId,
     type: params.type,
   });
 }
 
-/**
- * ✅ This is what your frontend calls:
- * trpc.admin.getDriverOnboardingProfile({ driverApplicationId })
- */
 export async function getDriverOnboardingProfile(driverApplicationId: number) {
   const app = await db.query.driverApplications.findFirst({
     where: (a, { eq }) => eq(a.id, driverApplicationId),
@@ -1003,12 +1083,18 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
     orderBy: (d, { asc }) => [asc(d.type)],
   });
 
-  // ✅ Return ALL common shapes so your UI never breaks:
+  const activity = await getAdminActivityForEntity({
+    entityType: "driver_application",
+    entityId: driverApplicationId,
+    limit: 50,
+  });
+
   return {
     driverApplication: app ?? null,
     driver: app ?? null,
     application: app ?? null,
     vehicle: vehicle ?? null,
     documents,
+    activity,
   };
 }

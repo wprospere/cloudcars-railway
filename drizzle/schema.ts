@@ -16,57 +16,81 @@ import { sql } from "drizzle-orm";
 
 /* ============================================================================
  * Admin audit log (request-level audit trail)
+ * NOTE: Optional legacy table (not required by db.ts timeline feature)
  * ========================================================================== */
-export const adminAuditLog = mysqlTable("admin_audit_log", {
-  id: int("id").autoincrement().primaryKey(),
+export const adminAuditLog = mysqlTable(
+  "admin_audit_log",
+  {
+    id: int("id").autoincrement().primaryKey(),
 
-  adminUserId: int("admin_user_id").notNull(),
+    // If you don't always have an admin user, consider making nullable later.
+    adminUserId: int("admin_user_id").notNull(),
 
-  // e.g. "DRIVER_APP:STATUS_UPDATE", "CONTACT:MARK_READ"
-  action: varchar("action", { length: 80 }).notNull(),
+    // e.g. "DRIVER_APP:STATUS_UPDATE", "CONTACT:MARK_READ"
+    action: varchar("action", { length: 80 }).notNull(),
 
-  // target entity info (optional but very useful)
-  entityType: varchar("entity_type", { length: 40 }).notNull(), // "driver_application" | "corporate_inquiry" etc.
-  entityId: int("entity_id"), // nullable
+    // target entity info (optional but very useful)
+    entityType: varchar("entity_type", { length: 40 }).notNull(),
+    entityId: int("entity_id"),
 
-  // store extra details (old/new values etc.)
-  metadata: json("metadata"),
+    // store extra details (old/new values etc.)
+    metadata: json("metadata"),
 
-  // request context (good for investigations)
-  ip: varchar("ip", { length: 64 }),
-  userAgent: text("user_agent"),
+    // request context
+    ip: varchar("ip", { length: 64 }),
+    userAgent: text("user_agent"),
 
-  createdAt: datetime("created_at", { mode: "date" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    createdAt: datetime("created_at", { mode: "date" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    createdIdx: index("ix_admin_audit_created").on(t.createdAt),
+    entityIdx: index("ix_admin_audit_entity").on(t.entityType, t.entityId),
+    adminIdx: index("ix_admin_audit_admin").on(t.adminUserId),
+  })
+);
 
 /* ============================================================================
  * Team members (admin dashboard staff)
  * ========================================================================== */
-export const teamMembers = mysqlTable("team_members", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }),
-  role: varchar("role", { length: 100 }),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const teamMembers = mysqlTable(
+  "team_members",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }),
+    role: varchar("role", { length: 100 }),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    activeIdx: index("ix_team_members_active").on(t.isActive),
+    emailIdx: index("ix_team_members_email").on(t.email),
+  })
+);
 
 /* ============================================================================
  * Public users (auth)
  * ========================================================================== */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+export const users = mysqlTable(
+  "users",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    openId: varchar("openId", { length: 64 }).notNull().unique(),
+    name: text("name"),
+    email: varchar("email", { length: 320 }),
+    loginMethod: varchar("loginMethod", { length: 64 }),
+    role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  },
+  (t) => ({
+    emailIdx: index("ix_users_email").on(t.email),
+    roleIdx: index("ix_users_role").on(t.role),
+  })
+);
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -74,39 +98,53 @@ export type InsertUser = typeof users.$inferInsert;
 /* ============================================================================
  * Bookings
  * ========================================================================== */
-export const bookings = mysqlTable("bookings", {
-  id: int("id").autoincrement().primaryKey(),
-  customerName: varchar("customerName", { length: 255 }).notNull(),
-  customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
-  customerPhone: varchar("customerPhone", { length: 32 }).notNull(),
-  serviceType: mysqlEnum("serviceType", [
-    "standard",
-    "courier",
-    "airport",
-    "executive",
-  ]).notNull(),
-  pickupAddress: text("pickupAddress").notNull(),
-  destinationAddress: text("destinationAddress").notNull(),
-  pickupDate: varchar("pickupDate", { length: 32 }).notNull(),
-  pickupTime: varchar("pickupTime", { length: 16 }).notNull(),
-  passengers: int("passengers").default(1).notNull(),
-  specialRequests: text("specialRequests"),
-  estimatedPrice: int("estimatedPrice"),
-  status: mysqlEnum("status", [
-    "pending",
-    "confirmed",
-    "completed",
-    "cancelled",
-  ]).default("pending").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const bookings = mysqlTable(
+  "bookings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerName: varchar("customerName", { length: 255 }).notNull(),
+    customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
+    customerPhone: varchar("customerPhone", { length: 32 }).notNull(),
+    serviceType: mysqlEnum("serviceType", [
+      "standard",
+      "courier",
+      "airport",
+      "executive",
+    ]).notNull(),
+    pickupAddress: text("pickupAddress").notNull(),
+    destinationAddress: text("destinationAddress").notNull(),
+    pickupDate: varchar("pickupDate", { length: 32 }).notNull(),
+    pickupTime: varchar("pickupTime", { length: 16 }).notNull(),
+    passengers: int("passengers").default(1).notNull(),
+    specialRequests: text("specialRequests"),
+    estimatedPrice: int("estimatedPrice"),
+    status: mysqlEnum("status", [
+      "pending",
+      "confirmed",
+      "completed",
+      "cancelled",
+    ])
+      .default("pending")
+      .notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("ix_bookings_status").on(t.status),
+    createdIdx: index("ix_bookings_created").on(t.createdAt),
+    emailIdx: index("ix_bookings_email").on(t.customerEmail),
+  })
+);
 
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = typeof bookings.$inferInsert;
 
 /* ============================================================================
- * Driver applications
+ * Driver applications (matches your updated db.ts)
+ * - status includes link_sent + docs_received
+ * - ownership fields: assignedToAdminId / assignedToEmail
+ * - last touched fields: lastTouchedAt / lastTouchedByEmail
+ * - legacy assignedTo/internalNotes retained
  * ========================================================================== */
 export const driverApplications = mysqlTable(
   "driver_applications",
@@ -125,23 +163,51 @@ export const driverApplications = mysqlTable(
       "weekends",
     ]).notNull(),
     message: text("message"),
+
+    // legacy (keep)
     internalNotes: text("internalNotes"),
     assignedTo: varchar("assignedTo", { length: 255 }),
+
+    // ✅ new ownership (optional)
+    assignedToAdminId: int("assignedToAdminId"),
+    assignedToEmail: varchar("assignedToEmail", { length: 320 }),
+
+    // ✅ upgraded status pipeline
     status: mysqlEnum("status", [
       "pending",
       "reviewing",
+      "link_sent",
+      "docs_received",
       "approved",
       "rejected",
-    ]).default("pending").notNull(),
+    ])
+      .default("pending")
+      .notNull(),
+
+    // ✅ last touched
+    lastTouchedAt: timestamp("lastTouchedAt"),
+    lastTouchedByEmail: varchar("lastTouchedByEmail", { length: 320 }),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
   (t) => ({
     statusIdx: index("ix_driver_app_status").on(t.status),
     createdIdx: index("ix_driver_app_created").on(t.createdAt),
+
+    // legacy assignment index
     assignedIdx: index("ix_driver_app_assigned").on(t.assignedTo),
+
+    // new ownership + queue indices
+    assignedAdminIdx: index("ix_driver_app_assigned_admin").on(
+      t.assignedToAdminId
+    ),
+    assignedEmailIdx: index("ix_driver_app_assigned_email").on(t.assignedToEmail),
+    lastTouchedIdx: index("ix_driver_app_last_touched").on(t.lastTouchedAt),
+
     emailIdx: index("ix_driver_app_email").on(t.email),
     phoneIdx: index("ix_driver_app_phone").on(t.phone),
+    licenseIdx: index("ix_driver_app_license").on(t.licenseNumber),
   })
 );
 
@@ -168,7 +234,9 @@ export const corporateInquiries = mysqlTable(
       "contacted",
       "converted",
       "declined",
-    ]).default("pending").notNull(),
+    ])
+      .default("pending")
+      .notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -177,6 +245,7 @@ export const corporateInquiries = mysqlTable(
     createdIdx: index("ix_corp_created").on(t.createdAt),
     assignedIdx: index("ix_corp_assigned").on(t.assignedTo),
     emailIdx: index("ix_corp_email").on(t.email),
+    phoneIdx: index("ix_corp_phone").on(t.phone),
   })
 );
 
@@ -249,6 +318,7 @@ export const adminUsers = mysqlTable(
   },
   (t) => ({
     roleIdx: index("ix_admin_users_role").on(t.role),
+    emailIdx: index("ix_admin_users_email").on(t.email),
   })
 );
 
@@ -337,8 +407,7 @@ export const driverDocuments = mysqlTable(
 );
 
 /* ============================================================================
- * Admin activity timeline (audit + notes + events)
- * - powers the "timeline" in the drawer + helps with accountability
+ * Admin activity timeline (powers drawer timeline)
  * ========================================================================== */
 export const adminActivity = mysqlTable(
   "admin_activity",
@@ -359,15 +428,16 @@ export const adminActivity = mysqlTable(
       "ASSIGNED",
       "NOTE_ADDED",
       "LINK_SENT",
+      "REMINDER_SENT",
       "DOC_REVIEWED",
     ]).notNull(),
 
-    // JSON stored as text for max compatibility (e.g. {"to":"approved"})
+    // JSON stored as text for max compatibility
     meta: text("meta"),
 
     createdAt: timestamp("createdAt").defaultNow().notNull(),
 
-    // keep as email to match your existing reviewedBy pattern
+    // keep as email to match reviewedBy usage
     adminEmail: varchar("adminEmail", { length: 320 }),
   },
   (t) => ({

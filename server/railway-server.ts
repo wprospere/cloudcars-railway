@@ -6,14 +6,12 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-
-// ✅ Needed for DB patching without Railway SQL console
 import mysql from "mysql2/promise";
 
 import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
-import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
+import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 
 // ✅ DB helpers (same ones admin/tRPC uses)
 import {
@@ -22,8 +20,18 @@ import {
   getAllDriverApplications,
   getAllCorporateInquiries,
   getAllContactMessages,
-  runMigrations, // ✅ single import from ./db (avoid duplicate import below)
-} from "./db";
+  runMigrations,
+} from "./db.js";
+
+// ✅ Preferred: your new “migrations once” helper (if you created it)
+let runMigrationsOnce: undefined | (() => Promise<void>);
+try {
+  // dynamic import so builds don't fail if file missing
+  const mod = await import("./db/migrate.js");
+  runMigrationsOnce = mod.runMigrationsOnce;
+} catch {
+  // ignore — we'll use safeRunMigrations() instead
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -175,7 +183,12 @@ function shouldRunMigrations() {
 }
 
 function drizzleJournalExists() {
-  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
+  const journalPath = path.join(
+    process.cwd(),
+    "drizzle",
+    "meta",
+    "_journal.json"
+  );
   return fs.existsSync(journalPath);
 }
 
@@ -191,8 +204,6 @@ function getDatabaseUrl(): string | undefined {
 /**
  * ✅ DB patcher: fixes "Unknown column 'revokedAt'" without needing to run SQL manually.
  * Safe to run on every boot (idempotent).
- *
- * IMPORTANT: In ESM/strict mode, do NOT declare functions inside blocks.
  */
 async function patchDatabaseIfNeeded() {
   const DATABASE_URL = getDatabaseUrl();
@@ -206,7 +217,6 @@ async function patchDatabaseIfNeeded() {
 
   let pool: mysql.Pool | null = null;
 
-  // ✅ Define helper OUTSIDE try/catch block (ESM strict-mode safe)
   const hasColumn = async (table: string, column: string) => {
     if (!pool) throw new Error("DB pool not initialised");
 
@@ -236,7 +246,6 @@ async function patchDatabaseIfNeeded() {
 
     const table = "driver_onboarding_tokens";
 
-    // ✅ Your code selects revokedAt; prod table may be missing it
     if (!(await hasColumn(table, "revokedAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.revokedAt ...`);
       await pool.query(
@@ -245,7 +254,6 @@ async function patchDatabaseIfNeeded() {
       console.log(`✅ DB patch: added ${table}.revokedAt`);
     }
 
-    // Common alongside your token logic; safe to add if missing
     if (!(await hasColumn(table, "lastSentAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.lastSentAt ...`);
       await pool.query(
@@ -262,7 +270,6 @@ async function patchDatabaseIfNeeded() {
       console.log(`✅ DB patch: added ${table}.sendCount`);
     }
   } catch (e: any) {
-    // Do not crash the whole server if patching fails
     console.error("❌ DB patch failed:", e?.message || e);
   } finally {
     try {
@@ -296,14 +303,23 @@ async function safeRunMigrations() {
 }
 
 // --------------------
-// Startup
+// Startup (single source of truth)
 // --------------------
-(async () => {
+async function bootstrap() {
   // ✅ Patch DB first so endpoints don't crash (revokedAt missing)
   await patchDatabaseIfNeeded();
 
-  // Optional: run migrations if you enable RUN_MIGRATIONS=true
-  await safeRunMigrations();
+  // ✅ Preferred migrations once (if available)
+  if (runMigrationsOnce) {
+    try {
+      await runMigrationsOnce();
+    } catch (e: any) {
+      console.error("❌ runMigrationsOnce failed:", e?.message || e);
+    }
+  } else {
+    // fallback to env-controlled migrations
+    await safeRunMigrations();
+  }
 
   try {
     await ensureDefaultAdmin();
@@ -314,4 +330,9 @@ async function safeRunMigrations() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Cloud Cars server running on port ${PORT}`);
   });
-})();
+}
+
+bootstrap().catch((err) => {
+  console.error("❌ Bootstrap failed", err);
+  process.exit(1);
+});

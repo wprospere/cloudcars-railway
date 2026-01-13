@@ -42,6 +42,13 @@
       "when": 1768250184830,
       "tag": "0005_gifted_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768253502499,
+      "tag": "0006_naive_unus",
+      "breakpoints": true
     }
   ]
 }
