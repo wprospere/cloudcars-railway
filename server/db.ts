@@ -9,7 +9,7 @@ import "dotenv/config";
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc, desc, and, isNull, inArray } from "drizzle-orm";
+import { eq, asc, desc, and, isNull, inArray, sql } from "drizzle-orm";
 import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
 
@@ -836,9 +836,10 @@ export async function logDriverOnboardingReminder(params: {
   adminEmail?: string | null;
   channel?: "email" | "sms" | "whatsapp" | "unknown";
 }) {
-  const now = new Date();
-
-  await touchDriverApplication({ id: params.driverApplicationId, adminEmail: params.adminEmail ?? null });
+  await touchDriverApplication({
+    id: params.driverApplicationId,
+    adminEmail: params.adminEmail ?? null,
+  });
 
   await logAdminActivity({
     entityType: "driver_application",
@@ -880,7 +881,9 @@ export async function upsertDriverVehicle(params: {
   const existing = await db
     .select()
     .from(schema.driverVehicles)
-    .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+    .where(
+      eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+    );
 
   if ((existing as any[]).length > 0) {
     await db
@@ -895,7 +898,9 @@ export async function upsertDriverVehicle(params: {
         capacity: params.capacity ?? null,
         updatedAt: new Date(),
       } as any)
-      .where(eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId));
+      .where(
+        eq(schema.driverVehicles.driverApplicationId, params.driverApplicationId)
+      );
 
     return { success: true };
   }
@@ -933,7 +938,10 @@ export async function upsertDriverDocument(params: {
     .from(schema.driverDocuments)
     .where(
       and(
-        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
+        eq(
+          schema.driverDocuments.driverApplicationId,
+          params.driverApplicationId
+        ),
         eq(schema.driverDocuments.type, params.type as any)
       )
     );
@@ -1027,7 +1035,10 @@ export async function getDriverDocumentByAppAndType(params: {
     .from(schema.driverDocuments)
     .where(
       and(
-        eq(schema.driverDocuments.driverApplicationId, params.driverApplicationId),
+        eq(
+          schema.driverDocuments.driverApplicationId,
+          params.driverApplicationId
+        ),
         eq(schema.driverDocuments.type, params.type as any)
       )
     )
@@ -1097,4 +1108,95 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
     documents,
     activity,
   };
+}
+
+// ============================================================================
+// ✅ Auto reminder helpers: link_sent + older than X days + zero docs
+// - returns candidates to remind
+// - logs REMINDER_SENT with meta.auto=true (so we don't double-send)
+// ============================================================================
+
+export type AutoReminderCandidate = {
+  id: number;
+  fullName: string | null;
+  email: string;
+  createdAt: Date | null;
+};
+
+export async function getOnboardingReminderCandidates(params?: {
+  days?: number;
+  limit?: number;
+}) {
+  const days = Math.max(1, Number(params?.days ?? 7));
+  const limit = Math.max(1, Math.min(Number(params?.limit ?? 50), 200));
+
+  /**
+   * Criteria:
+   * - driver_applications.status = 'link_sent'
+   * - createdAt <= NOW() - X days
+   * - NO driver_documents rows exist (left join dd.id is null)
+   * - NOT already auto-reminded (admin_activity action REMINDER_SENT with meta containing "auto":true)
+   */
+  const result: any = await db.execute(sql`
+    SELECT
+      da.id,
+      da.fullName,
+      da.email,
+      da.createdAt
+    FROM driver_applications da
+    LEFT JOIN driver_documents dd
+      ON dd.driverApplicationId = da.id
+    WHERE
+      da.status = 'link_sent'
+      AND da.createdAt <= (NOW() - INTERVAL ${days} DAY)
+      AND dd.id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM admin_activity aa
+        WHERE
+          aa.entityType = 'driver_application'
+          AND aa.entityId = da.id
+          AND aa.action = 'REMINDER_SENT'
+          AND aa.meta LIKE '%"auto":true%'
+      )
+    ORDER BY da.createdAt ASC
+    LIMIT ${limit};
+  `);
+
+  const rows: any[] = Array.isArray(result)
+    ? result
+    : (result?.rows ?? result?.[0] ?? []);
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    fullName: r.fullName ?? null,
+    email: String(r.email),
+    createdAt: r.createdAt ? new Date(r.createdAt) : null,
+  })) as AutoReminderCandidate[];
+}
+
+export async function logAutoOnboardingReminder(params: {
+  driverApplicationId: number;
+  adminEmail?: string | null;
+  days?: number;
+}) {
+  const days = Math.max(1, Number(params.days ?? 7));
+
+  await db
+    .update(schema.driverApplications)
+    .set({
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: params.adminEmail ?? "system",
+    } as any)
+    .where(eq(schema.driverApplications.id, Number(params.driverApplicationId)));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: Number(params.driverApplicationId),
+    action: "REMINDER_SENT",
+    adminEmail: params.adminEmail ?? "system",
+    meta: { auto: true, days },
+  });
+
+  return { success: true };
 }
