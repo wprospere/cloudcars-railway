@@ -3,12 +3,19 @@
  * - Requires DATABASE_URL
  * - Single pool for the whole app
  * - Optional ping helper for health checks
+ *
+ * ⚠️ IMPORTANT:
+ * This file is imported by the CLIENT build.
+ * Therefore we must use TYPE-ONLY imports for drizzle schema
+ * to avoid bundling server-only code into the browser.
  */
 
 import "dotenv/config";
 import mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
-import * as schema from "../drizzle/schema";
+
+// ✅ TYPE-ONLY import + correct relative path
+import type * as schema from "../../../drizzle/schema";
 
 function requiredEnv(name: string) {
   const v = process.env[name];
@@ -19,7 +26,7 @@ function requiredEnv(name: string) {
 // ✅ Railway standard
 const DATABASE_URL = requiredEnv("DATABASE_URL");
 
-// ✅ Pool (keep it stable in serverless-ish deploys too)
+// ✅ Pool (stable for Railway + long-lived connections)
 export const pool = mysql.createPool({
   uri: DATABASE_URL,
   waitForConnections: true,
@@ -29,8 +36,10 @@ export const pool = mysql.createPool({
   keepAliveInitialDelay: 10_000,
 });
 
-export const db = drizzle(pool, { schema, mode: "default" });
+// ✅ Drizzle instance (schema used only for typing)
+export const db = drizzle(pool, { schema: schema as any, mode: "default" });
 
+// ✅ Simple health-check helper
 export async function dbPing() {
   const conn = await pool.getConnection();
   try {
