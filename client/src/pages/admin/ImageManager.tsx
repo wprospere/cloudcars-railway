@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,6 @@ const mainImageSlots = [
 
 /**
  * ✅ Trusted Partners / Logos
- * Separate area in admin so homepage never needs CMS helper text
  */
 const partnerLogoSlots = [
   {
@@ -91,6 +90,24 @@ const partnerLogoSlots = [
 
 type SlotKind = "cover" | "logo";
 
+type CmsImageRow = {
+  imageKey: string;
+  url: string | null;
+  altText?: string | null;
+  caption?: string | null;
+};
+
+// ✅ Unwrap helper (because your API returns { json: [...] } on Railway)
+function unwrapImages(data: any): CmsImageRow[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data as CmsImageRow[];
+  if (Array.isArray(data?.json)) return data.json as CmsImageRow[];
+  if (Array.isArray(data?.data)) return data.data as CmsImageRow[];
+  if (Array.isArray(data?.items)) return data.items as CmsImageRow[];
+  if (Array.isArray(data?.rows)) return data.rows as CmsImageRow[];
+  return [];
+}
+
 function ImageUploader({
   imageKey,
   label,
@@ -117,6 +134,8 @@ function ImageUploader({
       setIsOpen(false);
       setPreview(null);
       setAltText("");
+      // reset file input so re-selecting same file works
+      if (fileInputRef.current) fileInputRef.current.value = "";
       onUploadSuccess();
     },
     onError: (error) => {
@@ -148,9 +167,15 @@ function ImageUploader({
   const handleUpload = () => {
     if (!preview) return;
 
-    // Extract base64 data (remove data:image/...;base64, prefix)
-    const base64Data = preview.split(",")[1];
-    const mimeType = preview.split(";")[0].split(":")[1];
+    const commaIndex = preview.indexOf(",");
+    if (commaIndex === -1) {
+      toast.error("Invalid image data");
+      return;
+    }
+
+    const meta = preview.slice(0, commaIndex); // data:image/png;base64
+    const base64Data = preview.slice(commaIndex + 1);
+    const mimeType = meta.split(";")[0].split(":")[1] || "image/png";
 
     uploadMutation.mutate({
       imageKey,
@@ -160,11 +185,7 @@ function ImageUploader({
     });
   };
 
-  const previewBoxClass =
-    kind === "logo"
-      ? "aspect-square" // logos look better square
-      : "aspect-video"; // covers look better 16:9
-
+  const previewBoxClass = kind === "logo" ? "aspect-square" : "aspect-video";
   const imgFitClass = kind === "logo" ? "object-contain p-4" : "object-cover";
 
   return (
@@ -281,11 +302,17 @@ function ImageUploader({
 }
 
 export default function ImageManager() {
-  const { data: images, refetch } = trpc.cms.getAllImages.useQuery();
+  const imagesQuery = trpc.cms.getAllImages.useQuery();
+
+  // ✅ this is the fix: unwrap { json: [...] } into a real array
+  const images = useMemo(
+    () => unwrapImages(imagesQuery.data),
+    [imagesQuery.data]
+  );
 
   const getImageUrl = (imageKey: string) => {
-    const image = images?.find((img) => img.imageKey === imageKey);
-    return image?.url;
+    const image = images.find((img) => img.imageKey === imageKey);
+    return image?.url ?? undefined;
   };
 
   return (
@@ -311,14 +338,14 @@ export default function ImageManager() {
                 label={slot.label}
                 description={slot.description}
                 currentUrl={getImageUrl(slot.key)}
-                onUploadSuccess={() => refetch()}
+                onUploadSuccess={() => imagesQuery.refetch()}
                 kind={slot.kind}
               />
             ))}
           </div>
         </div>
 
-        {/* ✅ Partners Logos (separate place) */}
+        {/* ✅ Partners Logos */}
         <div className="space-y-3">
           <div>
             <h2 className="text-lg font-semibold">Trusted Partners Logos</h2>
@@ -335,7 +362,7 @@ export default function ImageManager() {
                 label={slot.label}
                 description={slot.description}
                 currentUrl={getImageUrl(slot.key)}
-                onUploadSuccess={() => refetch()}
+                onUploadSuccess={() => imagesQuery.refetch()}
                 kind={slot.kind}
               />
             ))}
