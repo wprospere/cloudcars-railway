@@ -9,3 +9,6 @@ dist
 .idea
 .gitignore
 drizzle_migrations_backup/
+# build output
+dist/
+
