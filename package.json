@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/railway-server.ts",
-    "build": "vite build --outDir dist/client && esbuild server/railway-server.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/server/railway-server.js",
+    "build": "node -e \"console.log('RUNNING ROOT BUILD')\" && vite build --outDir dist/client && node -e \"const fs=require('fs'); const p='dist/client/index.html'; if(!fs.existsSync(p)){console.error('MISSING '+p); process.exit(1);} console.log('FOUND '+p);\" && esbuild server/railway-server.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/server/railway-server.js"
+
     "start": "node dist/server/railway-server.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
