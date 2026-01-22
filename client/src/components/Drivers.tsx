@@ -24,8 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ✅ Option A: submit via tRPC instead of fetch("/api/driver-application")
-import { trpc } from "@/lib/trpc"; // <-- if this path errors, search your project for "export const trpc"
+import { trpc } from "@/lib/trpc";
 
 const benefits = [
   {
@@ -79,8 +78,9 @@ export default function Drivers() {
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // ✅ tRPC mutation hook
-  const createDriverApplication = trpc.createDriverApplication.useMutation();
+  // ✅ Correct tRPC mutation based on server/routers.ts:
+  // driver.submitApplication
+  const submitApplication = trpc.driver.submitApplication.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,41 +92,18 @@ export default function Drivers() {
 
     setIsSending(true);
     try {
-      /**
-       * IMPORTANT:
-       * The object keys below must match your backend zod schema for createDriverApplication.
-       * If your backend expects different names, change them here to match EXACTLY.
-       *
-       * Common backend names in your Cloud Cars codebase:
-       * - licenceNumber (UK spelling) vs licenseNumber
-       * - yearsDriving vs yearsExperience
-       * - whenCanWork vs availability
-       * - hasOwnCar vs vehicleOwner
-       * - car / carModel / vehicleType
-       * - anythingElse vs message
-       */
-      await createDriverApplication.mutateAsync({
+      await submitApplication.mutateAsync({
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-
-        // ⚠️ change to "licenseNumber" if your backend uses US spelling
-        licenceNumber: formData.licenseNumber,
-
-        // ⚠️ change key to "yearsExperience" if backend expects that
-        yearsDriving: Number(formData.yearsExperience),
-
-        // ⚠️ change key to "availability" if backend expects that
-        whenCanWork: formData.availability,
-
-        // ⚠️ change key to "vehicleOwner" if backend expects that
-        hasOwnCar: formData.vehicleOwner,
-
-        // ⚠️ change key to "vehicleType" or "carModel" if backend expects that
-        car: formData.vehicleOwner ? formData.vehicleType : null,
-
-        // ⚠️ change key to "message" if backend expects that
-        anythingElse: formData.message || null,
+        licenseNumber: formData.licenseNumber,
+        yearsExperience: Number(formData.yearsExperience) || 0,
+        vehicleOwner: Boolean(formData.vehicleOwner),
+        vehicleType: formData.vehicleOwner
+          ? (formData.vehicleType || undefined)
+          : undefined,
+        availability: formData.availability as "fulltime" | "parttime" | "weekends",
+        message: formData.message ? formData.message : undefined,
       });
 
       setSubmitted(true);
