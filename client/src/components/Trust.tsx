@@ -1,12 +1,5 @@
-import { useMemo } from "react";
-import {
-  Shield,
-  Award,
-  MapPin,
-  Users,
-  Clock,
-  Leaf,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Shield, Award, MapPin, Users, Clock, Leaf } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const trustItems = [
@@ -56,27 +49,47 @@ const stats = [
 ];
 
 export default function Trust() {
-  // ✅ Load all CMS images
-  const { data: images } = trpc.cms.getAllImages.useQuery();
+  // ✅ Public-safe query options
+  const imagesQuery = trpc.cms.getAllImages.useQuery(undefined, {
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  // Build a lookup map: imageKey -> url
+  // Track broken logos so they don't leave empty boxes
+  const [failed, setFailed] = useState<Record<string, boolean>>({});
+
+  // Build a lookup: imageKey -> url
   const imageMap = useMemo(() => {
     const map: Record<string, string> = {};
-    images?.forEach((img) => {
-      if (img.imageKey && img.url) {
-        map[img.imageKey] = img.url;
-      }
-    });
-    return map;
-  }, [images]);
+    const imgs = imagesQuery.data;
 
-  // Exact keys from your database
-  const partnerLogos = [
-    imageMap["partner-logo-1"],
-    imageMap["partner-logo-2"],
-    imageMap["partner-logo-3"],
-    imageMap["partner-logo-4"],
-  ].filter(Boolean);
+    if (!Array.isArray(imgs)) return map;
+
+    for (const img of imgs) {
+      if (img?.imageKey && img?.url) {
+        map[String(img.imageKey)] = String(img.url);
+      }
+    }
+    return map;
+  }, [imagesQuery.data]);
+
+  // ✅ Exact keys from your DB
+  const partnerLogoKeys = [
+    "partner-logo-1",
+    "partner-logo-2",
+    "partner-logo-3",
+    "partner-logo-4",
+  ];
+
+  const partnerLogos = useMemo(() => {
+    const urls = partnerLogoKeys
+      .map((k) => imageMap[k])
+      .filter((u): u is string => typeof u === "string" && u.length > 5);
+
+    // remove ones that failed to load
+    return urls.filter((u) => !failed[u]);
+  }, [imageMap, failed]);
 
   return (
     <section className="py-20 lg:py-32">
@@ -93,8 +106,8 @@ export default function Trust() {
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Nottingham's been trusting us with their journeys for over a decade.
-            Here's why they keep coming back.
+            Nottingham&apos;s been trusting us with their journeys for over a decade.
+            Here&apos;s why they keep coming back.
           </p>
         </div>
 
@@ -133,9 +146,9 @@ export default function Trust() {
           ))}
         </div>
 
-        {/* ✅ Trusted Partners Logos */}
+        {/* ✅ Trusted Partners Logos (ONLY if we actually have logos) */}
         {partnerLogos.length > 0 && (
-          <div>
+          <div className="pt-8 border-t border-border">
             <div className="text-center mb-6">
               <h3 className="text-lg font-semibold">Trusted partners</h3>
               <p className="text-sm text-muted-foreground">
@@ -146,13 +159,20 @@ export default function Trust() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {partnerLogos.map((url, idx) => (
                 <div
-                  key={idx}
+                  key={`${url}-${idx}`}
                   className="bg-card rounded-xl p-6 border border-border flex items-center justify-center"
                 >
                   <img
                     src={url}
                     alt={`Trusted partner ${idx + 1}`}
                     className="max-h-16 object-contain"
+                    loading="lazy"
+                    onError={() =>
+                      setFailed((prev) => ({
+                        ...prev,
+                        [url]: true,
+                      }))
+                    }
                   />
                 </div>
               ))}
