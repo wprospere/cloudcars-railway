@@ -16,8 +16,8 @@
 // - storagePut returns BOTH a stable object key and a URL.
 //   - If your bucket is public (S3_PUBLIC_BASE_URL set), it returns a stable URL.
 //   - If your bucket is private, it returns a presigned GET URL.
-// - If you currently stored presigned URLs in DB (which expire), use
-//   refreshPresignedUrlFromStoredUrl() on read to keep images working.
+// - If you stored presigned URLs in DB (which expire), use refreshUrlFromStored()
+//   on read to keep images/docs working.
 
 import {
   S3Client,
@@ -32,12 +32,7 @@ type S3Config = {
   bucket: string;
   accessKeyId: string;
   secretAccessKey: string;
-
-  // Optional:
-  // If your bucket is PUBLIC, set this to the public base URL that serves objects, e.g.
-  //   https://<public-domain-or-cdn>/<bucket>  (depends on provider)
-  // If set, storageGet/storagePut will return stable public URLs (non-expiring).
-  publicBaseUrl?: string;
+  publicBaseUrl?: string; // stable public base if bucket is public
 };
 
 function required(name: string) {
@@ -47,18 +42,24 @@ function required(name: string) {
 }
 
 function normalizeKey(relKey: string): string {
-  return relKey.replace(/^\/+/, "");
+  return String(relKey || "").replace(/^\/+/, "");
 }
 
 function stripTrailingSlashes(v: string): string {
-  return v.replace(/\/+$/, "");
+  return String(v || "").replace(/\/+$/, "");
 }
 
 function joinUrl(base: string, key: string): string {
   return `${stripTrailingSlashes(base)}/${normalizeKey(key)}`;
 }
 
+/** Cache config + client (good for serverless-ish environments). */
+let _cfg: S3Config | null = null;
+let _client: S3Client | null = null;
+
 function getS3Config(): S3Config {
+  if (_cfg) return _cfg;
+
   const endpoint = required("S3_ENDPOINT");
   const region = process.env.S3_REGION || "auto";
   const bucket = required("S3_BUCKET");
@@ -69,7 +70,7 @@ function getS3Config(): S3Config {
     ? stripTrailingSlashes(process.env.S3_PUBLIC_BASE_URL)
     : undefined;
 
-  return {
+  _cfg = {
     endpoint,
     region,
     bucket,
@@ -77,17 +78,23 @@ function getS3Config(): S3Config {
     secretAccessKey,
     publicBaseUrl,
   };
+
+  return _cfg;
 }
 
-function makeS3Client() {
+function makeS3Client(): S3Client {
+  if (_client) return _client;
+
   const { endpoint, region, accessKeyId, secretAccessKey } = getS3Config();
 
-  return new S3Client({
+  _client = new S3Client({
     region,
-    endpoint, // IMPORTANT for S3-compatible providers
+    endpoint,
     credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle: true, // IMPORTANT for many S3-compatible providers
+    forcePathStyle: true,
   });
+
+  return _client;
 }
 
 function ensureBuffer(data: Buffer | Uint8Array | string): Buffer {
@@ -163,58 +170,66 @@ export async function storageGet(
 }
 
 /* -------------------------------------------------------------------------- */
-/*  ✅ Helpers to fix "images not showing" when DB stored old presigned URLs    */
+/* ✅ Helpers to fix "images not showing" when DB stored old URLs OR keys      */
 /* -------------------------------------------------------------------------- */
 
 /**
- * If you stored a presigned Railway-bucket URL in your DB, it eventually expires.
- * This helper tries to extract the object key from a stored URL so you can re-sign it.
+ * Accepts either:
+ *  - a raw key like "cms/2026-01-22/abc.png"
+ *  - or a full URL like "https://storage.railway.app/<bucket>/cms/...?.X-Amz-..."
+ *  - or a public URL like "https://cdn.yoursite.com/cms/abc.png"
  *
- * Expected Railway style:
- *   https://storage.railway.app/<bucket>/<key...>?X-Amz-...
- *
- * Returns:
- *   "<key...>" or null if it can't parse it.
+ * Returns object key or null if it can't parse.
  */
-export function extractKeyFromStoredUrl(url: string): string | null {
+export function extractKeyFromStoredUrlOrKey(stored: string): string | null {
+  if (!stored) return null;
+
+  const raw = String(stored).trim();
+  if (!raw) return null;
+
+  // ✅ already a key
+  if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
+    return normalizeKey(raw);
+  }
+
   try {
-    const u = new URL(url);
+    const u = new URL(raw);
     const parts = u.pathname.split("/").filter(Boolean);
+    if (parts.length === 0) return null;
 
-    // need at least: [bucket, ...keyParts]
-    if (parts.length < 2) return null;
+    const cfg = getS3Config();
 
-    // drop bucket
-    return parts.slice(1).join("/");
+    // Common pattern: /<bucket>/<key...>
+    if (parts[0] === cfg.bucket && parts.length >= 2) {
+      return parts.slice(1).join("/");
+    }
+
+    // Some providers/CDNs: /<key...> (no bucket segment)
+    return parts.join("/");
   } catch {
     return null;
   }
 }
 
 /**
- * Takes a URL stored in DB and returns a URL that should work now:
+ * Takes what is stored in DB (key or URL) and returns a URL that works now:
  * - If S3_PUBLIC_BASE_URL is set: returns a stable public URL.
  * - Otherwise: returns a fresh presigned URL from storageGet().
- *
- * Use this in your "getAllImages" endpoint before returning images to the frontend.
  */
-export async function refreshPresignedUrlFromStoredUrl(
-  storedUrl: string
-): Promise<string> {
-  if (!storedUrl) return storedUrl;
+export async function refreshUrlFromStored(stored: string | null): Promise<string | null> {
+  if (!stored) return null;
 
-  // If bucket is public and you set S3_PUBLIC_BASE_URL, we can convert to stable URL
+  const key = extractKeyFromStoredUrlOrKey(stored);
+  if (!key) return stored; // if we can't parse, return as-is
+
   const cfg = getS3Config();
+
+  // ✅ Public bucket: stable URL
   if (cfg.publicBaseUrl) {
-    const key = extractKeyFromStoredUrl(storedUrl);
-    if (!key) return storedUrl;
     return joinUrl(cfg.publicBaseUrl, key);
   }
 
-  // Private bucket: re-sign
-  const key = extractKeyFromStoredUrl(storedUrl);
-  if (!key) return storedUrl;
-
+  // ✅ Private bucket: re-sign
   const { url } = await storageGet(key);
   return url;
 }

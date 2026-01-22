@@ -60,7 +60,9 @@ import {
   logDriverOnboardingReminder,
 } from "./db";
 
-import { storagePut, storageGet } from "./storage";
+// ✅ FIX: import refreshUrlFromStored from storage.ts (single source of truth)
+import { storagePut, storageGet, refreshUrlFromStored } from "./storage";
+
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 
@@ -95,81 +97,6 @@ async function runAutoOnboardingReminders(): Promise<{
   skipped: number;
 }> {
   return { checked: 0, sent: 0, skipped: 0 };
-}
-
-/* ----------------------------------------
-   ✅ Storage URL helpers
-   - We store KEYS in DB
-   - We return fresh signed URLs when reading
----------------------------------------- */
-
-function getBucketName() {
-  // ✅ FIX: your env is AWS_S3_BUCKET (not S3_BUCKET)
-  return (
-    process.env.AWS_S3_BUCKET ||
-    process.env.S3_BUCKET ||
-    process.env.S3_BUCKET_NAME ||
-    process.env.BUCKET ||
-    ""
-  );
-}
-
-function stripHostPort(host: string) {
-  return String(host || "").toLowerCase().split(":")[0];
-}
-
-function extractStorageKey(stored: string): string {
-  if (!stored) return "";
-
-  // Already a key?
-  if (!stored.startsWith("http")) return stored.replace(/^\/+/, "");
-
-  try {
-    const u = new URL(stored);
-    let p = u.pathname.replace(/^\/+/, "");
-
-    // Some providers include bucket prefix in the path: /bucket/key...
-    const bucket = getBucketName();
-    if (bucket && p.startsWith(bucket + "/")) {
-      p = p.slice(bucket.length + 1);
-    }
-
-    return p;
-  } catch {
-    return stored.replace(/^\/+/, "");
-  }
-}
-
-async function refreshUrlFromStored(storedUrlOrKey: string | null) {
-  if (!storedUrlOrKey) return null;
-
-  const s = String(storedUrlOrKey);
-
-  // If it's a KEY (no scheme), sign it
-  if (!s.startsWith("http")) {
-    const key = extractStorageKey(s);
-    if (!key) return null;
-    const { url } = await storageGet(key);
-    return url;
-  }
-
-  // Stable public URL (no signing params) -> keep as-is
-  // (This allows you to store public S3 URLs if you ever choose)
-  if (
-    s.startsWith("http") &&
-    !s.includes("X-Amz-") &&
-    !s.includes("Signature=") &&
-    !s.includes("AWSAccessKeyId=")
-  ) {
-    return s;
-  }
-
-  // Old signed URL -> re-sign using the extracted key
-  const key = extractStorageKey(s);
-  if (!key) return null;
-
-  const { url } = await storageGet(key);
-  return url;
 }
 
 /* ----------------------------------------
@@ -543,9 +470,20 @@ export const appRouter = router({
             message: "Invalid or expired onboarding link",
           });
         }
-        return await getDriverOnboardingProfile(
+
+        // ✅ Refresh doc urls (we store KEYS in DB)
+        const profile = await getDriverOnboardingProfile(
           (tokenRow as any).driverApplicationId
         );
+
+        const documents = await Promise.all(
+          (profile?.documents ?? []).map(async (d: any) => ({
+            ...d,
+            fileUrl: await refreshUrlFromStored(d?.fileUrl ?? null),
+          }))
+        );
+
+        return { ...profile, documents };
       }),
 
     saveVehicle: publicProcedure
@@ -1137,7 +1075,17 @@ export const appRouter = router({
     getDriverOnboardingProfile: adminProcedure
       .input(z.object({ driverApplicationId: z.number() }))
       .query(async ({ input }) => {
-        return await getDriverOnboardingProfile(input.driverApplicationId);
+        // ✅ Refresh doc urls for admin UI too
+        const profile = await getDriverOnboardingProfile(input.driverApplicationId);
+
+        const documents = await Promise.all(
+          (profile?.documents ?? []).map(async (d: any) => ({
+            ...d,
+            fileUrl: await refreshUrlFromStored(d?.fileUrl ?? null),
+          }))
+        );
+
+        return { ...profile, documents };
       }),
 
     reviewDriverDocument: adminProcedure
