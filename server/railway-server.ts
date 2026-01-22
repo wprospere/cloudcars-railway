@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import mysql from "mysql2/promise";
@@ -151,16 +152,42 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
 // --------------------
 // Static / SPA
 // --------------------
-// Railway build output: /dist/public
-const clientDist = path.join(process.cwd(), "dist", "public");
+
+// ESM-safe __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * ✅ Split build layout (recommended):
+ *   - server bundle: dist/server/railway-server.js
+ *   - client build : dist/client
+ *
+ * This file runs from dist/server at runtime, so client is ../client.
+ */
+const clientDist = path.resolve(__dirname, "../client");
+
+/**
+ * (Optional TEMP) Local uploads folder for CMS images stored as /uploads/...
+ * ⚠️ Railway disk is ephemeral — move uploads to S3 for production durability.
+ */
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+
+// ✅ Serve uploads FIRST so SPA fallback never intercepts image URLs
+app.use("/uploads", express.static(uploadsDir));
+
+// ✅ Serve built frontend (Vite output)
 app.use(express.static(clientDist));
 
-// SPA fallback (keep LAST) — but don't break API routes
+// ✅ SPA fallback (keep LAST) — but don't break API/tRPC routes
 app.get("*", (req, res) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/trpc")) {
+  if (
+    req.path.startsWith("/api") ||
+    req.path.startsWith("/trpc") ||
+    req.path.startsWith("/uploads")
+  ) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
-  res.sendFile(path.join(clientDist, "index.html"));
+  return res.sendFile(path.join(clientDist, "index.html"));
 });
 
 // --------------------
@@ -311,6 +338,8 @@ async function bootstrap() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Cloud Cars server running on port ${PORT}`);
+    console.log(`📦 Serving client from: ${clientDist}`);
+    console.log(`🖼️ Serving uploads from: ${uploadsDir}`);
   });
 }
 
