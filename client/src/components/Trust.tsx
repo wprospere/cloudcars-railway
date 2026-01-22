@@ -1,7 +1,12 @@
 import { useMemo } from "react";
-import { Shield, Award, MapPin, Users, Clock, Leaf } from "lucide-react";
-
-// ✅ Pull images from CMS (partner-logo-1..4 etc.)
+import {
+  Shield,
+  Award,
+  MapPin,
+  Users,
+  Clock,
+  Leaf,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const trustItems = [
@@ -51,32 +56,27 @@ const stats = [
 ];
 
 export default function Trust() {
-  // ✅ This endpoint returns: { json: Array(5), meta: {...} }
-  const imagesQuery = trpc.cms.getAllImages.useQuery();
+  // ✅ Load all CMS images
+  const { data: images } = trpc.cms.getAllImages.useQuery();
 
-  const imagesArray = useMemo(() => {
-    const d: any = imagesQuery.data;
-    const arr = d?.json ?? d; // handle both {json:[...]} and direct array
-    return Array.isArray(arr) ? arr : [];
-  }, [imagesQuery.data]);
-
-  const imagesByKey = useMemo(() => {
-    const map = new Map<string, any>();
-    for (const row of imagesArray) {
-      if (row?.imageKey) map.set(String(row.imageKey), row);
-    }
+  // Build a lookup map: imageKey -> url
+  const imageMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    images?.forEach((img) => {
+      if (img.imageKey && img.url) {
+        map[img.imageKey] = img.url;
+      }
+    });
     return map;
-  }, [imagesArray]);
+  }, [images]);
 
-  const partnerLogos = useMemo(() => {
-    const keys = ["partner-logo-1", "partner-logo-2", "partner-logo-3", "partner-logo-4"];
-    return keys
-      .map((k) => {
-        const row = imagesByKey.get(k);
-        return row?.url ? { key: k, url: row.url, alt: row?.altText ?? k } : null;
-      })
-      .filter(Boolean) as { key: string; url: string; alt: string }[];
-  }, [imagesByKey]);
+  // Exact keys from your database
+  const partnerLogos = [
+    imageMap["partner-logo-1"],
+    imageMap["partner-logo-2"],
+    imageMap["partner-logo-3"],
+    imageMap["partner-logo-4"],
+  ].filter(Boolean);
 
   return (
     <section className="py-20 lg:py-32">
@@ -114,7 +114,7 @@ export default function Trust() {
         </div>
 
         {/* Trust Items Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
           {trustItems.map((item, index) => (
             <div
               key={index}
@@ -133,43 +133,32 @@ export default function Trust() {
           ))}
         </div>
 
-        {/* ✅ Trusted partners logos (from CMS) */}
-        <div className="mt-16">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div>
-              <h3 className="text-xl font-bold text-foreground">Trusted partners</h3>
+        {/* ✅ Trusted Partners Logos */}
+        {partnerLogos.length > 0 && (
+          <div>
+            <div className="text-center mb-6">
+              <h3 className="text-lg font-semibold">Trusted partners</h3>
               <p className="text-sm text-muted-foreground">
                 Organisations we support with corporate transport.
               </p>
             </div>
 
-            {imagesQuery.isLoading && (
-              <div className="text-sm text-muted-foreground">Loading logos…</div>
-            )}
-          </div>
-
-          {partnerLogos.length === 0 ? (
-            <div className="bg-card rounded-xl p-6 border border-border text-sm text-muted-foreground">
-              No partner logos uploaded yet. (Upload to <b>partner-logo-1</b> … <b>partner-logo-4</b> in Admin → Manage Images)
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {partnerLogos.map((logo) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {partnerLogos.map((url, idx) => (
                 <div
-                  key={logo.key}
-                  className="bg-card rounded-xl p-4 border border-border flex items-center justify-center"
+                  key={idx}
+                  className="bg-card rounded-xl p-6 border border-border flex items-center justify-center"
                 >
                   <img
-                    src={logo.url}
-                    alt={logo.alt}
-                    className="max-h-12 w-auto object-contain"
-                    loading="lazy"
+                    src={url}
+                    alt={`Trusted partner ${idx + 1}`}
+                    className="max-h-16 object-contain"
                   />
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );
