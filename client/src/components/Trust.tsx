@@ -1,14 +1,8 @@
 import { useMemo } from "react";
+import { Shield, Award, MapPin, Users, Clock, Leaf } from "lucide-react";
+
+// ✅ Pull images from CMS (partner-logo-1..4 etc.)
 import { trpc } from "@/lib/trpc";
-import {
-  Shield,
-  Award,
-  MapPin,
-  Users,
-  Clock,
-  Leaf,
-  CheckCircle2,
-} from "lucide-react";
 
 const trustItems = [
   {
@@ -56,54 +50,33 @@ const stats = [
   { value: "99%", label: "On-Time Arrivals" },
 ];
 
-function normalizeArray<T = any>(value: any): T[] {
-  if (Array.isArray(value)) return value;
-
-  if (value && typeof value === "object") {
-    for (const key of ["items", "data", "rows", "results", "images"]) {
-      const v = (value as any)[key];
-      if (Array.isArray(v)) return v;
-    }
-  }
-  return [];
-}
-
-/**
- * These are the most common imageKey patterns used for the 4 partner slots.
- * Your admin might store them as:
- * - partner_logo_1..4
- * - trusted_partner_1..4
- * - partner1..4
- */
-const PARTNER_KEY_CANDIDATES: string[][] = [
-  ["partner_logo_1", "trusted_partner_1", "partner1", "trustedPartner1", "partnerLogo1"],
-  ["partner_logo_2", "trusted_partner_2", "partner2", "trustedPartner2", "partnerLogo2"],
-  ["partner_logo_3", "trusted_partner_3", "partner3", "trustedPartner3", "partnerLogo3"],
-  ["partner_logo_4", "trusted_partner_4", "partner4", "trustedPartner4", "partnerLogo4"],
-];
-
 export default function Trust() {
-  // Pull ALL CMS images (includes partner logos)
+  // ✅ This endpoint returns: { json: Array(5), meta: {...} }
   const imagesQuery = trpc.cms.getAllImages.useQuery();
-  const images = normalizeArray<any>(imagesQuery.data);
 
-  const partnerUrls = useMemo(() => {
-    const byKey = new Map<string, string>();
+  const imagesArray = useMemo(() => {
+    const d: any = imagesQuery.data;
+    const arr = d?.json ?? d; // handle both {json:[...]} and direct array
+    return Array.isArray(arr) ? arr : [];
+  }, [imagesQuery.data]);
 
-    for (const img of images) {
-      const k = img?.imageKey;
-      const u = img?.url;
-      if (k && u) byKey.set(String(k), String(u));
+  const imagesByKey = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const row of imagesArray) {
+      if (row?.imageKey) map.set(String(row.imageKey), row);
     }
+    return map;
+  }, [imagesArray]);
 
-    return PARTNER_KEY_CANDIDATES.map((candidates) => {
-      for (const key of candidates) {
-        const url = byKey.get(key);
-        if (url) return url;
-      }
-      return null;
-    });
-  }, [images]);
+  const partnerLogos = useMemo(() => {
+    const keys = ["partner-logo-1", "partner-logo-2", "partner-logo-3", "partner-logo-4"];
+    return keys
+      .map((k) => {
+        const row = imagesByKey.get(k);
+        return row?.url ? { key: k, url: row.url, alt: row?.altText ?? k } : null;
+      })
+      .filter(Boolean) as { key: string; url: string; alt: string }[];
+  }, [imagesByKey]);
 
   return (
     <section className="py-20 lg:py-32">
@@ -120,8 +93,8 @@ export default function Trust() {
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Nottingham&apos;s been trusting us with their journeys for over a decade.
-            Here&apos;s why they keep coming back.
+            Nottingham's been trusting us with their journeys for over a decade.
+            Here's why they keep coming back.
           </p>
         </div>
 
@@ -160,53 +133,41 @@ export default function Trust() {
           ))}
         </div>
 
-        {/* ---------------- Trusted Partners Logos ---------------- */}
+        {/* ✅ Trusted partners logos (from CMS) */}
         <div className="mt-16">
-          <div className="flex items-center justify-between gap-4 mb-6 flex-col sm:flex-row">
+          <div className="flex items-center justify-between gap-4 mb-6">
             <div>
-              <div className="text-sm font-semibold text-primary uppercase tracking-wider">
-                Trusted partners
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mt-2">
-                Organisations we support
-              </h3>
-              <p className="text-muted-foreground mt-2">
-                A selection of organisations we support with corporate transport.
+              <h3 className="text-xl font-bold text-foreground">Trusted partners</h3>
+              <p className="text-sm text-muted-foreground">
+                Organisations we support with corporate transport.
               </p>
             </div>
 
-            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-              Verified
-            </div>
+            {imagesQuery.isLoading && (
+              <div className="text-sm text-muted-foreground">Loading logos…</div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {partnerUrls.map((url, idx) => (
-              <div
-                key={idx}
-                className="h-24 rounded-xl border border-border bg-card flex items-center justify-center p-4"
-              >
-                {url ? (
+          {partnerLogos.length === 0 ? (
+            <div className="bg-card rounded-xl p-6 border border-border text-sm text-muted-foreground">
+              No partner logos uploaded yet. (Upload to <b>partner-logo-1</b> … <b>partner-logo-4</b> in Admin → Manage Images)
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {partnerLogos.map((logo) => (
+                <div
+                  key={logo.key}
+                  className="bg-card rounded-xl p-4 border border-border flex items-center justify-center"
+                >
                   <img
-                    src={url}
-                    alt={`Trusted Partner ${idx + 1}`}
-                    className="max-h-12 max-w-full object-contain opacity-90 hover:opacity-100 transition"
+                    src={logo.url}
+                    alt={logo.alt}
+                    className="max-h-12 w-auto object-contain"
                     loading="lazy"
                   />
-                ) : (
-                  <span className="text-muted-foreground text-sm">
-                    No logo uploaded
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {imagesQuery.isError && (
-            <p className="text-sm text-destructive mt-4">
-              Could not load partner logos (CMS image query failed).
-            </p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
