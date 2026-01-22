@@ -45,17 +45,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Redirect apex -> www (GET/HEAD only)
-app.use((req, res, next) => {
-  const host = (req.headers.host || "").toLowerCase();
-  if (
-    (req.method === "GET" || req.method === "HEAD") &&
-    host === "cloudcarsltd.com"
-  ) {
-    return res.redirect(301, `https://www.cloudcarsltd.com${req.originalUrl}`);
-  }
-  next();
-});
+/**
+ * ✅ IMPORTANT:
+ * Previously you forced apex -> www.
+ * But your "www.cloudcarsltd.com" is not attached in Railway, so that redirect
+ * caused the homepage to show "Not Found".
+ *
+ * For now: DO NOT redirect apex -> www.
+ *
+ * If you later add www as a Railway domain, you can re-enable a safe redirect:
+ *
+ * app.use((req, res, next) => {
+ *   const host = String(req.headers.host || "").toLowerCase().split(":")[0];
+ *   if ((req.method === "GET" || req.method === "HEAD") && host === "cloudcarsltd.com") {
+ *     return res.redirect(301, `https://www.cloudcarsltd.com${req.originalUrl}`);
+ *   }
+ *   next();
+ * });
+ */
 
 // Health check
 app.get("/healthz", (_req, res) =>
@@ -158,7 +165,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * ✅ Split build layout (recommended):
+ * ✅ Split build layout:
  *   - server bundle: dist/server/railway-server.js
  *   - client build : dist/client
  *
