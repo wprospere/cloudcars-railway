@@ -68,10 +68,50 @@ app.use((req, res, next) => {
  * });
  */
 
+// --------------------
+// Paths (must be defined BEFORE debug/static routes)
+// --------------------
+
+// ESM-safe __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * ✅ Split build layout:
+ *   - server bundle: dist/server/railway-server.js
+ *   - client build : dist/client
+ *
+ * This file runs from dist/server at runtime, so client is ../client.
+ */
+const clientDist = path.resolve(__dirname, "../client");
+
+/**
+ * (Optional TEMP) Local uploads folder for CMS images stored as /uploads/...
+ * ⚠️ Railway disk is ephemeral — move uploads to S3 for production durability.
+ */
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+
+// --------------------
+// Health + Debug
+// --------------------
+
 // Health check
 app.get("/healthz", (_req, res) =>
   res.json({ ok: true, ts: new Date().toISOString() })
 );
+
+// Debug route – confirms client build exists on Railway
+app.get("/__debug", (_req, res) => {
+  const indexPath = path.join(clientDist, "index.html");
+  res.json({
+    ok: true,
+    nodeEnv: process.env.NODE_ENV,
+    cwd: process.cwd(),
+    clientDist,
+    indexExists: fs.existsSync(indexPath),
+    indexPath,
+  });
+});
 
 // --------------------
 // API routes
@@ -239,37 +279,25 @@ app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
 // Static / SPA
 // --------------------
 
-// ESM-safe __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/**
- * ✅ Split build layout:
- *   - server bundle: dist/server/railway-server.js
- *   - client build : dist/client
- *
- * This file runs from dist/server at runtime, so client is ../client.
- */
-const clientDist = path.resolve(__dirname, "../client");
-
-/**
- * (Optional TEMP) Local uploads folder for CMS images stored as /uploads/...
- * ⚠️ Railway disk is ephemeral — move uploads to S3 for production durability.
- */
-const uploadsDir = path.resolve(process.cwd(), "uploads");
-
 // ✅ Serve uploads FIRST so SPA fallback never intercepts image URLs
 app.use("/uploads", express.static(uploadsDir));
 
 // ✅ Serve built frontend (Vite output)
 app.use(express.static(clientDist));
 
+// ✅ Force homepage to always be the React app
+app.get("/", (_req, res) => {
+  return res.sendFile(path.join(clientDist, "index.html"));
+});
+
 // ✅ SPA fallback (keep LAST) — but don't break API/tRPC routes
 app.get("*", (req, res) => {
   if (
     req.path.startsWith("/api") ||
     req.path.startsWith("/trpc") ||
-    req.path.startsWith("/uploads")
+    req.path.startsWith("/uploads") ||
+    req.path === "/healthz" ||
+    req.path === "/__debug"
   ) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
