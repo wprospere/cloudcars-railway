@@ -98,25 +98,43 @@ async function runAutoOnboardingReminders(): Promise<{
 }
 
 /* ----------------------------------------
-   ✅ S3 signed-url fix helpers
+   ✅ Storage URL helpers
    - We store KEYS in DB
    - We return fresh signed URLs when reading
 ---------------------------------------- */
+
+function getBucketName() {
+  // ✅ FIX: your env is AWS_S3_BUCKET (not S3_BUCKET)
+  return (
+    process.env.AWS_S3_BUCKET ||
+    process.env.S3_BUCKET ||
+    process.env.S3_BUCKET_NAME ||
+    process.env.BUCKET ||
+    ""
+  );
+}
+
+function stripHostPort(host: string) {
+  return String(host || "").toLowerCase().split(":")[0];
+}
+
 function extractStorageKey(stored: string): string {
   if (!stored) return "";
+
   // Already a key?
   if (!stored.startsWith("http")) return stored.replace(/^\/+/, "");
 
   try {
     const u = new URL(stored);
-    let path = u.pathname.replace(/^\/+/, "");
+    let p = u.pathname.replace(/^\/+/, "");
 
-    // If provider URL includes bucket prefix in path, strip it
-    const bucket = process.env.S3_BUCKET;
-    if (bucket && path.startsWith(bucket + "/")) {
-      path = path.slice(bucket.length + 1);
+    // Some providers include bucket prefix in the path: /bucket/key...
+    const bucket = getBucketName();
+    if (bucket && p.startsWith(bucket + "/")) {
+      p = p.slice(bucket.length + 1);
     }
-    return path;
+
+    return p;
   } catch {
     return stored.replace(/^\/+/, "");
   }
@@ -125,17 +143,29 @@ function extractStorageKey(stored: string): string {
 async function refreshUrlFromStored(storedUrlOrKey: string | null) {
   if (!storedUrlOrKey) return null;
 
-  // Stable public URL (no signing params) -> keep
-  if (
-    storedUrlOrKey.startsWith("http") &&
-    !storedUrlOrKey.includes("X-Amz-") &&
-    !storedUrlOrKey.includes("Signature=")
-  ) {
-    return storedUrlOrKey;
+  const s = String(storedUrlOrKey);
+
+  // If it's a KEY (no scheme), sign it
+  if (!s.startsWith("http")) {
+    const key = extractStorageKey(s);
+    if (!key) return null;
+    const { url } = await storageGet(key);
+    return url;
   }
 
-  // Key or old signed url -> re-sign
-  const key = extractStorageKey(storedUrlOrKey);
+  // Stable public URL (no signing params) -> keep as-is
+  // (This allows you to store public S3 URLs if you ever choose)
+  if (
+    s.startsWith("http") &&
+    !s.includes("X-Amz-") &&
+    !s.includes("Signature=") &&
+    !s.includes("AWSAccessKeyId=")
+  ) {
+    return s;
+  }
+
+  // Old signed URL -> re-sign using the extracted key
+  const key = extractStorageKey(s);
   if (!key) return null;
 
   const { url } = await storageGet(key);
@@ -198,10 +228,11 @@ const DRIVER_APP_STATUSES = [
 ] as const;
 
 function getPublicBaseUrl() {
+  // ✅ Default to apex (safer if www not attached)
   return (
     process.env.PUBLIC_BASE_URL ||
     process.env.VITE_PUBLIC_BASE_URL ||
-    "https://www.cloudcarsltd.com"
+    "https://cloudcarsltd.com"
   );
 }
 
@@ -455,6 +486,11 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    /**
+     * Uploads a CMS image:
+     * - Stores KEY in DB (stable)
+     * - Returns signed URL for immediate preview
+     */
     uploadImage: adminProcedure
       .input(
         z.object({
@@ -475,14 +511,14 @@ export const appRouter = router({
 
         await upsertSiteImage({
           imageKey: input.imageKey,
-          url: key, // 🔥 important: store key in DB
+          url: key, // ✅ store key in DB
           altText: input.altText ?? null,
           caption: input.caption ?? null,
         } as any);
 
         // ✅ return fresh URL for admin preview
         const fresh = await storageGet(key);
-        return { success: true, url: fresh.url };
+        return { success: true, url: fresh.url, key };
       }),
 
     deleteImage: adminProcedure
@@ -507,9 +543,6 @@ export const appRouter = router({
             message: "Invalid or expired onboarding link",
           });
         }
-
-        // If your getDriverOnboardingProfile returns docs with fileUrl,
-        // they should also be stored as KEYS for longevity.
         return await getDriverOnboardingProfile(
           (tokenRow as any).driverApplicationId
         );
@@ -586,9 +619,8 @@ export const appRouter = router({
           expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         } as any);
 
-        // return signed url to the uploader (optional)
         const fresh = await storageGet(key);
-        return { success: true, url: fresh.url };
+        return { success: true, url: fresh.url, key };
       }),
 
     submit: publicProcedure
