@@ -7,11 +7,10 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/railway-server.ts",
     "build": "vite build --outDir dist/client && esbuild server/railway-server.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/server/railway-server.js",
-"start": "node dist/server/railway-server.js",
+    "start": "node dist/server/railway-server.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "pnpm db:generate && pnpm db:migrate"
@@ -68,6 +67,7 @@
     "jose": "6.1.0",
     "lucide-react": "^0.453.0",
     "mailgun.js": "^12.4.0",
+    "multer": "^2.0.2",
     "mysql2": "^3.15.0",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
@@ -94,6 +94,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "4.17.21",
     "@types/google.maps": "^3.58.1",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.7.0",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",

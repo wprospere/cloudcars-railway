@@ -5,6 +5,10 @@ import cookieParser from "cookie-parser";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+import multer from "multer";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { nanoid } from "nanoid";
+
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import mysql from "mysql2/promise";
 
@@ -157,6 +161,81 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
 });
 
 // --------------------
+// CMS image upload -> S3 (recommended)
+// --------------------
+
+// In-memory upload (no disk)
+const upload = multer({ storage: multer.memoryStorage() });
+
+function requiredEnv(name: string) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var: ${name}`);
+  return v;
+}
+
+// Only create S3 client when env is present (prevents boot crash if not configured yet)
+function isS3Configured() {
+  return Boolean(
+    process.env.AWS_REGION &&
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY &&
+      process.env.AWS_S3_BUCKET
+  );
+}
+
+const s3 = isS3Configured()
+  ? new S3Client({
+      region: requiredEnv("AWS_REGION"),
+      credentials: {
+        accessKeyId: requiredEnv("AWS_ACCESS_KEY_ID"),
+        secretAccessKey: requiredEnv("AWS_SECRET_ACCESS_KEY"),
+      },
+    })
+  : null;
+
+const S3_BUCKET = isS3Configured() ? process.env.AWS_S3_BUCKET! : "";
+const S3_PUBLIC_BASE = isS3Configured()
+  ? process.env.AWS_S3_PUBLIC_BASE ||
+    `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`
+  : "";
+
+// Upload endpoint (you can wrap with your admin auth later)
+app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!isS3Configured() || !s3) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          "S3 is not configured. Set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase();
+    const key = `cms/${new Date().toISOString().slice(0, 10)}/${nanoid()}.${ext}`;
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+        ACL: "public-read", // public images
+      })
+    );
+
+    const url = `${S3_PUBLIC_BASE}/${key}`;
+    return res.json({ ok: true, key, url });
+  } catch (e: any) {
+    console.error("cms-upload failed:", e?.message || e);
+    return res.status(500).json({ ok: false, error: "Upload failed" });
+  }
+});
+
+// --------------------
 // Static / SPA
 // --------------------
 
@@ -205,7 +284,12 @@ function shouldRunMigrations() {
 }
 
 function drizzleJournalExists() {
-  const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
+  const journalPath = path.join(
+    process.cwd(),
+    "drizzle",
+    "meta",
+    "_journal.json"
+  );
   return fs.existsSync(journalPath);
 }
 
@@ -222,11 +306,6 @@ function getDatabaseUrl(): string | undefined {
 /**
  * ✅ DB patcher: fixes missing columns without running SQL manually.
  * Safe to run on every boot (idempotent).
- *
- * NOTE:
- * Your schema uses snake_case columns (revokedAt -> revoked_at) only IF you
- * defined it that way. In your current schema you used "revokedAt".
- * This patch matches your CURRENT schema naming.
  */
 async function patchDatabaseIfNeeded() {
   const DATABASE_URL = getDatabaseUrl();
@@ -269,7 +348,6 @@ async function patchDatabaseIfNeeded() {
 
     const table = "driver_onboarding_tokens";
 
-    // ✅ match your schema field names exactly
     if (!(await hasColumn(table, "revokedAt"))) {
       console.log(`🛠️ DB patch: adding ${table}.revokedAt ...`);
       await pool.query(
@@ -347,6 +425,11 @@ async function bootstrap() {
     console.log(`✅ Cloud Cars server running on port ${PORT}`);
     console.log(`📦 Serving client from: ${clientDist}`);
     console.log(`🖼️ Serving uploads from: ${uploadsDir}`);
+    if (!isS3Configured()) {
+      console.log(
+        "ℹ️ S3 not configured yet (CMS upload disabled until AWS_* env vars are set)."
+      );
+    }
   });
 }
 
