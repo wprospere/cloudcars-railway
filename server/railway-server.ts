@@ -100,16 +100,37 @@ app.get("/healthz", (_req, res) =>
   res.json({ ok: true, ts: new Date().toISOString() })
 );
 
-// Debug route – confirms client build exists on Railway
+// ✅ Expanded debug route – lists runtime filesystem contents
 app.get("/__debug", (_req, res) => {
-  const indexPath = path.join(clientDist, "index.html");
+  const distPath = path.join(process.cwd(), "dist");
+  const clientPath = path.join(distPath, "client");
+  const indexPath = path.join(clientPath, "index.html");
+
+  const safeList = (p: string) => {
+    try {
+      return fs.readdirSync(p).slice(0, 200);
+    } catch {
+      return null;
+    }
+  };
+
   res.json({
     ok: true,
     nodeEnv: process.env.NODE_ENV,
     cwd: process.cwd(),
+
+    // what the server THINKS it's serving from
     clientDist,
-    indexExists: fs.existsSync(indexPath),
+
+    // what's actually on disk in the running container
+    distPath,
+    distList: safeList(distPath),
+
+    clientPath,
+    clientList: safeList(clientPath),
+
     indexPath,
+    indexExists: fs.existsSync(indexPath),
   });
 });
 
