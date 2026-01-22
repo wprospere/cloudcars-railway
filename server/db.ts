@@ -325,9 +325,6 @@ export async function updateDriverApplicationNotes(
 /**
  * Legacy assignment (kept): assignedTo string
  * New queue fields are optional: assignedToEmail + assignedToAdminId
- *
- * If you only have `assignedTo` in the UI right now, keep using this.
- * Later: pass assignedToEmail/adminUserId from your admin session.
  */
 export async function updateDriverApplicationAssignment(
   id: number,
@@ -620,18 +617,66 @@ export async function getAllSiteImages() {
   });
 }
 
+/**
+ * ✅ We store either:
+ *   - a STORAGE KEY (recommended) e.g. "cms/2026-01-22/abc.png"
+ *   - OR a stable public URL (https://...)
+ *   - OR a client-bundled absolute path (/assets/...)
+ *
+ * We DO NOT want /uploads/* in production (Railway disk is ephemeral).
+ * If you really want local uploads, set ALLOW_LOCAL_UPLOADS=true
+ */
+function normalizeSiteImageUrlOrKey(input: any): string | null {
+  if (input == null) return null;
+
+  const raw = String(input).trim();
+  if (!raw) return null;
+
+  const allowLocal =
+    String(process.env.ALLOW_LOCAL_UPLOADS || "").toLowerCase() === "true";
+
+  if (!allowLocal && raw.startsWith("/uploads/")) {
+    throw new Error(
+      "Refusing to save /uploads/* in production. Upload to S3 and store the key, or set ALLOW_LOCAL_UPLOADS=true (not recommended)."
+    );
+  }
+
+  // Absolute path for client assets is ok
+  if (raw.startsWith("/")) return raw;
+
+  // Full URL is ok
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+
+  // Otherwise treat as STORAGE KEY (this is what your routers.ts uses)
+  // e.g. "cms/2026-01-22/xyz.png"
+  return raw.replace(/^\/+/, "");
+}
+
 export async function upsertSiteImage(
   data: typeof schema.siteImages.$inferInsert
 ) {
-  const existing = await getSiteImage(String(data.imageKey));
+  const imageKey = String((data as any).imageKey);
+
+  const cleaned = {
+    ...data,
+    imageKey,
+    url:
+      typeof (data as any).url === "undefined"
+        ? (data as any).url
+        : normalizeSiteImageUrlOrKey((data as any).url),
+    updatedAt: new Date(),
+  } as any;
+
+  const existing = await getSiteImage(imageKey);
   if (existing) {
     await db
       .update(schema.siteImages)
-      .set({ ...data, updatedAt: new Date() } as any)
-      .where(eq(schema.siteImages.imageKey, String(data.imageKey)));
+      .set(cleaned)
+      .where(eq(schema.siteImages.imageKey, imageKey));
     return { id: existing.id };
   }
-  return insertAndReturnId(db.insert(schema.siteImages).values(data as any));
+
+  return insertAndReturnId(db.insert(schema.siteImages).values(cleaned));
 }
 
 export async function deleteSiteImage(imageKey: string) {
@@ -713,7 +758,6 @@ export async function createDriverOnboardingToken(params: {
   } as any);
 
   if (params.sentNow) {
-    // ✅ update app status + touch
     await db
       .update(schema.driverApplications)
       .set({
@@ -930,7 +974,7 @@ export type DriverDocType =
 export async function upsertDriverDocument(params: {
   driverApplicationId: number;
   type: DriverDocType;
-  fileUrl: string;
+  fileUrl: string; // ✅ should be STORAGE KEY (recommended) or stable URL
   expiryDate?: Date | null;
 }) {
   const existing = await db
@@ -959,7 +1003,6 @@ export async function upsertDriverDocument(params: {
       } as any)
       .where(eq(schema.driverDocuments.id, (existing as any[])[0].id));
 
-    // if any upload happens, status can move to docs_received (optional)
     await db
       .update(schema.driverApplications)
       .set({ status: "docs_received" } as any)
@@ -1112,8 +1155,6 @@ export async function getDriverOnboardingProfile(driverApplicationId: number) {
 
 // ============================================================================
 // ✅ Auto reminder helpers: link_sent + older than X days + zero docs
-// - returns candidates to remind
-// - logs REMINDER_SENT with meta.auto=true (so we don't double-send)
 // ============================================================================
 
 export type AutoReminderCandidate = {
@@ -1130,13 +1171,6 @@ export async function getOnboardingReminderCandidates(params?: {
   const days = Math.max(1, Number(params?.days ?? 7));
   const limit = Math.max(1, Math.min(Number(params?.limit ?? 50), 200));
 
-  /**
-   * Criteria:
-   * - driver_applications.status = 'link_sent'
-   * - createdAt <= NOW() - X days
-   * - NO driver_documents rows exist (left join dd.id is null)
-   * - NOT already auto-reminded (admin_activity action REMINDER_SENT with meta containing "auto":true)
-   */
   const result: any = await db.execute(sql`
     SELECT
       da.id,
