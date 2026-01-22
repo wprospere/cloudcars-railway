@@ -20,4 +20,5 @@ RUN pnpm build
 ENV NODE_ENV=production
 EXPOSE 8080
 
-CMD ["node", "dist/railway-server.js"]
+CMD ["node", "dist/server/railway-server.js"]
+
