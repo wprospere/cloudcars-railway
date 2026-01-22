@@ -24,6 +24,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// ✅ Option A: submit via tRPC instead of fetch("/api/driver-application")
+import { trpc } from "@/lib/trpc"; // <-- if this path errors, search your project for "export const trpc"
+
 const benefits = [
   {
     icon: PoundSterling,
@@ -60,6 +63,7 @@ const benefits = [
 
 export default function Drivers() {
   const content = useCmsContent("drivers");
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -71,8 +75,12 @@ export default function Drivers() {
     availability: "" as "fulltime" | "parttime" | "weekends" | "",
     message: "",
   });
+
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // ✅ tRPC mutation hook
+  const createDriverApplication = trpc.createDriverApplication.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,19 +92,42 @@ export default function Drivers() {
 
     setIsSending(true);
     try {
-      const res = await fetch("/api/driver-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          availability: formData.availability,
-        }),
-      });
+      /**
+       * IMPORTANT:
+       * The object keys below must match your backend zod schema for createDriverApplication.
+       * If your backend expects different names, change them here to match EXACTLY.
+       *
+       * Common backend names in your Cloud Cars codebase:
+       * - licenceNumber (UK spelling) vs licenseNumber
+       * - yearsDriving vs yearsExperience
+       * - whenCanWork vs availability
+       * - hasOwnCar vs vehicleOwner
+       * - car / carModel / vehicleType
+       * - anythingElse vs message
+       */
+      await createDriverApplication.mutateAsync({
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({} as any));
-        throw new Error(err?.message || "Something went wrong. Please try again.");
-      }
+        // ⚠️ change to "licenseNumber" if your backend uses US spelling
+        licenceNumber: formData.licenseNumber,
+
+        // ⚠️ change key to "yearsExperience" if backend expects that
+        yearsDriving: Number(formData.yearsExperience),
+
+        // ⚠️ change key to "availability" if backend expects that
+        whenCanWork: formData.availability,
+
+        // ⚠️ change key to "vehicleOwner" if backend expects that
+        hasOwnCar: formData.vehicleOwner,
+
+        // ⚠️ change key to "vehicleType" or "carModel" if backend expects that
+        car: formData.vehicleOwner ? formData.vehicleType : null,
+
+        // ⚠️ change key to "message" if backend expects that
+        anythingElse: formData.message || null,
+      });
 
       setSubmitted(true);
       toast.success("Application sent! We'll be in touch soon.");

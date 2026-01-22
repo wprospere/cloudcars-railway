@@ -64,6 +64,10 @@ import { storagePut } from "./storage";
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 
+// ✅ Cron runner + key gate
+import { runAutoOnboardingReminders } from "./onboarding/autoReminders";
+import { requireCronKey } from "./auth/cronKey";
+
 /* ----------------------------------------
    Admin-only middleware
 ---------------------------------------- */
@@ -510,6 +514,18 @@ export const appRouter = router({
 
   /* ---------- ADMIN ---------- */
   admin: router({
+    /**
+     * ✅ CRON endpoint – automatic onboarding reminders
+     * Protected by CRON_KEY (not admin/staff auth)
+     */
+    runAutoOnboardingReminders: publicProcedure
+      .input(z.object({ key: z.string().min(10) }))
+      .mutation(async ({ input }) => {
+        requireCronKey(input.key);
+        const result = await runAutoOnboardingReminders();
+        return { success: true, ...result };
+      }),
+
     /* ============================
        Inquiries lists
     ============================ */
@@ -918,12 +934,8 @@ export const appRouter = router({
       }),
 
     /**
-     * ✅ FIX: this is the missing tRPC procedure your UI is calling:
-     * trpc.admin.sendDriverOnboardingReminder.useMutation()
-     *
-     * - DOES NOT create a new token
-     * - Sends a generic reminder email (no link)
-     * - Logs REMINDER_SENT in timeline (db helper)
+     * ✅ Reminder email (no token re-issue)
+     * Logs REMINDER_SENT in timeline (db helper)
      */
     sendDriverOnboardingReminder: adminProcedure
       .input(
@@ -945,7 +957,6 @@ export const appRouter = router({
 
         const adminEmail = getAdminEmail(ctx);
 
-        // ✅ log timeline event (no token re-issue)
         await logDriverOnboardingReminder({
           driverApplicationId: Number(app.id),
           adminEmail,
