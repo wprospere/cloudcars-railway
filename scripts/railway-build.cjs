@@ -29,7 +29,6 @@ const clientDir = path.join(cwd, "client");
 
 // What we WANT
 const expectedIndex = path.join(clientDir, "dist", "index.html");
-
 console.log("=== RAILWAY BUILD DEBUG ===");
 console.log("cwd:", cwd);
 console.log("node:", process.version);
@@ -51,8 +50,7 @@ run("pnpm exec vite build", { cwd: clientDir });
 
 console.log("\nAfter Vite build:");
 console.log("client contents:", safeList(clientDir));
-console.log("client/dist contents:", safeList(path.join(clientDir, "dist")));
-
+console.log("dist/public contents:", safeList(path.join(cwd, "dist", "public")));
 console.log("\nIndex check:");
 console.log("expectedIndex:", expectedIndex, "exists:", exists(expectedIndex));
 

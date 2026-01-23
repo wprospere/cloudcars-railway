@@ -79,7 +79,7 @@ const __dirname = path.dirname(__filename);
 /**
  * ✅ Serve frontend from /app/client/dist (more reliable than /app/dist/client)
  */
-const clientDist = path.resolve(process.cwd(), "client", "dist");
+const clientDist = path.resolve(process.cwd(), "dist", "public");
 
 /**
  * Local uploads folder (ephemeral on Railway)
