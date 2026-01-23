@@ -151,10 +151,10 @@ export default function Inquiries() {
   // ✅ filter drivers list (client-side)
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
 
-  // ✅ NEW: quick assignment filters
-  type AssignmentQuickFilter = "all" | "mine" | "others";
-  const [assignmentQuickFilter, setAssignmentQuickFilter] =
-    useState<AssignmentQuickFilter>("all");
+  // ✅ NEW: assignment dropdown (includes team member names)
+  type AssignedQuick = "all" | "unassigned" | "mine" | "others" | "person";
+  const [assignedQuick, setAssignedQuick] = useState<AssignedQuick>("all");
+  const [assignedPerson, setAssignedPerson] = useState<string>("");
 
   // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
@@ -162,12 +162,13 @@ export default function Inquiries() {
   // keep a tiny per-driver "restoring" state so one restore doesn't disable all
   const [restoringForId, setRestoringForId] = useState<number | null>(null);
 
-  // If Unassigned-only is on, "mine/others" would be empty/confusing. Reset to "all".
+  // If Unassigned-only is on, the assignment dropdown would be redundant/confusing. Reset to "all".
   useEffect(() => {
-    if (driverFilter === "unassigned" && assignmentQuickFilter !== "all") {
-      setAssignmentQuickFilter("all");
+    if (driverFilter === "unassigned" && assignedQuick !== "all") {
+      setAssignedQuick("all");
+      setAssignedPerson("");
     }
-  }, [driverFilter, assignmentQuickFilter]);
+  }, [driverFilter, assignedQuick]);
 
   /* ---------- Queries (LIMITED) ---------- */
   const driversQuery = trpc.admin.getDriverApplications.useQuery({
@@ -181,42 +182,6 @@ export default function Inquiries() {
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
   const rawDrivers = normalizeArray<any>(driversQuery.data);
-
-  // ✅ Apply filters + quick filters + sort unassigned-to-top (all client-side)
-  const drivers = useMemo(() => {
-    const filtered = rawDrivers
-      // Existing "Unassigned only" filter
-      .filter((d: any) => {
-        if (driverFilter === "unassigned") return !d?.assignedTo;
-        return true;
-      })
-      // NEW quick filters
-      .filter((d: any) => {
-        const assignedTo = typeof d?.assignedTo === "string" ? d.assignedTo : "";
-        const assignedTrim = assignedTo.trim();
-
-        if (assignmentQuickFilter === "mine") {
-          // If we don't know my name, show none rather than accidentally showing all
-          return !!myName && assignedTrim === myName;
-        }
-
-        if (assignmentQuickFilter === "others") {
-          // If myName unknown, this becomes "any assigned"
-          if (!assignedTrim) return false;
-          if (!myName) return true;
-          return assignedTrim !== myName;
-        }
-
-        return true;
-      });
-
-    // NEW: sort unassigned first (and then newest first within group)
-    return sortUnassignedFirst(
-      filtered,
-      (d: any) => d?.assignedTo,
-      (d: any) => new Date(d?.createdAt ?? 0).getTime()
-    );
-  }, [rawDrivers, driverFilter, assignmentQuickFilter, myName]);
 
   const corporate = normalizeArray<any>(corporateQuery.data);
   const messages = normalizeArray<any>(messagesQuery.data);
@@ -232,6 +197,51 @@ export default function Inquiries() {
         : [];
     return Array.from(new Set(names));
   }, [teamMembersData]);
+
+  // ✅ Apply filters + assignment dropdown + sort unassigned-to-top (all client-side)
+  const drivers = useMemo(() => {
+    const filtered = rawDrivers
+      // Existing "Unassigned only" filter
+      .filter((d: any) => {
+        if (driverFilter === "unassigned") return !d?.assignedTo;
+        return true;
+      })
+      // NEW assignment dropdown filter
+      .filter((d: any) => {
+        const assignedTo =
+          typeof d?.assignedTo === "string" ? d.assignedTo : "";
+        const assignedTrim = assignedTo.trim();
+
+        if (assignedQuick === "all") return true;
+
+        if (assignedQuick === "unassigned") return !assignedTrim;
+
+        if (assignedQuick === "mine") {
+          // If we don't know my name, show none rather than accidentally showing all
+          return !!myName && assignedTrim === myName;
+        }
+
+        if (assignedQuick === "others") {
+          // If myName unknown, this becomes "any assigned"
+          if (!assignedTrim) return false;
+          if (!myName) return true;
+          return assignedTrim !== myName;
+        }
+
+        if (assignedQuick === "person") {
+          return !!assignedPerson && assignedTrim === assignedPerson;
+        }
+
+        return true;
+      });
+
+    // NEW: sort unassigned first (and then newest first within group)
+    return sortUnassignedFirst(
+      filtered,
+      (d: any) => d?.assignedTo,
+      (d: any) => new Date(d?.createdAt ?? 0).getTime()
+    );
+  }, [rawDrivers, driverFilter, assignedQuick, assignedPerson, myName]);
 
   /* ---------- Mutations ---------- */
   const updateDriverStatus = trpc.admin.updateDriverStatus.useMutation();
@@ -311,7 +321,7 @@ export default function Inquiries() {
                   </SelectContent>
                 </Select>
 
-                {/* ✅ Assignment filter */}
+                {/* ✅ Base filter (All / Unassigned-only) */}
                 <Select
                   value={driverFilter}
                   onValueChange={(v) => setDriverFilter(v as any)}
@@ -325,51 +335,43 @@ export default function Inquiries() {
                   </SelectContent>
                 </Select>
 
-                {/* ✅ NEW: quick filters */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={assignmentQuickFilter === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAssignmentQuickFilter("all")}
-                  >
-                    All
-                  </Button>
+                {/* ✅ NEW: Assignment filter with team member names */}
+                <Select
+                  value={
+                    assignedQuick === "person"
+                      ? `person:${assignedPerson || ""}`
+                      : assignedQuick
+                  }
+                  onValueChange={(v) => {
+                    if (v.startsWith("person:")) {
+                      const name = v.replace("person:", "");
+                      setAssignedQuick("person");
+                      setAssignedPerson(name);
+                      return;
+                    }
 
-                  <Button
-                    type="button"
-                    variant={assignmentQuickFilter === "mine" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAssignmentQuickFilter("mine")}
-                    disabled={!myName || driverFilter === "unassigned"}
-                    title={
-                      !myName
-                        ? "Can't detect your admin name for 'Assigned to me'"
-                        : driverFilter === "unassigned"
-                        ? "Unassigned-only is enabled"
-                        : "Show items assigned to you"
-                    }
-                  >
-                    Assigned to me
-                  </Button>
+                    setAssignedQuick(v as any);
+                    setAssignedPerson("");
+                  }}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Assigned filter..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All assignments</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="mine" disabled={!myName}>
+                      Assigned to me{!myName ? " (unknown)" : ""}
+                    </SelectItem>
+                    <SelectItem value="others">Assigned to others</SelectItem>
 
-                  <Button
-                    type="button"
-                    variant={
-                      assignmentQuickFilter === "others" ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => setAssignmentQuickFilter("others")}
-                    disabled={driverFilter === "unassigned"}
-                    title={
-                      driverFilter === "unassigned"
-                        ? "Unassigned-only is enabled"
-                        : "Show items assigned to others"
-                    }
-                  >
-                    Assigned to others
-                  </Button>
-                </div>
+                    {teamMembers.map((name) => (
+                      <SelectItem key={name} value={`person:${name}`}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -578,7 +580,8 @@ export default function Inquiries() {
                               },
                               onError: (err: any) => {
                                 alert(
-                                  err?.message || "Failed to send onboarding link"
+                                  err?.message ||
+                                    "Failed to send onboarding link"
                                 );
                               },
                               onSettled: () => setSendingForId(null),
@@ -623,10 +626,14 @@ export default function Inquiries() {
                     ? "No archived (rejected) driver applications."
                     : driverFilter === "unassigned"
                     ? "No unassigned driver applications 🎉"
-                    : assignmentQuickFilter === "mine"
+                    : assignedQuick === "mine"
                     ? "No driver applications assigned to you."
-                    : assignmentQuickFilter === "others"
+                    : assignedQuick === "others"
                     ? "No driver applications assigned to others."
+                    : assignedQuick === "unassigned"
+                    ? "No unassigned driver applications 🎉"
+                    : assignedQuick === "person"
+                    ? `No driver applications assigned to ${assignedPerson || "that person"}.`
                     : "No driver applications yet."
                 }
               />
