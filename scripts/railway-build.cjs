@@ -27,42 +27,51 @@ function exists(p) {
 const cwd = process.cwd();
 const clientDir = path.join(cwd, "client");
 
-// What we WANT
-const expectedIndex = path.join(clientDir, "dist", "index.html");
+// Vite (per your logs) outputs to /app/dist/public
+const expectedIndex = path.join(cwd, "dist", "public", "index.html");
+const expectedOutDir = path.join(cwd, "dist", "public");
+
 console.log("=== RAILWAY BUILD DEBUG ===");
 console.log("cwd:", cwd);
 console.log("node:", process.version);
 
 console.log("\nBefore build:");
 console.log("client contents:", safeList(clientDir));
+console.log("dist contents:", safeList(path.join(cwd, "dist")));
+console.log("dist/public contents:", safeList(expectedOutDir));
 
 run("pnpm -v");
 run("pnpm exec vite -v");
 
-console.log("\n== CLEAN DIST ==");
+// Clean previous output so we know what this build produced
+console.log("\n== CLEAN dist/public ==");
 try {
-  fs.rmSync(path.join(clientDir, "dist"), { recursive: true, force: true });
+  fs.rmSync(expectedOutDir, { recursive: true, force: true });
 } catch {}
-console.log("client/dist after rm:", safeList(path.join(clientDir, "dist")));
+console.log("dist/public after rm:", safeList(expectedOutDir));
 
 console.log("\n== VITE BUILD (run inside /client) ==");
 run("pnpm exec vite build", { cwd: clientDir });
 
 console.log("\nAfter Vite build:");
-console.log("client contents:", safeList(clientDir));
-console.log("dist/public contents:", safeList(path.join(cwd, "dist", "public")));
+console.log("dist contents:", safeList(path.join(cwd, "dist")));
+console.log("dist/public contents:", safeList(expectedOutDir));
+console.log("dist/public/assets contents:", safeList(path.join(expectedOutDir, "assets")));
+
 console.log("\nIndex check:");
 console.log("expectedIndex:", expectedIndex, "exists:", exists(expectedIndex));
 
 if (!exists(expectedIndex)) {
-  console.error("\n❌ Build failed: expected client/dist/index.html not found.");
+  console.error("\n❌ Build failed: expected dist/public/index.html not found.");
   process.exit(1);
 }
 
-console.log("\n✅ Found client/dist/index.html");
+console.log("\n✅ Found dist/public/index.html");
 
 // Marker file to prove build ran
-fs.writeFileSync(path.join(clientDir, "dist", "BUILD_MARKER.txt"), new Date().toISOString());
+try {
+  fs.writeFileSync(path.join(expectedOutDir, "BUILD_MARKER.txt"), new Date().toISOString());
+} catch {}
 
 console.log("\n== ESBUILD SERVER ==");
 run(
