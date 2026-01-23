@@ -16,6 +16,8 @@ import {
   updateDriverApplicationStatus,
   updateDriverApplicationNotes,
   updateDriverApplicationAssignment,
+  archiveDriverApplication, // ✅ NEW
+  restoreDriverApplication, // ✅ NEW
 
   getAllCorporateInquiries,
   updateCorporateInquiryStatus,
@@ -596,11 +598,18 @@ export const appRouter = router({
     ============================ */
     getDriverApplications: adminProcedure
       .input(
-        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+        z
+          .object({
+            limit: z.number().min(1).max(500).optional(),
+            archived: z.boolean().optional(), // ✅ NEW
+          })
+          .optional()
       )
       .query(async ({ input }) => {
-        const rows: any[] = await getAllDriverApplications();
         const limit = input?.limit ?? 200;
+        const archived = input?.archived ?? false;
+
+        const rows: any[] = await getAllDriverApplications({ archived }); // ✅ NEW
 
         return rows.slice(0, limit).map((r: any) => ({
           id: r.id,
@@ -626,6 +635,10 @@ export const appRouter = router({
               ? r.internalNotes.slice(0, 5000)
               : r.internalNotes,
           createdAt: r.createdAt,
+
+          // ✅ archive fields (optional, only if in schema)
+          archivedAt: r.archivedAt ?? null,
+          archivedByEmail: r.archivedByEmail ?? null,
 
           documents: Array.isArray(r.documents) ? r.documents : [],
         }));
@@ -665,6 +678,23 @@ export const appRouter = router({
           input.assignedTo,
           adminEmail
         );
+        return { success: true };
+      }),
+
+    // ✅ NEW: Archive / Restore driver applications
+    archiveDriverApplication: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await archiveDriverApplication(input.id, adminEmail);
+        return { success: true };
+      }),
+
+    restoreDriverApplication: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await restoreDriverApplication(input.id, adminEmail);
         return { success: true };
       }),
 
@@ -1076,7 +1106,9 @@ export const appRouter = router({
       .input(z.object({ driverApplicationId: z.number() }))
       .query(async ({ input }) => {
         // ✅ Refresh doc urls for admin UI too
-        const profile = await getDriverOnboardingProfile(input.driverApplicationId);
+        const profile = await getDriverOnboardingProfile(
+          input.driverApplicationId
+        );
 
         const documents = await Promise.all(
           (profile?.documents ?? []).map(async (d: any) => ({
