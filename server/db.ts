@@ -9,7 +9,7 @@ import "dotenv/config";
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc, desc, and, isNull, inArray, sql } from "drizzle-orm";
+import { eq, asc, desc, and, isNull, isNotNull, inArray, sql } from "drizzle-orm"; // ✅ added isNotNull
 import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
 
@@ -239,10 +239,16 @@ export async function createDriverApplication(
 
 /**
  * ✅ Returns driver applications + their documents as `documents: []`
- * This powers completion badges on the Inquiries page.
+ * Supports archive filter:
+ * - archived=false (default): archivedAt IS NULL
+ * - archived=true: archivedAt IS NOT NULL
  */
-export async function getAllDriverApplications() {
+export async function getAllDriverApplications(opts?: { archived?: boolean }) {
+  const archived = opts?.archived ?? false;
+
   const apps = await db.query.driverApplications.findMany({
+    where: (a, { isNull, isNotNull }) =>
+      archived ? isNotNull(a.archivedAt) : isNull(a.archivedAt),
     orderBy: (applications, { desc }) => [desc(applications.createdAt)],
   });
 
@@ -359,6 +365,62 @@ export async function updateDriverApplicationAssignment(
       assignedToAdminId: opts?.assignedToAdminId ?? null,
     },
   });
+}
+
+/**
+ * ✅ Archive a driver application (soft delete)
+ */
+export async function archiveDriverApplication(
+  id: number,
+  adminEmail?: string | null
+) {
+  await db
+    .update(schema.driverApplications)
+    .set({
+      archivedAt: new Date(),
+      archivedByEmail: adminEmail ?? null,
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: adminEmail ?? null,
+    } as any)
+    .where(eq(schema.driverApplications.id, id));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { archived: true },
+  });
+
+  return { success: true };
+}
+
+/**
+ * ✅ Restore a driver application from archive
+ */
+export async function restoreDriverApplication(
+  id: number,
+  adminEmail?: string | null
+) {
+  await db
+    .update(schema.driverApplications)
+    .set({
+      archivedAt: null,
+      archivedByEmail: null,
+      lastTouchedAt: new Date(),
+      lastTouchedByEmail: adminEmail ?? null,
+    } as any)
+    .where(eq(schema.driverApplications.id, id));
+
+  await logAdminActivity({
+    entityType: "driver_application",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { archived: false },
+  });
+
+  return { success: true };
 }
 
 // -------------------- Corporate Inquiries --------------------
