@@ -104,6 +104,9 @@ export default function Inquiries() {
   // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
 
+  // keep a tiny per-driver "restoring" state so one restore doesn't disable all
+  const [restoringForId, setRestoringForId] = useState<number | null>(null);
+
   /* ---------- Queries (LIMITED) ---------- */
   const driversQuery = trpc.admin.getDriverApplications.useQuery({
     limit: 200,
@@ -155,6 +158,31 @@ export default function Inquiries() {
       exportToCSV(corporate, "corporate-inquiries");
     else exportToCSV(messages, "contact-messages");
   };
+
+  async function restoreDriverToActive(driverId: number) {
+    try {
+      setRestoringForId(driverId);
+
+      // 1) restore status -> pending
+      await updateDriverStatus.mutateAsync({
+        id: driverId,
+        status: "pending" as any,
+      });
+
+      // 2) unassign (optional but recommended so it goes back in the pool)
+      await updateDriverAssignment.mutateAsync({
+        id: driverId,
+        assignedTo: null,
+      });
+
+      await driversQuery.refetch();
+      alert("Restored to Active ✅");
+    } catch (err: any) {
+      alert(err?.message || "Failed to restore driver");
+    } finally {
+      setRestoringForId(null);
+    }
+  }
 
   return (
     <AdminLayout title="Inquiries" description="Manage all inbound requests">
@@ -226,8 +254,7 @@ export default function Inquiries() {
 
                 const driverId = Number(driver.id);
                 const isSendingThis = sendingForId === driverId;
-
-                const isArchivedView = driverView === "archived";
+                const isRestoringThis = restoringForId === driverId;
 
                 // ✅ completion badge: supports either driver.documents or driver.driverDocuments
                 const docs = (driver?.documents ??
@@ -236,14 +263,24 @@ export default function Inquiries() {
 
                 const completion = getDriverCompletionBadge(docs);
 
+                const assignedLabel =
+                  driver?.assignedTo && String(driver.assignedTo).trim()
+                    ? `Assigned: ${String(driver.assignedTo).trim()}`
+                    : "Unassigned";
+
                 return (
                   <Card key={driver.id} className="p-6 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-lg font-semibold">
                             {driver.fullName}
                           </h3>
+
+                          {/* ✅ Assigned badge */}
+                          <Badge variant="outline" title={assignedLabel}>
+                            {assignedLabel}
+                          </Badge>
 
                           {/* Time badge */}
                           <Badge className={urgencyColor}>
@@ -333,34 +370,6 @@ export default function Inquiries() {
 
                     {/* Actions */}
                     <div className="flex flex-wrap gap-2">
-                      {/* ✅ Restore button (only in Archived view) */}
-                      {isArchivedView && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const ok = confirm(
-                              "Restore this driver to Active (Pending)?"
-                            );
-                            if (!ok) return;
-
-                            updateDriverStatus.mutate(
-                              { id: driverId, status: "pending" as any },
-                              {
-                                onSuccess: () => driversQuery.refetch(),
-                                onError: (err: any) =>
-                                  alert(
-                                    err?.message || "Failed to restore driver"
-                                  ),
-                              }
-                            );
-                          }}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Restore
-                        </Button>
-                      )}
-
                       <Button variant="outline" size="sm" asChild>
                         <a href={`mailto:${driver.email}`}>
                           <Mail className="h-4 w-4 mr-2" />
@@ -375,58 +384,46 @@ export default function Inquiries() {
                         </a>
                       </Button>
 
-                      {/* Hide onboarding send button in Archived view (optional but cleaner) */}
-                      {!isArchivedView && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          disabled={
-                            sendOnboardingLink.isPending && isSendingThis
-                          }
-                          onClick={() => {
-                            setSendingForId(driverId);
+                      <Button
+                        variant="default"
+                        size="sm"
+                        disabled={sendOnboardingLink.isPending && isSendingThis}
+                        onClick={() => {
+                          setSendingForId(driverId);
 
-                            sendOnboardingLink.mutate(
-                              { driverApplicationId: driverId },
-                              {
-                                onSuccess: async (res: any) => {
-                                  const link = res?.link;
+                          sendOnboardingLink.mutate(
+                            { driverApplicationId: driverId },
+                            {
+                              onSuccess: async (res: any) => {
+                                const link = res?.link;
 
-                                  if (
-                                    link &&
-                                    typeof navigator !== "undefined"
-                                  ) {
-                                    try {
-                                      await navigator.clipboard.writeText(link);
-                                      alert(
-                                        "Onboarding link sent + copied to clipboard ✅"
-                                      );
-                                    } catch {
-                                      alert(
-                                        `Onboarding link sent ✅\n\n${link}`
-                                      );
-                                    }
-                                  } else {
-                                    alert("Onboarding link sent ✅");
+                                if (link && typeof navigator !== "undefined") {
+                                  try {
+                                    await navigator.clipboard.writeText(link);
+                                    alert(
+                                      "Onboarding link sent + copied to clipboard ✅"
+                                    );
+                                  } catch {
+                                    alert(`Onboarding link sent ✅\n\n${link}`);
                                   }
-                                },
-                                onError: (err: any) => {
-                                  alert(
-                                    err?.message ||
-                                      "Failed to send onboarding link"
-                                  );
-                                },
-                                onSettled: () => setSendingForId(null),
-                              }
-                            );
-                          }}
-                        >
-                          <LinkIcon className="h-4 w-4 mr-2" />
-                          {isSendingThis
-                            ? "Sending..."
-                            : "Send Onboarding Link"}
-                        </Button>
-                      )}
+                                } else {
+                                  alert("Onboarding link sent ✅");
+                                }
+                              },
+                              onError: (err: any) => {
+                                alert(
+                                  err?.message ||
+                                    "Failed to send onboarding link"
+                                );
+                              },
+                              onSettled: () => setSendingForId(null),
+                            }
+                          );
+                        }}
+                      >
+                        <LinkIcon className="h-4 w-4 mr-2" />
+                        {isSendingThis ? "Sending..." : "Send Onboarding Link"}
+                      </Button>
 
                       <Button
                         variant="outline"
@@ -436,6 +433,19 @@ export default function Inquiries() {
                         <Eye className="h-4 w-4 mr-2" />
                         Review Uploads
                       </Button>
+
+                      {/* ✅ Restore button (ONLY in Archived view) */}
+                      {driverView === "archived" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={isRestoringThis}
+                          onClick={() => restoreDriverToActive(driverId)}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          {isRestoringThis ? "Restoring..." : "Restore to Active"}
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 );
