@@ -72,22 +72,17 @@ app.use((req, res, next) => {
 // Paths (must be defined BEFORE debug/static routes)
 // --------------------
 
-// ESM-safe __dirname
+// ESM-safe __dirname (kept, even though we now use process.cwd() for clientDist)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * ✅ Split build layout:
- *   - server bundle: dist/server/railway-server.js
- *   - client build : dist/client
- *
- * This file runs from dist/server at runtime, so client is ../client.
+ * ✅ Serve frontend from /app/client/dist (more reliable than /app/dist/client)
  */
 const clientDist = path.resolve(process.cwd(), "client", "dist");
 
 /**
- * (Optional TEMP) Local uploads folder for CMS images stored as /uploads/...
- * ⚠️ Railway disk is ephemeral — move uploads to S3 for production durability.
+ * Local uploads folder (ephemeral on Railway)
  */
 const uploadsDir = path.resolve(process.cwd(), "uploads");
 
@@ -100,11 +95,10 @@ app.get("/healthz", (_req, res) =>
   res.json({ ok: true, ts: new Date().toISOString() })
 );
 
-// ✅ Expanded debug route – lists runtime filesystem contents
+// ✅ Debug route – inspects the actual served clientDist
 app.get("/__debug", (_req, res) => {
-  const distPath = path.join(process.cwd(), "dist");
-  const clientPath = path.join(distPath, "client");
-  const indexPath = path.join(clientPath, "index.html");
+  const servedClientDist = clientDist;
+  const servedIndexPath = path.join(servedClientDist, "index.html");
 
   const safeList = (p: string) => {
     try {
@@ -114,23 +108,26 @@ app.get("/__debug", (_req, res) => {
     }
   };
 
+  const appDistPath = path.join(process.cwd(), "dist");
+  const appClientPath = path.join(process.cwd(), "client");
+
   res.json({
     ok: true,
     nodeEnv: process.env.NODE_ENV,
     cwd: process.cwd(),
 
-    // what the server THINKS it's serving from
-    clientDist,
+    // what express.static is serving
+    servedClientDist,
+    servedClientDistList: safeList(servedClientDist),
+    servedIndexPath,
+    servedIndexExists: fs.existsSync(servedIndexPath),
 
-    // what's actually on disk in the running container
-    distPath,
-    distList: safeList(distPath),
+    // extra: show what's actually present in container
+    appDistPath,
+    appDistList: safeList(appDistPath),
 
-    clientPath,
-    clientList: safeList(clientPath),
-
-    indexPath,
-    indexExists: fs.existsSync(indexPath),
+    appClientPath,
+    appClientList: safeList(appClientPath),
   });
 });
 
@@ -343,7 +340,6 @@ function drizzleJournalExists() {
 }
 
 function getDatabaseUrl(): string | undefined {
-  // Your db.ts REQUIRES DATABASE_URL, but patcher can accept common variants too
   return (
     process.env.DATABASE_URL ||
     process.env.MYSQL_URL ||
@@ -352,10 +348,6 @@ function getDatabaseUrl(): string | undefined {
   );
 }
 
-/**
- * ✅ DB patcher: fixes missing columns without running SQL manually.
- * Safe to run on every boot (idempotent).
- */
 async function patchDatabaseIfNeeded() {
   const DATABASE_URL = getDatabaseUrl();
 
@@ -457,13 +449,9 @@ async function safeRunMigrations() {
 // Startup
 // --------------------
 async function bootstrap() {
-  // ✅ Patch DB first so endpoints don't crash if a column is missing
   await patchDatabaseIfNeeded();
-
-  // ✅ Migrations (opt-in via env)
   await safeRunMigrations();
 
-  // ✅ Ensure admin exists
   try {
     await ensureDefaultAdmin();
   } catch (e: any) {
