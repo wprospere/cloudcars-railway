@@ -49,6 +49,13 @@
       "when": 1768253502499,
       "tag": "0006_naive_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1769133197741,
+      "tag": "0007_lyrical_iron_monger",
+      "breakpoints": true
     }
   ]
 }

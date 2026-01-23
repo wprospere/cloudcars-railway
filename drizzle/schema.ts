@@ -145,6 +145,7 @@ export type InsertBooking = typeof bookings.$inferInsert;
  * - ownership fields: assignedToAdminId / assignedToEmail
  * - last touched fields: lastTouchedAt / lastTouchedByEmail
  * - legacy assignedTo/internalNotes retained
+ * - ✅ archive fields: archivedAt / archivedByEmail
  * ========================================================================== */
 export const driverApplications = mysqlTable(
   "driver_applications",
@@ -188,6 +189,10 @@ export const driverApplications = mysqlTable(
     lastTouchedAt: timestamp("lastTouchedAt"),
     lastTouchedByEmail: varchar("lastTouchedByEmail", { length: 320 }),
 
+    // ✅ archive controls (soft delete)
+    archivedAt: timestamp("archivedAt"),
+    archivedByEmail: varchar("archivedByEmail", { length: 320 }),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -204,6 +209,9 @@ export const driverApplications = mysqlTable(
     ),
     assignedEmailIdx: index("ix_driver_app_assigned_email").on(t.assignedToEmail),
     lastTouchedIdx: index("ix_driver_app_last_touched").on(t.lastTouchedAt),
+
+    // ✅ archive filter index
+    archivedIdx: index("ix_driver_app_archived").on(t.archivedAt),
 
     emailIdx: index("ix_driver_app_email").on(t.email),
     phoneIdx: index("ix_driver_app_phone").on(t.phone),
