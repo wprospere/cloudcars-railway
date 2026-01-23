@@ -83,7 +83,7 @@ const __dirname = path.dirname(__filename);
  *
  * This file runs from dist/server at runtime, so client is ../client.
  */
-const clientDist = path.resolve(__dirname, "../client");
+const clientDist = path.resolve(process.cwd(), "client", "dist");
 
 /**
  * (Optional TEMP) Local uploads folder for CMS images stored as /uploads/...
