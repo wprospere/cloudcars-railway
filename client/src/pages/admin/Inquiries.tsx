@@ -97,11 +97,17 @@ export default function Inquiries() {
 
   const [activeTab, setActiveTab] = useState("drivers");
 
+  // ✅ Option A: Active vs Archived view for drivers
+  const [driverView, setDriverView] = useState<"active" | "archived">("active");
+
   // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
 
   /* ---------- Queries (LIMITED) ---------- */
-  const driversQuery = trpc.admin.getDriverApplications.useQuery({ limit: 200 });
+  const driversQuery = trpc.admin.getDriverApplications.useQuery({
+    limit: 200,
+    view: driverView, // ✅ send view to backend
+  });
   const corporateQuery = trpc.admin.getCorporateInquiries.useQuery({
     limit: 200,
   });
@@ -153,7 +159,26 @@ export default function Inquiries() {
     <AdminLayout title="Inquiries" description="Manage all inbound requests">
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold">Inquiries</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Inquiries</h1>
+
+            {/* ✅ Drivers view toggle (only meaningful on Drivers tab) */}
+            {activeTab === "drivers" && (
+              <Select
+                value={driverView}
+                onValueChange={(v) => setDriverView(v as "active" | "archived")}
+              >
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active drivers</SelectItem>
+                  <SelectItem value="archived">Archived (rejected)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
@@ -332,10 +357,6 @@ export default function Inquiries() {
                               onSuccess: async (res: any) => {
                                 const link = res?.link;
 
-                                // NOTE:
-                                // After the backend change, failures will come through onError(),
-                                // so we can safely treat onSuccess as "sent".
-
                                 if (link && typeof navigator !== "undefined") {
                                   try {
                                     await navigator.clipboard.writeText(link);
@@ -378,7 +399,13 @@ export default function Inquiries() {
               })}
 
             {!driversQuery.isLoading && drivers.length === 0 && (
-              <LoadingCard text="No driver applications yet." />
+              <LoadingCard
+                text={
+                  driverView === "archived"
+                    ? "No archived (rejected) driver applications."
+                    : "No driver applications yet."
+                }
+              />
             )}
           </TabsContent>
 
