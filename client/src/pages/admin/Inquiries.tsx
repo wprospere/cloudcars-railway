@@ -101,6 +101,9 @@ export default function Inquiries() {
   // ✅ Option A: Active vs Archived view for drivers
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
 
+  // ✅ NEW: filter drivers list (client-side)
+  const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
+
   // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
 
@@ -118,7 +121,14 @@ export default function Inquiries() {
   const messagesQuery = trpc.admin.getContactMessages.useQuery({ limit: 200 });
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
-  const drivers = normalizeArray<any>(driversQuery.data);
+  const rawDrivers = normalizeArray<any>(driversQuery.data);
+
+  // ✅ Apply assignment filter client-side
+  const drivers = rawDrivers.filter((d: any) => {
+    if (driverFilter === "unassigned") return !d?.assignedTo;
+    return true;
+  });
+
   const corporate = normalizeArray<any>(corporateQuery.data);
   const messages = normalizeArray<any>(messagesQuery.data);
   const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
@@ -169,7 +179,7 @@ export default function Inquiries() {
         status: "pending" as any,
       });
 
-      // 2) unassign (optional but recommended so it goes back in the pool)
+      // 2) unassign (recommended so it goes back into the pool)
       await updateDriverAssignment.mutateAsync({
         id: driverId,
         assignedTo: null,
@@ -191,20 +201,41 @@ export default function Inquiries() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">Inquiries</h1>
 
-            {/* ✅ Drivers view toggle (only meaningful on Drivers tab) */}
+            {/* ✅ Drivers controls (only meaningful on Drivers tab) */}
             {activeTab === "drivers" && (
-              <Select
-                value={driverView}
-                onValueChange={(v) => setDriverView(v as "active" | "archived")}
-              >
-                <SelectTrigger className="w-[170px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active drivers</SelectItem>
-                  <SelectItem value="archived">Archived (rejected)</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                {/* Active / Archived toggle */}
+                <Select
+                  value={driverView}
+                  onValueChange={(v) =>
+                    setDriverView(v as "active" | "archived")
+                  }
+                >
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active drivers</SelectItem>
+                    <SelectItem value="archived">
+                      Archived (rejected)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* ✅ Assignment filter */}
+                <Select
+                  value={driverFilter}
+                  onValueChange={(v) => setDriverFilter(v as any)}
+                >
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="unassigned">Unassigned only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
 
@@ -443,7 +474,9 @@ export default function Inquiries() {
                           onClick={() => restoreDriverToActive(driverId)}
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
-                          {isRestoringThis ? "Restoring..." : "Restore to Active"}
+                          {isRestoringThis
+                            ? "Restoring..."
+                            : "Restore to Active"}
                         </Button>
                       )}
                     </div>
@@ -456,6 +489,8 @@ export default function Inquiries() {
                 text={
                   driverView === "archived"
                     ? "No archived (rejected) driver applications."
+                    : driverFilter === "unassigned"
+                    ? "No unassigned driver applications 🎉"
                     : "No driver applications yet."
                 }
               />
