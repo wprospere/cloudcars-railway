@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import AdminLayout from "@/components/AdminLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -30,6 +30,36 @@ import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
 // ✅ Completion badge helper
 import { getDriverCompletionBadge } from "@/lib/driverCompletion";
+
+/* ---------------- Unassigned-first sort helper ---------------- */
+type MaybeString = string | null | undefined;
+
+function sortUnassignedFirst<T>(
+  rows: T[],
+  getAssignee: (row: T) => MaybeString,
+  getCreatedAt?: (row: T) => number
+) {
+  return rows
+    .map((row, idx) => ({ row, idx }))
+    .sort((a, b) => {
+      const aAssigned = !!getAssignee(a.row);
+      const bAssigned = !!getAssignee(b.row);
+
+      // Unassigned first
+      if (aAssigned !== bAssigned) return aAssigned ? 1 : -1;
+
+      // Optional: newest first within group
+      if (getCreatedAt) {
+        const at = getCreatedAt(a.row);
+        const bt = getCreatedAt(b.row);
+        if (at !== bt) return bt - at;
+      }
+
+      // Stable tiebreak
+      return a.idx - b.idx;
+    })
+    .map((x) => x.row);
+}
 
 /* ---------------- CSV Export ---------------- */
 function exportToCSV(data: any[], filename: string) {
@@ -94,21 +124,50 @@ function openAdminReview(driverApplicationId: number) {
 
 /* ---------------- Page ---------------- */
 export default function Inquiries() {
-  useAuth({ redirectOnUnauthenticated: true, redirectPath: "/admin/login" });
+  // Keep existing behavior, but also capture whatever it returns (if anything)
+  const auth: any = useAuth({
+    redirectOnUnauthenticated: true,
+    redirectPath: "/admin/login",
+  });
+
+  // "Assigned to me" relies on name matching your assignedTo values (which are names)
+  const myNameRaw =
+    auth?.user?.name ??
+    auth?.admin?.name ??
+    auth?.profile?.name ??
+    auth?.name ??
+    null;
+
+  const myName =
+    typeof myNameRaw === "string" && myNameRaw.trim()
+      ? myNameRaw.trim()
+      : null;
 
   const [activeTab, setActiveTab] = useState("drivers");
 
   // ✅ Option A: Active vs Archived view for drivers
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
 
-  // ✅ NEW: filter drivers list (client-side)
+  // ✅ filter drivers list (client-side)
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
+
+  // ✅ NEW: quick assignment filters
+  type AssignmentQuickFilter = "all" | "mine" | "others";
+  const [assignmentQuickFilter, setAssignmentQuickFilter] =
+    useState<AssignmentQuickFilter>("all");
 
   // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
 
   // keep a tiny per-driver "restoring" state so one restore doesn't disable all
   const [restoringForId, setRestoringForId] = useState<number | null>(null);
+
+  // If Unassigned-only is on, "mine/others" would be empty/confusing. Reset to "all".
+  useEffect(() => {
+    if (driverFilter === "unassigned" && assignmentQuickFilter !== "all") {
+      setAssignmentQuickFilter("all");
+    }
+  }, [driverFilter, assignmentQuickFilter]);
 
   /* ---------- Queries (LIMITED) ---------- */
   const driversQuery = trpc.admin.getDriverApplications.useQuery({
@@ -123,11 +182,41 @@ export default function Inquiries() {
 
   const rawDrivers = normalizeArray<any>(driversQuery.data);
 
-  // ✅ Apply assignment filter client-side
-  const drivers = rawDrivers.filter((d: any) => {
-    if (driverFilter === "unassigned") return !d?.assignedTo;
-    return true;
-  });
+  // ✅ Apply filters + quick filters + sort unassigned-to-top (all client-side)
+  const drivers = useMemo(() => {
+    const filtered = rawDrivers
+      // Existing "Unassigned only" filter
+      .filter((d: any) => {
+        if (driverFilter === "unassigned") return !d?.assignedTo;
+        return true;
+      })
+      // NEW quick filters
+      .filter((d: any) => {
+        const assignedTo = typeof d?.assignedTo === "string" ? d.assignedTo : "";
+        const assignedTrim = assignedTo.trim();
+
+        if (assignmentQuickFilter === "mine") {
+          // If we don't know my name, show none rather than accidentally showing all
+          return !!myName && assignedTrim === myName;
+        }
+
+        if (assignmentQuickFilter === "others") {
+          // If myName unknown, this becomes "any assigned"
+          if (!assignedTrim) return false;
+          if (!myName) return true;
+          return assignedTrim !== myName;
+        }
+
+        return true;
+      });
+
+    // NEW: sort unassigned first (and then newest first within group)
+    return sortUnassignedFirst(
+      filtered,
+      (d: any) => d?.assignedTo,
+      (d: any) => new Date(d?.createdAt ?? 0).getTime()
+    );
+  }, [rawDrivers, driverFilter, assignmentQuickFilter, myName]);
 
   const corporate = normalizeArray<any>(corporateQuery.data);
   const messages = normalizeArray<any>(messagesQuery.data);
@@ -203,7 +292,7 @@ export default function Inquiries() {
 
             {/* ✅ Drivers controls (only meaningful on Drivers tab) */}
             {activeTab === "drivers" && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Active / Archived toggle */}
                 <Select
                   value={driverView}
@@ -235,6 +324,52 @@ export default function Inquiries() {
                     <SelectItem value="unassigned">Unassigned only</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {/* ✅ NEW: quick filters */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={assignmentQuickFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAssignmentQuickFilter("all")}
+                  >
+                    All
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant={assignmentQuickFilter === "mine" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAssignmentQuickFilter("mine")}
+                    disabled={!myName || driverFilter === "unassigned"}
+                    title={
+                      !myName
+                        ? "Can't detect your admin name for 'Assigned to me'"
+                        : driverFilter === "unassigned"
+                        ? "Unassigned-only is enabled"
+                        : "Show items assigned to you"
+                    }
+                  >
+                    Assigned to me
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant={
+                      assignmentQuickFilter === "others" ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => setAssignmentQuickFilter("others")}
+                    disabled={driverFilter === "unassigned"}
+                    title={
+                      driverFilter === "unassigned"
+                        ? "Unassigned-only is enabled"
+                        : "Show items assigned to others"
+                    }
+                  >
+                    Assigned to others
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -443,8 +578,7 @@ export default function Inquiries() {
                               },
                               onError: (err: any) => {
                                 alert(
-                                  err?.message ||
-                                    "Failed to send onboarding link"
+                                  err?.message || "Failed to send onboarding link"
                                 );
                               },
                               onSettled: () => setSendingForId(null),
@@ -474,9 +608,7 @@ export default function Inquiries() {
                           onClick={() => restoreDriverToActive(driverId)}
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
-                          {isRestoringThis
-                            ? "Restoring..."
-                            : "Restore to Active"}
+                          {isRestoringThis ? "Restoring..." : "Restore to Active"}
                         </Button>
                       )}
                     </div>
@@ -491,6 +623,10 @@ export default function Inquiries() {
                     ? "No archived (rejected) driver applications."
                     : driverFilter === "unassigned"
                     ? "No unassigned driver applications 🎉"
+                    : assignmentQuickFilter === "mine"
+                    ? "No driver applications assigned to you."
+                    : assignmentQuickFilter === "others"
+                    ? "No driver applications assigned to others."
                     : "No driver applications yet."
                 }
               />
