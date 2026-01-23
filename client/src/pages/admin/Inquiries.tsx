@@ -24,6 +24,7 @@ import {
   User,
   Link as LinkIcon,
   Eye,
+  RotateCcw,
 } from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
@@ -226,6 +227,8 @@ export default function Inquiries() {
                 const driverId = Number(driver.id);
                 const isSendingThis = sendingForId === driverId;
 
+                const isArchivedView = driverView === "archived";
+
                 // ✅ completion badge: supports either driver.documents or driver.driverDocuments
                 const docs = (driver?.documents ??
                   driver?.driverDocuments ??
@@ -330,6 +333,34 @@ export default function Inquiries() {
 
                     {/* Actions */}
                     <div className="flex flex-wrap gap-2">
+                      {/* ✅ Restore button (only in Archived view) */}
+                      {isArchivedView && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const ok = confirm(
+                              "Restore this driver to Active (Pending)?"
+                            );
+                            if (!ok) return;
+
+                            updateDriverStatus.mutate(
+                              { id: driverId, status: "pending" as any },
+                              {
+                                onSuccess: () => driversQuery.refetch(),
+                                onError: (err: any) =>
+                                  alert(
+                                    err?.message || "Failed to restore driver"
+                                  ),
+                              }
+                            );
+                          }}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Restore
+                        </Button>
+                      )}
+
                       <Button variant="outline" size="sm" asChild>
                         <a href={`mailto:${driver.email}`}>
                           <Mail className="h-4 w-4 mr-2" />
@@ -344,46 +375,58 @@ export default function Inquiries() {
                         </a>
                       </Button>
 
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={sendOnboardingLink.isPending && isSendingThis}
-                        onClick={() => {
-                          setSendingForId(driverId);
+                      {/* Hide onboarding send button in Archived view (optional but cleaner) */}
+                      {!isArchivedView && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          disabled={
+                            sendOnboardingLink.isPending && isSendingThis
+                          }
+                          onClick={() => {
+                            setSendingForId(driverId);
 
-                          sendOnboardingLink.mutate(
-                            { driverApplicationId: driverId },
-                            {
-                              onSuccess: async (res: any) => {
-                                const link = res?.link;
+                            sendOnboardingLink.mutate(
+                              { driverApplicationId: driverId },
+                              {
+                                onSuccess: async (res: any) => {
+                                  const link = res?.link;
 
-                                if (link && typeof navigator !== "undefined") {
-                                  try {
-                                    await navigator.clipboard.writeText(link);
-                                    alert(
-                                      "Onboarding link sent + copied to clipboard ✅"
-                                    );
-                                  } catch {
-                                    alert(`Onboarding link sent ✅\n\n${link}`);
+                                  if (
+                                    link &&
+                                    typeof navigator !== "undefined"
+                                  ) {
+                                    try {
+                                      await navigator.clipboard.writeText(link);
+                                      alert(
+                                        "Onboarding link sent + copied to clipboard ✅"
+                                      );
+                                    } catch {
+                                      alert(
+                                        `Onboarding link sent ✅\n\n${link}`
+                                      );
+                                    }
+                                  } else {
+                                    alert("Onboarding link sent ✅");
                                   }
-                                } else {
-                                  alert("Onboarding link sent ✅");
-                                }
-                              },
-                              onError: (err: any) => {
-                                alert(
-                                  err?.message ||
-                                    "Failed to send onboarding link"
-                                );
-                              },
-                              onSettled: () => setSendingForId(null),
-                            }
-                          );
-                        }}
-                      >
-                        <LinkIcon className="h-4 w-4 mr-2" />
-                        {isSendingThis ? "Sending..." : "Send Onboarding Link"}
-                      </Button>
+                                },
+                                onError: (err: any) => {
+                                  alert(
+                                    err?.message ||
+                                      "Failed to send onboarding link"
+                                  );
+                                },
+                                onSettled: () => setSendingForId(null),
+                              }
+                            );
+                          }}
+                        >
+                          <LinkIcon className="h-4 w-4 mr-2" />
+                          {isSendingThis
+                            ? "Sending..."
+                            : "Send Onboarding Link"}
+                        </Button>
+                      )}
 
                       <Button
                         variant="outline"
