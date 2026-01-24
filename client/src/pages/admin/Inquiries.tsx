@@ -25,10 +25,12 @@ import {
   Link as LinkIcon,
   Eye,
   RotateCcw,
+  AlertTriangle,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
-// ✅ Completion badge helper
 import { getDriverCompletionBadge } from "@/lib/driverCompletion";
 
 /* ---------------- Helpers ---------------- */
@@ -68,13 +70,7 @@ function ErrorCard({ title, message }: { title: string; message?: string }) {
   );
 }
 
-function SectionHeader({
-  title,
-  count,
-}: {
-  title: string;
-  count: number;
-}) {
+function SectionHeader({ title, count }: { title: string; count: number }) {
   return (
     <div className="flex items-center justify-between pt-2">
       <div className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -91,6 +87,36 @@ function openAdminReview(driverApplicationId: number) {
   window.location.href = `/admin/driver-onboarding/${driverApplicationId}`;
 }
 
+/* ---------------- SLA / Priority ---------------- */
+type SLALevel = "OVERDUE" | "CRITICAL" | "HIGH" | "NORMAL";
+
+function getSlaLevel(createdAt: any): {
+  level: SLALevel;
+  rank: number;
+  label: string;
+} {
+  const ms = new Date(createdAt ?? 0).getTime();
+  const ageHours = (Date.now() - ms) / (1000 * 60 * 60);
+
+  if (ageHours >= 72) return { level: "OVERDUE", rank: 0, label: "Overdue" };
+  if (ageHours >= 24) return { level: "CRITICAL", rank: 1, label: "Critical" };
+  if (ageHours >= 8) return { level: "HIGH", rank: 2, label: "High" };
+  return { level: "NORMAL", rank: 3, label: "Normal" };
+}
+
+function slaBadgeClass(level: SLALevel) {
+  switch (level) {
+    case "OVERDUE":
+      return "bg-red-600/20 text-red-300 border border-red-500/40";
+    case "CRITICAL":
+      return "bg-orange-600/20 text-orange-300 border border-orange-500/40";
+    case "HIGH":
+      return "bg-yellow-600/20 text-yellow-200 border border-yellow-500/40";
+    default:
+      return "bg-muted text-muted-foreground border border-border";
+  }
+}
+
 /* ---------------- Sorting ---------------- */
 function sortUnassignedFirst<T>(
   rows: T[],
@@ -103,17 +129,31 @@ function sortUnassignedFirst<T>(
       const aAssigned = !!getAssignee(a.row);
       const bAssigned = !!getAssignee(b.row);
 
-      // Unassigned first
       if (aAssigned !== bAssigned) return aAssigned ? 1 : -1;
 
-      // Optional: newest first within group
       if (getCreatedAt) {
         const at = getCreatedAt(a.row);
         const bt = getCreatedAt(b.row);
         if (at !== bt) return bt - at;
       }
 
-      // Stable tiebreak
+      return a.idx - b.idx;
+    })
+    .map((x) => x.row);
+}
+
+function sortBySlaThenNewest<T>(rows: T[], getCreatedAt: (row: T) => number) {
+  return rows
+    .map((row, idx) => ({ row, idx }))
+    .sort((a, b) => {
+      const at = getCreatedAt(a.row);
+      const bt = getCreatedAt(b.row);
+
+      const aSla = getSlaLevel(at).rank;
+      const bSla = getSlaLevel(bt).rank;
+      if (aSla !== bSla) return aSla - bSla;
+
+      if (at !== bt) return bt - at;
       return a.idx - b.idx;
     })
     .map((x) => x.row);
@@ -147,30 +187,23 @@ export default function Inquiries() {
     redirectPath: "/admin/login",
   });
 
-  const myNameRaw =
-    auth?.user?.name ??
-    auth?.admin?.name ??
-    auth?.profile?.name ??
-    auth?.name ??
-    null;
-
-  const myName =
-    typeof myNameRaw === "string" && myNameRaw.trim()
-      ? myNameRaw.trim()
-      : null;
+  // ✅ Force your name for one-click assignment + "Assigned to me"
+  const myName = "Wayne";
 
   const [activeTab, setActiveTab] = useState("drivers");
 
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
 
-  // Assignment dropdown
   type AssignedQuick = "all" | "unassigned" | "mine" | "others" | "person";
   const [assignedQuick, setAssignedQuick] = useState<AssignedQuick>("all");
   const [assignedPerson, setAssignedPerson] = useState<string>("");
 
   const [sendingForId, setSendingForId] = useState<number | null>(null);
   const [restoringForId, setRestoringForId] = useState<number | null>(null);
+
+  // ✅ One-click assignment loading (so you don't spam-click)
+  const [assigningKey, setAssigningKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (driverFilter === "unassigned" && assignedQuick !== "all") {
@@ -195,6 +228,7 @@ export default function Inquiries() {
   const messages = normalizeArray<any>(messagesQuery.data);
   const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
 
+  // ✅ Always include Wayne in the dropdown even if backend list is empty
   const teamMembers = useMemo(() => {
     const names =
       teamMembersData.length > 0
@@ -203,6 +237,9 @@ export default function Inquiries() {
             .filter(Boolean)
             .map(String)
         : [];
+
+    names.push("Wayne");
+
     return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
   }, [teamMembersData]);
 
@@ -221,12 +258,11 @@ export default function Inquiries() {
         if (assignedQuick === "unassigned") return !assignedTrim;
 
         if (assignedQuick === "mine") {
-          return !!myName && assignedTrim === myName;
+          return assignedTrim === myName;
         }
 
         if (assignedQuick === "others") {
           if (!assignedTrim) return false;
-          if (!myName) return true;
           return assignedTrim !== myName;
         }
 
@@ -244,7 +280,6 @@ export default function Inquiries() {
     );
   }, [rawDrivers, driverFilter, assignedQuick, assignedPerson, myName]);
 
-  // ✅ NEW: group drivers into sections (after filtering)
   const driverSections = useMemo(() => {
     const unassigned: any[] = [];
     const mine: any[] = [];
@@ -257,11 +292,17 @@ export default function Inquiries() {
           : null;
 
       if (!assignedName) unassigned.push(d);
-      else if (myName && assignedName === myName) mine.push(d);
+      else if (assignedName === myName) mine.push(d);
       else others.push(d);
     }
 
-    return { unassigned, mine, others };
+    const getCreated = (x: any) => new Date(x?.createdAt ?? 0).getTime();
+
+    return {
+      unassigned: sortBySlaThenNewest(unassigned, getCreated),
+      mine: sortBySlaThenNewest(mine, getCreated),
+      others: sortBySlaThenNewest(others, getCreated),
+    };
   }, [drivers, myName]);
 
   /* ---------- Mutations ---------- */
@@ -311,6 +352,46 @@ export default function Inquiries() {
     }
   }
 
+  // ✅ One-click assignment helpers
+  async function assignDriver(id: number, assignedTo: string | null) {
+    const key = `driver:${id}:${assignedTo ?? "unassigned"}`;
+    try {
+      setAssigningKey(key);
+      await updateDriverAssignment.mutateAsync({ id, assignedTo });
+      await driversQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to assign");
+    } finally {
+      setAssigningKey(null);
+    }
+  }
+
+  async function assignCorporate(id: number, assignedTo: string | null) {
+    const key = `corp:${id}:${assignedTo ?? "unassigned"}`;
+    try {
+      setAssigningKey(key);
+      await updateCorporateAssignment.mutateAsync({ id, assignedTo });
+      await corporateQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to assign");
+    } finally {
+      setAssigningKey(null);
+    }
+  }
+
+  async function assignMessage(id: number, assignedTo: string | null) {
+    const key = `msg:${id}:${assignedTo ?? "unassigned"}`;
+    try {
+      setAssigningKey(key);
+      await updateContactAssignment.mutateAsync({ id, assignedTo });
+      await messagesQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to assign");
+    } finally {
+      setAssigningKey(null);
+    }
+  }
+
   function DriverCard({ driver }: { driver: any }) {
     const urgency = getUrgency(driver.createdAt);
     const urgencyColor = getUrgencyColor(urgency);
@@ -327,7 +408,15 @@ export default function Inquiries() {
         ? String(driver.assignedTo).trim()
         : null;
 
-    const isMine = !!assignedName && !!myName && assignedName === myName;
+    const isMine = !!assignedName && assignedName === myName;
+
+    const createdMs = new Date(driver?.createdAt ?? 0).getTime();
+    const sla = getSlaLevel(createdMs);
+
+    const isAssignWayneLoading =
+      assigningKey === `driver:${driverId}:Wayne`;
+    const isUnassignLoading =
+      assigningKey === `driver:${driverId}:unassigned`;
 
     return (
       <Card key={driver.id} className="p-6 space-y-4">
@@ -336,7 +425,11 @@ export default function Inquiries() {
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-lg font-semibold">{driver.fullName}</h3>
 
-              {/* Assigned chip */}
+              <Badge className={slaBadgeClass(sla.level)} title="SLA by age">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                {sla.label}
+              </Badge>
+
               {assignedName ? (
                 <Badge
                   className={
@@ -397,8 +490,7 @@ export default function Inquiries() {
           </Select>
         </div>
 
-        {/* Assignment */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <User className="h-4 w-4 text-muted-foreground" />
           <Select
             value={driver.assignedTo || "unassigned"}
@@ -424,9 +516,33 @@ export default function Inquiries() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* ✅ One-click actions */}
+          <Button
+            type="button"
+            variant={isMine ? "outline" : "secondary"}
+            size="sm"
+            disabled={isAssignWayneLoading}
+            onClick={() => assignDriver(driverId, "Wayne")}
+            title="Assign this to Wayne"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            {isAssignWayneLoading ? "Assigning..." : "Assign to Wayne"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!assignedName || isUnassignLoading}
+            onClick={() => assignDriver(driverId, null)}
+            title="Unassign"
+          >
+            <UserX className="h-4 w-4 mr-2" />
+            {isUnassignLoading ? "Unassigning..." : "Unassign"}
+          </Button>
         </div>
 
-        {/* Notes */}
         <Textarea
           defaultValue={driver.internalNotes || ""}
           placeholder="Internal notes..."
@@ -442,7 +558,6 @@ export default function Inquiries() {
           }}
         />
 
-        {/* Actions */}
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
             <a href={`mailto:${driver.email}`}>
@@ -579,9 +694,7 @@ export default function Inquiries() {
                   <SelectContent>
                     <SelectItem value="all">All assignments</SelectItem>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    <SelectItem value="mine" disabled={!myName}>
-                      Assigned to me{!myName ? " (unknown)" : ""}
-                    </SelectItem>
+                    <SelectItem value="mine">Assigned to Wayne</SelectItem>
                     <SelectItem value="others">Assigned to others</SelectItem>
                     {teamMembers.map((name) => (
                       <SelectItem key={name} value={`person:${name}`}>
@@ -634,7 +747,6 @@ export default function Inquiries() {
 
             {!driversQuery.isLoading && (
               <div className="space-y-6">
-                {/* Show sections only when base filter isn't forcing a single bucket */}
                 {driverFilter === "unassigned" ? (
                   <div className="space-y-4">
                     <SectionHeader
@@ -657,42 +769,25 @@ export default function Inquiries() {
                       ))}
                     </div>
 
+                    <div className="space-y-4">
+                      <SectionHeader
+                        title="Assigned to Wayne"
+                        count={driverSections.mine.length}
+                      />
+                      {driverSections.mine.map((d) => (
+                        <DriverCard key={d.id} driver={d} />
+                      ))}
+                    </div>
 
-
-                    {/* If we can't detect myName, still show "Assigned" as a single section */}
-                    {myName ? (
-                      <>
-                        <div className="space-y-4">
-                          <SectionHeader
-                            title="Assigned to you"
-                            count={driverSections.mine.length}
-                          />
-                          {driverSections.mine.map((d) => (
-                            <DriverCard key={d.id} driver={d} />
-                          ))}
-                        </div>
-
-                        <div className="space-y-4">
-                          <SectionHeader
-                            title="Assigned to others"
-                            count={driverSections.others.length}
-                          />
-                          {driverSections.others.map((d) => (
-                            <DriverCard key={d.id} driver={d} />
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="space-y-4">
-                        <SectionHeader
-                          title="Assigned"
-                          count={driverSections.others.length}
-                        />
-                        {driverSections.others.map((d) => (
-                          <DriverCard key={d.id} driver={d} />
-                        ))}
-                      </div>
-                    )}
+                    <div className="space-y-4">
+                      <SectionHeader
+                        title="Assigned to others"
+                        count={driverSections.others.length}
+                      />
+                      {driverSections.others.map((d) => (
+                        <DriverCard key={d.id} driver={d} />
+                      ))}
+                    </div>
                   </>
                 )}
 
@@ -704,7 +799,7 @@ export default function Inquiries() {
                         : driverFilter === "unassigned"
                         ? "No unassigned driver applications 🎉"
                         : assignedQuick === "mine"
-                        ? "No driver applications assigned to you."
+                        ? "No driver applications assigned to Wayne."
                         : assignedQuick === "others"
                         ? "No driver applications assigned to others."
                         : assignedQuick === "unassigned"
@@ -737,8 +832,12 @@ export default function Inquiries() {
                     ? String(inquiry.assignedTo).trim()
                     : null;
 
-                const isMine =
-                  !!assignedName && !!myName && assignedName === myName;
+                const isMine = !!assignedName && assignedName === myName;
+
+                const sla = getSlaLevel(inquiry?.createdAt);
+
+                const corpKeyAssign = `corp:${Number(inquiry.id)}:Wayne`;
+                const corpKeyUnassign = `corp:${Number(inquiry.id)}:unassigned`;
 
                 return (
                   <Card key={inquiry.id} className="p-6 space-y-4">
@@ -749,6 +848,11 @@ export default function Inquiries() {
                             {inquiry.companyName}
                           </h3>
 
+                          <Badge className={slaBadgeClass(sla.level)} title="SLA by age">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {sla.label}
+                          </Badge>
+
                           {assignedName ? (
                             <Badge
                               className={
@@ -758,13 +862,13 @@ export default function Inquiries() {
                               }
                               title={
                                 isMine
-                                  ? "Assigned to you"
+                                  ? "Assigned to Wayne"
                                   : `Assigned to ${assignedName}`
                               }
                             >
                               <User className="h-3 w-3 mr-1" />
                               {assignedName}
-                              {isMine && " (you)"}
+                              {isMine && " (Wayne)"}
                             </Badge>
                           ) : (
                             <Badge
@@ -810,7 +914,7 @@ export default function Inquiries() {
                       </Select>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <Select
                         value={inquiry.assignedTo || "unassigned"}
@@ -836,6 +940,32 @@ export default function Inquiries() {
                           ))}
                         </SelectContent>
                       </Select>
+
+                      <Button
+                        type="button"
+                        variant={isMine ? "outline" : "secondary"}
+                        size="sm"
+                        disabled={assigningKey === corpKeyAssign}
+                        onClick={() => assignCorporate(Number(inquiry.id), "Wayne")}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        {assigningKey === corpKeyAssign
+                          ? "Assigning..."
+                          : "Assign to Wayne"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!assignedName || assigningKey === corpKeyUnassign}
+                        onClick={() => assignCorporate(Number(inquiry.id), null)}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        {assigningKey === corpKeyUnassign
+                          ? "Unassigning..."
+                          : "Unassign"}
+                      </Button>
                     </div>
 
                     <Textarea
@@ -877,8 +1007,12 @@ export default function Inquiries() {
                     ? String(msg.assignedTo).trim()
                     : null;
 
-                const isMine =
-                  !!assignedName && !!myName && assignedName === myName;
+                const isMine = !!assignedName && assignedName === myName;
+
+                const sla = getSlaLevel(msg?.createdAt);
+
+                const msgKeyAssign = `msg:${Number(msg.id)}:Wayne`;
+                const msgKeyUnassign = `msg:${Number(msg.id)}:unassigned`;
 
                 return (
                   <Card key={msg.id} className="p-6 space-y-4">
@@ -886,6 +1020,11 @@ export default function Inquiries() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <div className="font-semibold">{msg.subject}</div>
+
+                          <Badge className={slaBadgeClass(sla.level)} title="SLA by age">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {sla.label}
+                          </Badge>
 
                           {assignedName ? (
                             <Badge
@@ -896,13 +1035,13 @@ export default function Inquiries() {
                               }
                               title={
                                 isMine
-                                  ? "Assigned to you"
+                                  ? "Assigned to Wayne"
                                   : `Assigned to ${assignedName}`
                               }
                             >
                               <User className="h-3 w-3 mr-1" />
                               {assignedName}
-                              {isMine && " (you)"}
+                              {isMine && " (Wayne)"}
                             </Badge>
                           ) : (
                             <Badge
@@ -951,7 +1090,7 @@ export default function Inquiries() {
                       {msg.message}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <Select
                         value={msg.assignedTo || "unassigned"}
@@ -977,6 +1116,32 @@ export default function Inquiries() {
                           ))}
                         </SelectContent>
                       </Select>
+
+                      <Button
+                        type="button"
+                        variant={isMine ? "outline" : "secondary"}
+                        size="sm"
+                        disabled={assigningKey === msgKeyAssign}
+                        onClick={() => assignMessage(Number(msg.id), "Wayne")}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        {assigningKey === msgKeyAssign
+                          ? "Assigning..."
+                          : "Assign to Wayne"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!assignedName || assigningKey === msgKeyUnassign}
+                        onClick={() => assignMessage(Number(msg.id), null)}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        {assigningKey === msgKeyUnassign
+                          ? "Unassigning..."
+                          : "Unassign"}
+                      </Button>
                     </div>
 
                     <Textarea

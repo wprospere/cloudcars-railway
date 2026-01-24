@@ -175,6 +175,39 @@ function getAdminEmail(ctx: any): string | null {
 }
 
 /* ----------------------------------------
+   ✅ Team helper (clean + consistent response)
+---------------------------------------- */
+type TeamMemberOut = {
+  id: number;
+  name: string;
+  email: string | null;
+  role: string | null;
+};
+
+function normalizeTeamMembers(rows: any[]): TeamMemberOut[] {
+  const list: TeamMemberOut[] = (rows ?? [])
+    .map((r: any) => ({
+      id: Number(r?.id),
+      name: String(r?.name ?? "").trim(),
+      email: r?.email ? String(r.email).trim() : null,
+      role: r?.role ? String(r.role).trim() : null,
+    }))
+    .filter((m) => !!m.name && Number.isFinite(m.id));
+
+  // Unique by id (defensive)
+  const seen = new Set<number>();
+  const unique: TeamMemberOut[] = [];
+  for (const m of list) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    unique.push(m);
+  }
+
+  unique.sort((a, b) => a.name.localeCompare(b.name));
+  return unique;
+}
+
+/* ----------------------------------------
    App Router
 ---------------------------------------- */
 export const appRouter = router({
@@ -579,7 +612,7 @@ export const appRouter = router({
 
     /* ============================
        Driver Applications list
-       ✅ Option A: Active vs Archived
+       ✅ Active vs Archived
     ============================ */
     getDriverApplications: adminProcedure
       .input(
@@ -842,14 +875,17 @@ export const appRouter = router({
       }),
 
     /* ============================
-       Team
+       ✅ Team (improved output)
     ============================ */
-    getTeamMembers: adminProcedure.query(getAllTeamMembers),
+    getTeamMembers: adminProcedure.query(async () => {
+      const rows: any[] = await getAllTeamMembers();
+      return normalizeTeamMembers(rows);
+    }),
 
     createTeamMember: adminProcedure
       .input(
         z.object({
-          name: z.string(),
+          name: z.string().min(1),
           email: z.string().email().optional(),
           role: z.string().optional(),
         })
