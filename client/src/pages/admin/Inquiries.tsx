@@ -31,9 +31,67 @@ import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 // ✅ Completion badge helper
 import { getDriverCompletionBadge } from "@/lib/driverCompletion";
 
-/* ---------------- Unassigned-first sort helper ---------------- */
+/* ---------------- Helpers ---------------- */
 type MaybeString = string | null | undefined;
 
+function normalizeArray<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+
+  if (value && typeof value === "object") {
+    for (const key of [
+      "items",
+      "data",
+      "rows",
+      "results",
+      "applications",
+      "inquiries",
+      "messages",
+    ]) {
+      const v = (value as any)[key];
+      if (Array.isArray(v)) return v;
+    }
+  }
+  return [];
+}
+
+function LoadingCard({ text }: { text: string }) {
+  return <Card className="p-6 text-center text-muted-foreground">{text}</Card>;
+}
+
+function ErrorCard({ title, message }: { title: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <Card className="p-4 border border-destructive/40 bg-destructive/10">
+      <div className="font-semibold">{title}</div>
+      <div className="text-sm mt-1">{message}</div>
+    </Card>
+  );
+}
+
+function SectionHeader({
+  title,
+  count,
+}: {
+  title: string;
+  count: number;
+}) {
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+        {title}
+      </div>
+      <Badge variant="outline" className="text-muted-foreground">
+        {count}
+      </Badge>
+    </div>
+  );
+}
+
+function openAdminReview(driverApplicationId: number) {
+  window.location.href = `/admin/driver-onboarding/${driverApplicationId}`;
+}
+
+/* ---------------- Sorting ---------------- */
 function sortUnassignedFirst<T>(
   rows: T[],
   getAssignee: (row: T) => MaybeString,
@@ -82,55 +140,13 @@ function exportToCSV(data: any[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/* ---------------- Helpers ---------------- */
-function normalizeArray<T = any>(value: any): T[] {
-  if (Array.isArray(value)) return value;
-
-  if (value && typeof value === "object") {
-    for (const key of [
-      "items",
-      "data",
-      "rows",
-      "results",
-      "applications",
-      "inquiries",
-      "messages",
-    ]) {
-      const v = (value as any)[key];
-      if (Array.isArray(v)) return v;
-    }
-  }
-  return [];
-}
-
-function LoadingCard({ text }: { text: string }) {
-  return <Card className="p-6 text-center text-muted-foreground">{text}</Card>;
-}
-
-function ErrorCard({ title, message }: { title: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <Card className="p-4 border border-destructive/40 bg-destructive/10">
-      <div className="font-semibold">{title}</div>
-      <div className="text-sm mt-1">{message}</div>
-    </Card>
-  );
-}
-
-function openAdminReview(driverApplicationId: number) {
-  // wouter route exists: /admin/driver-onboarding/:id
-  window.location.href = `/admin/driver-onboarding/${driverApplicationId}`;
-}
-
 /* ---------------- Page ---------------- */
 export default function Inquiries() {
-  // Keep existing behavior, but also capture whatever it returns (if anything)
   const auth: any = useAuth({
     redirectOnUnauthenticated: true,
     redirectPath: "/admin/login",
   });
 
-  // "Assigned to me" relies on name matching your assignedTo values (which are names)
   const myNameRaw =
     auth?.user?.name ??
     auth?.admin?.name ??
@@ -145,24 +161,17 @@ export default function Inquiries() {
 
   const [activeTab, setActiveTab] = useState("drivers");
 
-  // ✅ Option A: Active vs Archived view for drivers
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
-
-  // ✅ filter drivers list (client-side)
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
 
-  // ✅ NEW: assignment dropdown (includes team member names)
+  // Assignment dropdown
   type AssignedQuick = "all" | "unassigned" | "mine" | "others" | "person";
   const [assignedQuick, setAssignedQuick] = useState<AssignedQuick>("all");
   const [assignedPerson, setAssignedPerson] = useState<string>("");
 
-  // keep a tiny per-driver "sending" state so one send doesn't disable all
   const [sendingForId, setSendingForId] = useState<number | null>(null);
-
-  // keep a tiny per-driver "restoring" state so one restore doesn't disable all
   const [restoringForId, setRestoringForId] = useState<number | null>(null);
 
-  // If Unassigned-only is on, the assignment dropdown would be redundant/confusing. Reset to "all".
   useEffect(() => {
     if (driverFilter === "unassigned" && assignedQuick !== "all") {
       setAssignedQuick("all");
@@ -170,10 +179,10 @@ export default function Inquiries() {
     }
   }, [driverFilter, assignedQuick]);
 
-  /* ---------- Queries (LIMITED) ---------- */
+  /* ---------- Queries ---------- */
   const driversQuery = trpc.admin.getDriverApplications.useQuery({
     limit: 200,
-    view: driverView, // ✅ send view to backend
+    view: driverView,
   });
   const corporateQuery = trpc.admin.getCorporateInquiries.useQuery({
     limit: 200,
@@ -182,7 +191,6 @@ export default function Inquiries() {
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
   const rawDrivers = normalizeArray<any>(driversQuery.data);
-
   const corporate = normalizeArray<any>(corporateQuery.data);
   const messages = normalizeArray<any>(messagesQuery.data);
   const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
@@ -195,34 +203,28 @@ export default function Inquiries() {
             .filter(Boolean)
             .map(String)
         : [];
-    return Array.from(new Set(names));
+    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
   }, [teamMembersData]);
 
-  // ✅ Apply filters + assignment dropdown + sort unassigned-to-top (all client-side)
   const drivers = useMemo(() => {
     const filtered = rawDrivers
-      // Existing "Unassigned only" filter
       .filter((d: any) => {
         if (driverFilter === "unassigned") return !d?.assignedTo;
         return true;
       })
-      // NEW assignment dropdown filter
       .filter((d: any) => {
         const assignedTo =
           typeof d?.assignedTo === "string" ? d.assignedTo : "";
         const assignedTrim = assignedTo.trim();
 
         if (assignedQuick === "all") return true;
-
         if (assignedQuick === "unassigned") return !assignedTrim;
 
         if (assignedQuick === "mine") {
-          // If we don't know my name, show none rather than accidentally showing all
           return !!myName && assignedTrim === myName;
         }
 
         if (assignedQuick === "others") {
-          // If myName unknown, this becomes "any assigned"
           if (!assignedTrim) return false;
           if (!myName) return true;
           return assignedTrim !== myName;
@@ -235,13 +237,32 @@ export default function Inquiries() {
         return true;
       });
 
-    // NEW: sort unassigned first (and then newest first within group)
     return sortUnassignedFirst(
       filtered,
       (d: any) => d?.assignedTo,
       (d: any) => new Date(d?.createdAt ?? 0).getTime()
     );
   }, [rawDrivers, driverFilter, assignedQuick, assignedPerson, myName]);
+
+  // ✅ NEW: group drivers into sections (after filtering)
+  const driverSections = useMemo(() => {
+    const unassigned: any[] = [];
+    const mine: any[] = [];
+    const others: any[] = [];
+
+    for (const d of drivers) {
+      const assignedName =
+        d?.assignedTo && String(d.assignedTo).trim()
+          ? String(d.assignedTo).trim()
+          : null;
+
+      if (!assignedName) unassigned.push(d);
+      else if (myName && assignedName === myName) mine.push(d);
+      else others.push(d);
+    }
+
+    return { unassigned, mine, others };
+  }, [drivers, myName]);
 
   /* ---------- Mutations ---------- */
   const updateDriverStatus = trpc.admin.updateDriverStatus.useMutation();
@@ -258,7 +279,6 @@ export default function Inquiries() {
   const updateContactAssignment =
     trpc.admin.updateContactAssignment.useMutation();
 
-  // ✅ Phase 1 onboarding (admin)
   const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
 
   const handleExport = () => {
@@ -272,13 +292,11 @@ export default function Inquiries() {
     try {
       setRestoringForId(driverId);
 
-      // 1) restore status -> pending
       await updateDriverStatus.mutateAsync({
         id: driverId,
         status: "pending" as any,
       });
 
-      // 2) unassign (recommended so it goes back into the pool)
       await updateDriverAssignment.mutateAsync({
         id: driverId,
         assignedTo: null,
@@ -293,6 +311,214 @@ export default function Inquiries() {
     }
   }
 
+  function DriverCard({ driver }: { driver: any }) {
+    const urgency = getUrgency(driver.createdAt);
+    const urgencyColor = getUrgencyColor(urgency);
+
+    const driverId = Number(driver.id);
+    const isSendingThis = sendingForId === driverId;
+    const isRestoringThis = restoringForId === driverId;
+
+    const docs = (driver?.documents ?? driver?.driverDocuments ?? []) as any[];
+    const completion = getDriverCompletionBadge(docs);
+
+    const assignedName =
+      driver?.assignedTo && String(driver.assignedTo).trim()
+        ? String(driver.assignedTo).trim()
+        : null;
+
+    const isMine = !!assignedName && !!myName && assignedName === myName;
+
+    return (
+      <Card key={driver.id} className="p-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-semibold">{driver.fullName}</h3>
+
+              {/* Assigned chip */}
+              {assignedName ? (
+                <Badge
+                  className={
+                    isMine
+                      ? "bg-green-600/20 text-green-300 border border-green-500/40"
+                      : "bg-blue-600/20 text-blue-300 border border-blue-500/40"
+                  }
+                  title={isMine ? "Assigned to you" : `Assigned to ${assignedName}`}
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  {assignedName}
+                  {isMine && " (you)"}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="text-muted-foreground"
+                  title="Not assigned yet"
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  Unassigned
+                </Badge>
+              )}
+
+              <Badge className={urgencyColor}>
+                <Clock className="h-3 w-3 mr-1" />
+                {timeAgo(driver.createdAt)}
+              </Badge>
+
+              <Badge variant={completion.variant} title={completion.detail}>
+                {completion.text}
+              </Badge>
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              {driver.email} · {driver.phone}
+            </div>
+          </div>
+
+          <Select
+            value={driver.status}
+            onValueChange={(status) =>
+              updateDriverStatus.mutate(
+                { id: driver.id, status: status as any },
+                { onSuccess: () => driversQuery.refetch() }
+              )
+            }
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="reviewing">Reviewing</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Assignment */}
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={driver.assignedTo || "unassigned"}
+            onValueChange={(value) =>
+              updateDriverAssignment.mutate(
+                {
+                  id: driver.id,
+                  assignedTo: value === "unassigned" ? null : value,
+                },
+                { onSuccess: () => driversQuery.refetch() }
+              )
+            }
+          >
+            <SelectTrigger className="w-[260px]">
+              <SelectValue placeholder="Assign to..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {teamMembers.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Notes */}
+        <Textarea
+          defaultValue={driver.internalNotes || ""}
+          placeholder="Internal notes..."
+          onBlur={(e) => {
+            const next = e.target.value ?? "";
+            const prev = driver.internalNotes ?? "";
+            if (next === prev) return;
+
+            updateDriverNotes.mutate(
+              { id: driver.id, notes: next },
+              { onSuccess: () => driversQuery.refetch() }
+            );
+          }}
+        />
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href={`mailto:${driver.email}`}>
+              <Mail className="h-4 w-4 mr-2" />
+              Email
+            </a>
+          </Button>
+
+          <Button variant="outline" size="sm" asChild>
+            <a href={`tel:${driver.phone}`}>
+              <Phone className="h-4 w-4 mr-2" />
+              Call
+            </a>
+          </Button>
+
+          <Button
+            variant="default"
+            size="sm"
+            disabled={sendOnboardingLink.isPending && isSendingThis}
+            onClick={() => {
+              setSendingForId(driverId);
+
+              sendOnboardingLink.mutate(
+                { driverApplicationId: driverId },
+                {
+                  onSuccess: async (res: any) => {
+                    const link = res?.link;
+
+                    if (link && typeof navigator !== "undefined") {
+                      try {
+                        await navigator.clipboard.writeText(link);
+                        alert("Onboarding link sent + copied ✅");
+                      } catch {
+                        alert(`Onboarding link sent ✅\n\n${link}`);
+                      }
+                    } else {
+                      alert("Onboarding link sent ✅");
+                    }
+                  },
+                  onError: (err: any) => {
+                    alert(err?.message || "Failed to send onboarding link");
+                  },
+                  onSettled: () => setSendingForId(null),
+                }
+              );
+            }}
+          >
+            <LinkIcon className="h-4 w-4 mr-2" />
+            {isSendingThis ? "Sending..." : "Send Onboarding Link"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openAdminReview(Number(driver.id))}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Review Uploads
+          </Button>
+
+          {driverView === "archived" && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isRestoringThis}
+              onClick={() => restoreDriverToActive(driverId)}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              {isRestoringThis ? "Restoring..." : "Restore to Active"}
+            </Button>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <AdminLayout title="Inquiries" description="Manage all inbound requests">
       <div className="space-y-6">
@@ -300,10 +526,8 @@ export default function Inquiries() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">Inquiries</h1>
 
-            {/* ✅ Drivers controls (only meaningful on Drivers tab) */}
             {activeTab === "drivers" && (
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Active / Archived toggle */}
                 <Select
                   value={driverView}
                   onValueChange={(v) =>
@@ -315,13 +539,10 @@ export default function Inquiries() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active drivers</SelectItem>
-                    <SelectItem value="archived">
-                      Archived (rejected)
-                    </SelectItem>
+                    <SelectItem value="archived">Archived (rejected)</SelectItem>
                   </SelectContent>
                 </Select>
 
-                {/* ✅ Base filter (All / Unassigned-only) */}
                 <Select
                   value={driverFilter}
                   onValueChange={(v) => setDriverFilter(v as any)}
@@ -335,7 +556,6 @@ export default function Inquiries() {
                   </SelectContent>
                 </Select>
 
-                {/* ✅ NEW: Assignment filter with team member names */}
                 <Select
                   value={
                     assignedQuick === "person"
@@ -349,12 +569,11 @@ export default function Inquiries() {
                       setAssignedPerson(name);
                       return;
                     }
-
                     setAssignedQuick(v as any);
                     setAssignedPerson("");
                   }}
                 >
-                  <SelectTrigger className="w-[240px]">
+                  <SelectTrigger className="w-[260px]">
                     <SelectValue placeholder="Assigned filter..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -364,7 +583,6 @@ export default function Inquiries() {
                       Assigned to me{!myName ? " (unknown)" : ""}
                     </SelectItem>
                     <SelectItem value="others">Assigned to others</SelectItem>
-
                     {teamMembers.map((name) => (
                       <SelectItem key={name} value={`person:${name}`}>
                         {name}
@@ -382,7 +600,6 @@ export default function Inquiries() {
           </Button>
         </div>
 
-        {/* Errors */}
         <div className="space-y-2">
           <ErrorCard
             title="Drivers error"
@@ -415,228 +632,92 @@ export default function Inquiries() {
               <LoadingCard text="Loading driver applications..." />
             )}
 
-            {!driversQuery.isLoading &&
-              drivers.map((driver: any) => {
-                const urgency = getUrgency(driver.createdAt);
-                const urgencyColor = getUrgencyColor(urgency);
-
-                const driverId = Number(driver.id);
-                const isSendingThis = sendingForId === driverId;
-                const isRestoringThis = restoringForId === driverId;
-
-                // ✅ completion badge: supports either driver.documents or driver.driverDocuments
-                const docs = (driver?.documents ??
-                  driver?.driverDocuments ??
-                  []) as any[];
-
-                const completion = getDriverCompletionBadge(docs);
-
-                const assignedLabel =
-                  driver?.assignedTo && String(driver.assignedTo).trim()
-                    ? `Assigned: ${String(driver.assignedTo).trim()}`
-                    : "Unassigned";
-
-                return (
-                  <Card key={driver.id} className="p-6 space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-lg font-semibold">
-                            {driver.fullName}
-                          </h3>
-
-                          {/* ✅ Assigned badge */}
-                          <Badge variant="outline" title={assignedLabel}>
-                            {assignedLabel}
-                          </Badge>
-
-                          {/* Time badge */}
-                          <Badge className={urgencyColor}>
-                            <Clock className="h-3 w-3 mr-1" />
-                            {timeAgo(driver.createdAt)}
-                          </Badge>
-
-                          {/* ✅ Completion badge */}
-                          <Badge
-                            variant={completion.variant}
-                            title={completion.detail}
-                          >
-                            {completion.text}
-                          </Badge>
-                        </div>
-
-                        <div className="text-sm text-muted-foreground">
-                          {driver.email} · {driver.phone}
-                        </div>
-                      </div>
-
-                      <Select
-                        value={driver.status}
-                        onValueChange={(status) =>
-                          updateDriverStatus.mutate(
-                            { id: driver.id, status: status as any },
-                            { onSuccess: () => driversQuery.refetch() }
-                          )
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="reviewing">Reviewing</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Assignment */}
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <Select
-                        value={driver.assignedTo || "unassigned"}
-                        onValueChange={(value) =>
-                          updateDriverAssignment.mutate(
-                            {
-                              id: driver.id,
-                              assignedTo: value === "unassigned" ? null : value,
-                            },
-                            { onSuccess: () => driversQuery.refetch() }
-                          )
-                        }
-                      >
-                        <SelectTrigger className="w-[220px]">
-                          <SelectValue placeholder="Assign to..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unassigned">Unassigned</SelectItem>
-                          {teamMembers.map((name) => (
-                            <SelectItem key={name} value={name}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Notes */}
-                    <Textarea
-                      defaultValue={driver.internalNotes || ""}
-                      placeholder="Internal notes..."
-                      onBlur={(e) => {
-                        const next = e.target.value ?? "";
-                        const prev = driver.internalNotes ?? "";
-                        if (next === prev) return;
-
-                        updateDriverNotes.mutate(
-                          { id: driver.id, notes: next },
-                          { onSuccess: () => driversQuery.refetch() }
-                        );
-                      }}
+            {!driversQuery.isLoading && (
+              <div className="space-y-6">
+                {/* Show sections only when base filter isn't forcing a single bucket */}
+                {driverFilter === "unassigned" ? (
+                  <div className="space-y-4">
+                    <SectionHeader
+                      title="Unassigned"
+                      count={driverSections.unassigned.length}
                     />
-
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`mailto:${driver.email}`}>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email
-                        </a>
-                      </Button>
-
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`tel:${driver.phone}`}>
-                          <Phone className="h-4 w-4 mr-2" />
-                          Call
-                        </a>
-                      </Button>
-
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={sendOnboardingLink.isPending && isSendingThis}
-                        onClick={() => {
-                          setSendingForId(driverId);
-
-                          sendOnboardingLink.mutate(
-                            { driverApplicationId: driverId },
-                            {
-                              onSuccess: async (res: any) => {
-                                const link = res?.link;
-
-                                if (link && typeof navigator !== "undefined") {
-                                  try {
-                                    await navigator.clipboard.writeText(link);
-                                    alert(
-                                      "Onboarding link sent + copied to clipboard ✅"
-                                    );
-                                  } catch {
-                                    alert(`Onboarding link sent ✅\n\n${link}`);
-                                  }
-                                } else {
-                                  alert("Onboarding link sent ✅");
-                                }
-                              },
-                              onError: (err: any) => {
-                                alert(
-                                  err?.message ||
-                                    "Failed to send onboarding link"
-                                );
-                              },
-                              onSettled: () => setSendingForId(null),
-                            }
-                          );
-                        }}
-                      >
-                        <LinkIcon className="h-4 w-4 mr-2" />
-                        {isSendingThis ? "Sending..." : "Send Onboarding Link"}
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAdminReview(Number(driver.id))}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Review Uploads
-                      </Button>
-
-                      {/* ✅ Restore button (ONLY in Archived view) */}
-                      {driverView === "archived" && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={isRestoringThis}
-                          onClick={() => restoreDriverToActive(driverId)}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          {isRestoringThis ? "Restoring..." : "Restore to Active"}
-                        </Button>
-                      )}
+                    {driverSections.unassigned.map((d) => (
+                      <DriverCard key={d.id} driver={d} />
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <SectionHeader
+                        title="Unassigned"
+                        count={driverSections.unassigned.length}
+                      />
+                      {driverSections.unassigned.map((d) => (
+                        <DriverCard key={d.id} driver={d} />
+                      ))}
                     </div>
-                  </Card>
-                );
-              })}
 
-            {!driversQuery.isLoading && drivers.length === 0 && (
-              <LoadingCard
-                text={
-                  driverView === "archived"
-                    ? "No archived (rejected) driver applications."
-                    : driverFilter === "unassigned"
-                    ? "No unassigned driver applications 🎉"
-                    : assignedQuick === "mine"
-                    ? "No driver applications assigned to you."
-                    : assignedQuick === "others"
-                    ? "No driver applications assigned to others."
-                    : assignedQuick === "unassigned"
-                    ? "No unassigned driver applications 🎉"
-                    : assignedQuick === "person"
-                    ? `No driver applications assigned to ${assignedPerson || "that person"}.`
-                    : "No driver applications yet."
-                }
-              />
+
+
+                    {/* If we can't detect myName, still show "Assigned" as a single section */}
+                    {myName ? (
+                      <>
+                        <div className="space-y-4">
+                          <SectionHeader
+                            title="Assigned to you"
+                            count={driverSections.mine.length}
+                          />
+                          {driverSections.mine.map((d) => (
+                            <DriverCard key={d.id} driver={d} />
+                          ))}
+                        </div>
+
+                        <div className="space-y-4">
+                          <SectionHeader
+                            title="Assigned to others"
+                            count={driverSections.others.length}
+                          />
+                          {driverSections.others.map((d) => (
+                            <DriverCard key={d.id} driver={d} />
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <SectionHeader
+                          title="Assigned"
+                          count={driverSections.others.length}
+                        />
+                        {driverSections.others.map((d) => (
+                          <DriverCard key={d.id} driver={d} />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {drivers.length === 0 && (
+                  <LoadingCard
+                    text={
+                      driverView === "archived"
+                        ? "No archived (rejected) driver applications."
+                        : driverFilter === "unassigned"
+                        ? "No unassigned driver applications 🎉"
+                        : assignedQuick === "mine"
+                        ? "No driver applications assigned to you."
+                        : assignedQuick === "others"
+                        ? "No driver applications assigned to others."
+                        : assignedQuick === "unassigned"
+                        ? "No unassigned driver applications 🎉"
+                        : assignedQuick === "person"
+                        ? `No driver applications assigned to ${
+                            assignedPerson || "that person"
+                          }.`
+                        : "No driver applications yet."
+                    }
+                  />
+                )}
+              </div>
             )}
           </TabsContent>
 
@@ -651,19 +732,57 @@ export default function Inquiries() {
                 const urgency = getUrgency(inquiry.createdAt);
                 const urgencyColor = getUrgencyColor(urgency);
 
+                const assignedName =
+                  inquiry?.assignedTo && String(inquiry.assignedTo).trim()
+                    ? String(inquiry.assignedTo).trim()
+                    : null;
+
+                const isMine =
+                  !!assignedName && !!myName && assignedName === myName;
+
                 return (
                   <Card key={inquiry.id} className="p-6 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-lg font-semibold">
                             {inquiry.companyName}
                           </h3>
+
+                          {assignedName ? (
+                            <Badge
+                              className={
+                                isMine
+                                  ? "bg-green-600/20 text-green-300 border border-green-500/40"
+                                  : "bg-blue-600/20 text-blue-300 border border-blue-500/40"
+                              }
+                              title={
+                                isMine
+                                  ? "Assigned to you"
+                                  : `Assigned to ${assignedName}`
+                              }
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              {assignedName}
+                              {isMine && " (you)"}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground"
+                              title="Not assigned yet"
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              Unassigned
+                            </Badge>
+                          )}
+
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(inquiry.createdAt)}
                           </Badge>
                         </div>
+
                         <div className="text-sm text-muted-foreground">
                           {inquiry.contactName} · {inquiry.email} ·{" "}
                           {inquiry.phone}
@@ -691,7 +810,6 @@ export default function Inquiries() {
                       </Select>
                     </div>
 
-                    {/* Assignment */}
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <Select
@@ -706,7 +824,7 @@ export default function Inquiries() {
                           )
                         }
                       >
-                        <SelectTrigger className="w-[220px]">
+                        <SelectTrigger className="w-[260px]">
                           <SelectValue placeholder="Assign to..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -720,7 +838,6 @@ export default function Inquiries() {
                       </Select>
                     </div>
 
-                    {/* Notes */}
                     <Textarea
                       defaultValue={inquiry.internalNotes || ""}
                       placeholder="Internal notes..."
@@ -755,20 +872,59 @@ export default function Inquiries() {
                 const urgency = getUrgency(msg.createdAt);
                 const urgencyColor = getUrgencyColor(urgency);
 
+                const assignedName =
+                  msg?.assignedTo && String(msg.assignedTo).trim()
+                    ? String(msg.assignedTo).trim()
+                    : null;
+
+                const isMine =
+                  !!assignedName && !!myName && assignedName === myName;
+
                 return (
                   <Card key={msg.id} className="p-6 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <div className="font-semibold">{msg.subject}</div>
+
+                          {assignedName ? (
+                            <Badge
+                              className={
+                                isMine
+                                  ? "bg-green-600/20 text-green-300 border border-green-500/40"
+                                  : "bg-blue-600/20 text-blue-300 border border-blue-500/40"
+                              }
+                              title={
+                                isMine
+                                  ? "Assigned to you"
+                                  : `Assigned to ${assignedName}`
+                              }
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              {assignedName}
+                              {isMine && " (you)"}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground"
+                              title="Not assigned yet"
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              Unassigned
+                            </Badge>
+                          )}
+
                           {!msg.isRead && (
                             <Badge variant="destructive">Unread</Badge>
                           )}
+
                           <Badge className={urgencyColor}>
                             <Clock className="h-3 w-3 mr-1" />
                             {timeAgo(msg.createdAt)}
                           </Badge>
                         </div>
+
                         <div className="text-sm text-muted-foreground">
                           {msg.name} · {msg.email}{" "}
                           {msg.phone ? `· ${msg.phone}` : ""}
@@ -795,7 +951,6 @@ export default function Inquiries() {
                       {msg.message}
                     </div>
 
-                    {/* Assignment */}
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <Select
@@ -810,7 +965,7 @@ export default function Inquiries() {
                           )
                         }
                       >
-                        <SelectTrigger className="w-[220px]">
+                        <SelectTrigger className="w-[260px]">
                           <SelectValue placeholder="Assign to..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -824,7 +979,6 @@ export default function Inquiries() {
                       </Select>
                     </div>
 
-                    {/* Notes */}
                     <Textarea
                       defaultValue={msg.internalNotes || ""}
                       placeholder="Internal notes..."
@@ -840,7 +994,6 @@ export default function Inquiries() {
                       }}
                     />
 
-                    {/* Quick actions */}
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" asChild>
                         <a href={`mailto:${msg.email}`}>
