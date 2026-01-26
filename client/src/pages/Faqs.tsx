@@ -13,8 +13,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-// If you don't have Accordion yet, add it via shadcn/ui.
-// This import matches the standard shadcn path:
 import {
   Accordion,
   AccordionContent,
@@ -45,43 +43,23 @@ function formatDate(iso: string | null | undefined) {
 function stripMarkdown(md: string) {
   return (
     md
-      // code fences
       .replace(/```[\s\S]*?```/g, " ")
-      // inline code
       .replace(/`([^`]+)`/g, "$1")
-      // links [text](url)
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
-      // images ![alt](url)
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
-      // headings
       .replace(/^#{1,6}\s+/gm, "")
-      // blockquotes
       .replace(/^\s*>\s?/gm, "")
-      // bullets
       .replace(/^\s*[-*+]\s+/gm, "")
       .replace(/^\s*\d+\.\s+/gm, "")
-      // bold/italic
       .replace(/\*\*([^*]+)\*\*/g, "$1")
       .replace(/\*([^*]+)\*/g, "$1")
       .replace(/__([^_]+)__/g, "$1")
       .replace(/_([^_]+)_/g, "$1")
-      // extra whitespace
       .replace(/\s+/g, " ")
       .trim()
   );
 }
 
-/**
- * Parse markdown into:
- * - introMarkdown: everything BEFORE the first "## Question"
- * - items: [{ q, aMarkdown }]
- *
- * Required format:
- * ## Question?
- * Answer...
- * ## Next question?
- * Answer...
- */
 function parseFaqMarkdown(markdown: string): {
   introMarkdown: string;
   items: Array<{ q: string; aMarkdown: string }>;
@@ -107,10 +85,6 @@ function parseFaqMarkdown(markdown: string): {
   for (const line of lines) {
     const m = line.match(/^##\s+(.+)\s*$/);
     if (m) {
-      // starting a new question
-      if (!currentQ && items.length === 0 && currentA.length === 0) {
-        // intro already collected separately
-      }
       flush();
       currentQ = m[1];
       continue;
@@ -195,17 +169,15 @@ export default function Faqs() {
     if (!q) return items;
 
     return items.filter((it) => {
-      const hay =
-        (it.q || "") + " " + stripMarkdown(it.aMarkdown || "");
+      const hay = (it.q || "") + " " + stripMarkdown(it.aMarkdown || "");
       return hay.toLowerCase().includes(q);
     });
   }, [items, query]);
 
   const schemaJsonLd = useMemo(() => {
-    // Keep schema clean: only include items that have both Q and A
     const entities = items
       .filter((it) => it.q.trim() && it.aMarkdown.trim())
-      .slice(0, 30) // keep it sensible
+      .slice(0, 30)
       .map((it) => ({
         "@type": "Question",
         name: stripMarkdown(it.q),
@@ -224,7 +196,6 @@ export default function Faqs() {
     };
   }, [items]);
 
-  // Optional: track page view
   useEffect(() => {
     track("page_view", { page: "faqs" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,7 +207,6 @@ export default function Faqs() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* SEO schema */}
       {schemaJsonLd ? (
         <script
           type="application/ld+json"
@@ -245,7 +215,6 @@ export default function Faqs() {
       ) : null}
 
       <main className="pt-20">
-        {/* Hero */}
         <div className="bg-card border-b border-border">
           <div className="container py-8">
             <Link
@@ -262,7 +231,9 @@ export default function Faqs() {
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
               {title}
             </h1>
-            <p className="text-muted-foreground mt-2">Last updated: {lastUpdated}</p>
+            <p className="text-muted-foreground mt-2">
+              Last updated: {lastUpdated}
+            </p>
 
             {error ? (
               <p className="text-sm text-destructive mt-3">
@@ -272,10 +243,8 @@ export default function Faqs() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="container py-12">
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* Search */}
             <Card className="p-4">
               <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                 <div className="space-y-1">
@@ -295,7 +264,6 @@ export default function Faqs() {
               </div>
             </Card>
 
-            {/* Optional intro markdown (before first ## question) */}
             {introMarkdown?.trim() ? (
               <Card className="p-6">
                 <div className="prose prose-invert prose-green max-w-none">
@@ -306,7 +274,6 @@ export default function Faqs() {
               </Card>
             ) : null}
 
-            {/* FAQs */}
             {filtered.length ? (
               <Accordion type="single" collapsible className="w-full">
                 {filtered.map((it, idx) => (
@@ -389,8 +356,11 @@ export default function Faqs() {
             ) : (
               <Card className="p-6">
                 <div className="text-muted-foreground">
-                  No results for <span className="text-foreground font-medium">“{query.trim()}”</span>.
-                  Try another keyword.
+                  No results for{" "}
+                  <span className="text-foreground font-medium">
+                    “{query.trim()}”
+                  </span>
+                  . Try another keyword.
                 </div>
               </Card>
             )}
@@ -410,7 +380,10 @@ export default function Faqs() {
                     href="tel:+441158244244"
                     className="inline-flex"
                     onClick={() =>
-                      track("contact_click", { type: "phone", location: "faqs_cta" })
+                      track("contact_click", {
+                        type: "phone",
+                        location: "faqs_cta",
+                      })
                     }
                   >
                     <Button className="gap-2 w-full sm:w-auto">
@@ -420,23 +393,26 @@ export default function Faqs() {
                   </a>
 
                   <a
-                    href="mailto:info@cloudcarsltd.com"
+                    href="mailto:bookings@cloudcarsltd.com"
                     className="inline-flex"
                     onClick={() =>
-                      track("contact_click", { type: "email", location: "faqs_cta" })
+                      track("contact_click", {
+                        type: "email",
+                        location: "faqs_cta",
+                      })
                     }
                   >
                     <Button variant="outline" className="w-full sm:w-auto">
-                      Email info@cloudcarsltd.com
+                      Email bookings@cloudcarsltd.com
                     </Button>
                   </a>
                 </div>
               </div>
             </Card>
 
-            {/* Admin-friendly hint (optional) */}
             <div className="text-xs text-muted-foreground">
-              <span className="font-medium">Tip for admin:</span> In CMS, format each FAQ question as a heading like{" "}
+              <span className="font-medium">Tip for admin:</span> In CMS, format
+              each FAQ question as a heading like{" "}
               <code>## How do I book?</code>
             </div>
           </div>
