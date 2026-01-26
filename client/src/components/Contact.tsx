@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,17 +13,36 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
-const contactInfo = [
+const contactInfo: Array<{
+  icon: any;
+  title: string;
+  primary: ReactNode;
+  secondary: string;
+}> = [
   {
     icon: Phone,
     title: "Give Us a Ring",
-    primary: "0115 8 244 244",
+    primary: (
+      <a
+        href="tel:+441158244244"
+        className="text-foreground hover:text-primary transition-colors underline underline-offset-4"
+      >
+        0115 8 244 244
+      </a>
+    ),
     secondary: "Open 24/7",
   },
   {
     icon: Mail,
     title: "Drop Us an Email",
-    primary: "bookings@cloudcarsltd.com",
+    primary: (
+      <a
+        href="mailto:bookings@cloudcarsltd.com?subject=Booking%20Enquiry%20-%20Cloud%20Cars"
+        className="text-foreground hover:text-primary transition-colors underline underline-offset-4"
+      >
+        bookings@cloudcarsltd.com
+      </a>
+    ),
     secondary: "We'll reply within a day",
   },
 ];
@@ -101,7 +121,6 @@ export default function Contact() {
                 </div>
               ))}
             </div>
-
           </div>
 
           {/* Right Column - Form */}
