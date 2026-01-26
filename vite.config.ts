@@ -1,4 +1,3 @@
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -8,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === "development";
 
   return {
-    plugins: [react(), tailwindcss(), isDev && jsxLocPlugin()].filter(Boolean),
+    plugins: [react(), tailwindcss()],
 
     resolve: {
       alias: {
