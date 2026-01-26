@@ -313,6 +313,36 @@ export const siteImages = mysqlTable("site_images", {
 });
 
 /* ============================================================================
+ * CMS Policy Docs (Terms / Privacy / Cookies)
+ * ========================================================================== */
+export const policyDocs = mysqlTable(
+  "policy_docs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+
+    // e.g. "terms", "privacy", "cookies"
+    slug: varchar("slug", { length: 64 }).notNull().unique(),
+
+    title: varchar("title", { length: 255 }).notNull(),
+    markdown: text("markdown").notNull(),
+
+    // What shows on the public pages ("Last updated: ...")
+    lastUpdated: datetime("last_updated", { mode: "date" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("ux_policy_docs_slug").on(t.slug),
+    updatedIdx: index("ix_policy_docs_updated").on(t.updatedAt),
+  })
+);
+
+export type PolicyDoc = typeof policyDocs.$inferSelect;
+export type InsertPolicyDoc = typeof policyDocs.$inferInsert;
+
+/* ============================================================================
  * Admin users
  * ========================================================================== */
 export const adminUsers = mysqlTable(

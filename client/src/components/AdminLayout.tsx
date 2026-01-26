@@ -10,6 +10,7 @@ import {
   X,
   Home,
   Loader2,
+  ScrollText,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/content", label: "Edit Content", icon: FileText },
   { href: "/admin/images", label: "Manage Images", icon: Image },
+  { href: "/admin/policies", label: "Policies", icon: ScrollText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -27,7 +29,11 @@ interface AdminLayoutProps {
   description?: string;
 }
 
-export default function AdminLayout({ children, title, description }: AdminLayoutProps) {
+export default function AdminLayout({
+  children,
+  title,
+  description,
+}: AdminLayoutProps) {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,7 +51,9 @@ export default function AdminLayout({ children, title, description }: AdminLayou
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Admin Access Required</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-4">
+            Admin Access Required
+          </h1>
           <p className="text-muted-foreground mb-6">
             Please sign in to access the content management system.
           </p>
@@ -62,7 +70,9 @@ export default function AdminLayout({ children, title, description }: AdminLayou
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-4">
+            Access Denied
+          </h1>
           <p className="text-muted-foreground mb-6">
             You don't have permission to access the admin area.
           </p>
@@ -78,10 +88,19 @@ export default function AdminLayout({ children, title, description }: AdminLayou
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border h-16 flex items-center px-4">
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-foreground">
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 text-foreground"
+        >
+          {sidebarOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
-        <span className="ml-4 font-semibold text-foreground">Cloud Cars Admin</span>
+        <span className="ml-4 font-semibold text-foreground">
+          Cloud Cars Admin
+        </span>
       </header>
 
       {/* Sidebar */}
@@ -97,7 +116,9 @@ export default function AdminLayout({ children, title, description }: AdminLayou
               <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
               <div>
                 <span className="font-semibold text-foreground">Cloud Cars</span>
-                <span className="block text-xs text-muted-foreground">Admin Panel</span>
+                <span className="block text-xs text-muted-foreground">
+                  Admin Panel
+                </span>
               </div>
             </Link>
           </div>
@@ -157,8 +178,12 @@ export default function AdminLayout({ children, title, description }: AdminLayou
         <div className="p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{title}</h1>
-            {description && <p className="text-muted-foreground mt-2">{description}</p>}
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+              {title}
+            </h1>
+            {description && (
+              <p className="text-muted-foreground mt-2">{description}</p>
+            )}
           </div>
 
           {/* Page Content */}

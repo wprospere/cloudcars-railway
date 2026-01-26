@@ -17,6 +17,7 @@ import ImageManager from "./pages/admin/ImageManager";
 import AdminSettings from "./pages/admin/Settings";
 import Inquiries from "./pages/admin/Inquiries";
 import TeamMembers from "./pages/admin/TeamMembers";
+import PoliciesAdmin from "./pages/admin/PoliciesAdmin";
 
 import DriverOnboardingPage from "@/pages/DriverOnboarding";
 import DriverOnboardingReview from "@/pages/admin/DriverOnboardingReview";
@@ -38,10 +39,14 @@ function Router() {
       <Route path="/admin/team-members" component={TeamMembers} />
       <Route path="/admin/content" component={ContentEditor} />
       <Route path="/admin/images" component={ImageManager} />
+      <Route path="/admin/policies" component={PoliciesAdmin} />
       <Route path="/admin/settings" component={AdminSettings} />
 
       {/* Review onboarding docs (admin) */}
-      <Route path="/admin/driver-onboarding/:id" component={DriverOnboardingReview} />
+      <Route
+        path="/admin/driver-onboarding/:id"
+        component={DriverOnboardingReview}
+      />
 
       <Route path="/admin" component={AdminDashboard} />
 

@@ -210,6 +210,7 @@ function normalizeTeamMembers(rows: any[]): TeamMemberOut[] {
 
 /* ----------------------------------------
    ✅ Policy CMS helpers (markdown + lastUpdated stored in extraData JSON)
+   NOTE: This avoids needing new DB tables and works with your current CMS.
 ---------------------------------------- */
 const POLICY_SLUGS = ["privacy", "terms", "cookies"] as const;
 type PolicySlug = (typeof POLICY_SLUGS)[number];
@@ -473,6 +474,74 @@ export const appRouter = router({
       }),
 
     /* ---------- POLICY DOCS (Admin) ---------- */
+    listPolicyDocs: adminProcedure.query(async () => {
+      const results = await Promise.all(
+        POLICY_SLUGS.map(async (slug) => {
+          const sectionKey = policySectionKey(slug);
+          const row = await getSiteContent(sectionKey);
+          const extra = safeParsePolicyExtra(row?.extraData ?? null);
+
+          const markdown =
+            (typeof extra.markdown === "string" && extra.markdown.trim()) ||
+            (typeof row?.description === "string" && row.description.trim()) ||
+            "";
+
+          const lastUpdated =
+            (typeof extra.lastUpdated === "string" &&
+              extra.lastUpdated.trim()) ||
+            null;
+
+          return {
+            slug,
+            sectionKey,
+            title: row?.title ?? policyTitle(slug),
+            markdown,
+            lastUpdated,
+            exists: !!row,
+          };
+        })
+      );
+
+      return results;
+    }),
+
+    upsertPolicyDoc: adminProcedure
+      .input(
+        z.object({
+          slug: z.enum(POLICY_SLUGS),
+          title: z.string().optional(),
+          markdown: z.string().default(""),
+          lastUpdated: z.string().optional(), // ISO string
+        })
+      )
+      .mutation(async ({ input }) => {
+        const sectionKey = policySectionKey(input.slug);
+
+        const existing = await getSiteContent(sectionKey);
+        const extra = safeParsePolicyExtra(existing?.extraData ?? null);
+
+        const nextExtra: PolicyExtra = {
+          ...extra,
+          markdown: input.markdown ?? "",
+          lastUpdated: (input.lastUpdated ?? nowIso()).trim(),
+        };
+
+        await upsertSiteContent({
+          sectionKey,
+          title: (input.title ?? existing?.title ?? policyTitle(input.slug))
+            .toString()
+            .trim(),
+          subtitle: existing?.subtitle ?? null,
+          description: existing?.description ?? null,
+          buttonText: existing?.buttonText ?? null,
+          buttonLink: existing?.buttonLink ?? null,
+          extraData: JSON.stringify(nextExtra),
+        } as any);
+
+        return { success: true };
+      }),
+
+    /* Back-compat: keep your old mutation name too (optional) */
     updatePolicyDoc: adminProcedure
       .input(
         z.object({
