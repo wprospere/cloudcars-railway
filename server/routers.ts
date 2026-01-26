@@ -208,6 +208,56 @@ function normalizeTeamMembers(rows: any[]): TeamMemberOut[] {
 }
 
 /* ----------------------------------------
+   ✅ Policy CMS helpers (markdown + lastUpdated stored in extraData JSON)
+---------------------------------------- */
+const POLICY_SLUGS = ["privacy", "terms", "cookies"] as const;
+type PolicySlug = (typeof POLICY_SLUGS)[number];
+
+function policySectionKey(slug: PolicySlug) {
+  return `policy.${slug}`;
+}
+
+type PolicyExtra = {
+  markdown?: string | null;
+  lastUpdated?: string | null; // ISO string
+};
+
+function safeParsePolicyExtra(extraData: any): PolicyExtra {
+  if (!extraData) return {};
+  if (typeof extraData === "object") return extraData as PolicyExtra;
+
+  if (typeof extraData === "string") {
+    try {
+      const parsed = JSON.parse(extraData);
+      if (parsed && typeof parsed === "object") return parsed as PolicyExtra;
+      return {};
+    } catch {
+      // If old data is plain string, treat it as markdown
+      return { markdown: extraData };
+    }
+  }
+
+  return {};
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function policyTitle(slug: PolicySlug) {
+  switch (slug) {
+    case "privacy":
+      return "Privacy Notice";
+    case "terms":
+      return "Terms & Conditions";
+    case "cookies":
+      return "Cookie Policy";
+    default:
+      return "Policy";
+  }
+}
+
+/* ----------------------------------------
    App Router
 ---------------------------------------- */
 export const appRouter = router({
@@ -393,6 +443,68 @@ export const appRouter = router({
       ),
 
     getAllContent: publicProcedure.query(getAllSiteContent),
+
+    /* ---------- POLICY DOCS (Public) ---------- */
+    getPolicyDoc: publicProcedure
+      .input(z.object({ slug: z.enum(POLICY_SLUGS) }))
+      .query(async ({ input }) => {
+        const sectionKey = policySectionKey(input.slug);
+        const row = await getSiteContent(sectionKey);
+
+        const extra = safeParsePolicyExtra(row?.extraData ?? null);
+
+        const markdown =
+          (typeof extra.markdown === "string" && extra.markdown.trim()) ||
+          (typeof row?.description === "string" && row.description.trim()) ||
+          "";
+
+        const lastUpdated =
+          (typeof extra.lastUpdated === "string" && extra.lastUpdated.trim()) ||
+          null;
+
+        return {
+          slug: input.slug,
+          sectionKey,
+          title: row?.title ?? policyTitle(input.slug),
+          markdown,
+          lastUpdated,
+        };
+      }),
+
+    /* ---------- POLICY DOCS (Admin) ---------- */
+    updatePolicyDoc: adminProcedure
+      .input(
+        z.object({
+          slug: z.enum(POLICY_SLUGS),
+          title: z.string().optional(),
+          markdown: z.string().default(""),
+          lastUpdated: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const sectionKey = policySectionKey(input.slug);
+
+        const existing = await getSiteContent(sectionKey);
+        const extra = safeParsePolicyExtra(existing?.extraData ?? null);
+
+        const nextExtra: PolicyExtra = {
+          ...extra,
+          markdown: input.markdown ?? "",
+          lastUpdated: (input.lastUpdated ?? nowIso()).trim(),
+        };
+
+        await upsertSiteContent({
+          sectionKey,
+          title: input.title ?? existing?.title ?? policyTitle(input.slug),
+          subtitle: existing?.subtitle ?? null,
+          description: existing?.description ?? null,
+          buttonText: existing?.buttonText ?? null,
+          buttonLink: existing?.buttonLink ?? null,
+          extraData: JSON.stringify(nextExtra),
+        } as any);
+
+        return { success: true };
+      }),
 
     getImage: publicProcedure
       .input(z.object({ imageKey: z.string() }))
@@ -671,7 +783,11 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateDriverApplicationStatus(input.id, input.status as any, adminEmail);
+        await updateDriverApplicationStatus(
+          input.id,
+          input.status as any,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -687,7 +803,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateDriverApplicationAssignment(input.id, input.assignedTo, adminEmail);
+        await updateDriverApplicationAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -746,7 +866,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateCorporateInquiryAssignment(input.id, input.assignedTo, adminEmail);
+        await updateCorporateInquiryAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -797,7 +921,11 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
       .mutation(async ({ input, ctx }) => {
         const adminEmail = getAdminEmail(ctx);
-        await updateContactMessageAssignment(input.id, input.assignedTo, adminEmail);
+        await updateContactMessageAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
         return { success: true };
       }),
 
@@ -1095,7 +1223,9 @@ export const appRouter = router({
     getDriverOnboardingProfile: adminProcedure
       .input(z.object({ driverApplicationId: z.number() }))
       .query(async ({ input }) => {
-        const profile = await getDriverOnboardingProfile(input.driverApplicationId);
+        const profile = await getDriverOnboardingProfile(
+          input.driverApplicationId
+        );
 
         const documents = await Promise.all(
           (profile?.documents ?? []).map(async (d: any) => ({
