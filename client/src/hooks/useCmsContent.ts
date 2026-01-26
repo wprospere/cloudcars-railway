@@ -11,7 +11,7 @@ const defaultContent: Record<string, {
   hero: {
     title: "Getting You There,",
     subtitle: "Every Time",
-    description: "Cloud Cars has been moving Nottingham for over 15 years. From quick city trips to airport runs, our local drivers know the best routes to get you where you need to be.",
+    description: "Cloud Cars has been moving Nottingham for over 12 years. From quick city trips to airport runs, our local drivers know the best routes to get you where you need to be.",
     buttonText: "Book Your Ride",
     buttonLink: "#booking",
   },
