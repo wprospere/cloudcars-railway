@@ -185,6 +185,9 @@ importers:
       react-hook-form:
         specifier: ^7.64.0
         version: 7.69.0(react@19.2.3)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.7)(react@19.2.3)
       react-resizable-panels:
         specifier: ^3.0.6
         version: 3.0.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -294,15 +297,6 @@ importers:
       vitest:
         specifier: ^2.1.4
         version: 2.1.9(@types/node@24.10.4)(lightningcss@1.30.2)
-
-  client:
-    dependencies:
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.2.7)(react@19.2.3)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
 
 packages:
 

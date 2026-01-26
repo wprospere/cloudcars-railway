@@ -4,17 +4,17 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
-"scripts": {
-  "dev": "cross-env NODE_ENV=development tsx watch server/railway-server.ts",
-  "build": "vite build && node -e \"require('fs').accessSync('dist/public/index.html')\" && esbuild server/railway-server.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/server/railway-server.js",
-  "start": "node dist/server/railway-server.js",
-  "check": "tsc --noEmit",
-  "format": "prettier --write .",
-  "test": "vitest run",
-  "db:generate": "drizzle-kit generate",
-  "db:migrate": "drizzle-kit migrate",
-  "db:push": "pnpm db:generate && pnpm db:migrate"
-},
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsx watch server/railway-server.ts",
+    "build": "vite build && node -e \"require('fs').accessSync('dist/public/index.html')\" && esbuild server/railway-server.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/server/railway-server.js",
+    "start": "node dist/server/railway-server.js",
+    "check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "pnpm db:generate && pnpm db:migrate"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
     "@aws-sdk/s3-request-presigner": "^3.693.0",
@@ -75,6 +75,7 @@
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.64.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
     "recharts": "^2.15.2",
     "sonner": "^2.0.7",
