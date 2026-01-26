@@ -29,8 +29,8 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
-import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 
+import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
 import { getDriverCompletionBadge } from "@/lib/driverCompletion";
 
 /* ---------------- Helpers ---------------- */
@@ -182,7 +182,7 @@ function exportToCSV(data: any[], filename: string) {
 
 /* ---------------- Page ---------------- */
 export default function Inquiries() {
-  const auth: any = useAuth({
+  useAuth({
     redirectOnUnauthenticated: true,
     redirectPath: "/admin/login",
   });
@@ -190,7 +190,9 @@ export default function Inquiries() {
   // ✅ Force your name for one-click assignment + "Assigned to me"
   const myName = "Wayne";
 
-  const [activeTab, setActiveTab] = useState("drivers");
+  const [activeTab, setActiveTab] = useState<"drivers" | "corporate" | "messages">(
+    "drivers"
+  );
 
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
@@ -257,9 +259,7 @@ export default function Inquiries() {
         if (assignedQuick === "all") return true;
         if (assignedQuick === "unassigned") return !assignedTrim;
 
-        if (assignedQuick === "mine") {
-          return assignedTrim === myName;
-        }
+        if (assignedQuick === "mine") return assignedTrim === myName;
 
         if (assignedQuick === "others") {
           if (!assignedTrim) return false;
@@ -413,10 +413,8 @@ export default function Inquiries() {
     const createdMs = new Date(driver?.createdAt ?? 0).getTime();
     const sla = getSlaLevel(createdMs);
 
-    const isAssignWayneLoading =
-      assigningKey === `driver:${driverId}:Wayne`;
-    const isUnassignLoading =
-      assigningKey === `driver:${driverId}:unassigned`;
+    const isAssignWayneLoading = assigningKey === `driver:${driverId}:Wayne`;
+    const isUnassignLoading = assigningKey === `driver:${driverId}:unassigned`;
 
     return (
       <Card key={driver.id} className="p-6 space-y-4">
@@ -645,9 +643,7 @@ export default function Inquiries() {
               <div className="flex items-center gap-2 flex-wrap">
                 <Select
                   value={driverView}
-                  onValueChange={(v) =>
-                    setDriverView(v as "active" | "archived")
-                  }
+                  onValueChange={(v) => setDriverView(v as "active" | "archived")}
                 >
                   <SelectTrigger className="w-[170px]">
                     <SelectValue />
@@ -728,7 +724,7 @@ export default function Inquiries() {
           />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
           <TabsList>
             <TabsTrigger value="drivers">Drivers ({drivers.length})</TabsTrigger>
             <TabsTrigger value="corporate">
@@ -848,7 +844,10 @@ export default function Inquiries() {
                             {inquiry.companyName}
                           </h3>
 
-                          <Badge className={slaBadgeClass(sla.level)} title="SLA by age">
+                          <Badge
+                            className={slaBadgeClass(sla.level)}
+                            title="SLA by age"
+                          >
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {sla.label}
                           </Badge>
@@ -946,7 +945,9 @@ export default function Inquiries() {
                         variant={isMine ? "outline" : "secondary"}
                         size="sm"
                         disabled={assigningKey === corpKeyAssign}
-                        onClick={() => assignCorporate(Number(inquiry.id), "Wayne")}
+                        onClick={() =>
+                          assignCorporate(Number(inquiry.id), "Wayne")
+                        }
                       >
                         <UserCheck className="h-4 w-4 mr-2" />
                         {assigningKey === corpKeyAssign
@@ -1009,7 +1010,8 @@ export default function Inquiries() {
 
                 const isMine = !!assignedName && assignedName === myName;
 
-                const sla = getSlaLevel(msg?.createdAt);
+                const createdMs = new Date(msg?.createdAt ?? 0).getTime();
+                const sla = getSlaLevel(createdMs);
 
                 const msgKeyAssign = `msg:${Number(msg.id)}:Wayne`;
                 const msgKeyUnassign = `msg:${Number(msg.id)}:unassigned`;
@@ -1021,7 +1023,10 @@ export default function Inquiries() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <div className="font-semibold">{msg.subject}</div>
 
-                          <Badge className={slaBadgeClass(sla.level)} title="SLA by age">
+                          <Badge
+                            className={slaBadgeClass(sla.level)}
+                            title="SLA by age"
+                          >
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {sla.label}
                           </Badge>

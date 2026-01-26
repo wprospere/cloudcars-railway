@@ -19,13 +19,6 @@ function track(eventName: string, props: TrackProps = {}) {
   if (typeof w.gtag === "function") {
     w.gtag("event", eventName, props);
   }
-
-  // ✅ Plausible (if installed)
-  if (typeof w.plausible === "function") {
-    w.plausible(eventName, { props });
-  }
-
-  // (Optional) You can add other trackers here later (PostHog, Meta Pixel, etc.)
 }
 
 const contactInfo: Array<{

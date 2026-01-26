@@ -1,5 +1,26 @@
-import { Car, Package, Plane, Crown, Users, Check, Mail, Clock } from "lucide-react";
+import {
+  Car,
+  Package,
+  Plane,
+  Crown,
+  Users,
+  Check,
+  Mail,
+  Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+type TrackProps = Record<string, string | number | boolean | null | undefined>;
+
+function track(eventName: string, props: TrackProps = {}) {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+
+  // ✅ Google Analytics 4 (gtag)
+  if (typeof w.gtag === "function") {
+    w.gtag("event", eventName, props);
+  }
+}
 
 const services = [
   {
@@ -123,12 +144,12 @@ export default function Services() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">
             Whatever You Need,{" "}
             <span className="text-gradient-green font-['Playfair_Display',serif] italic">
-              We've Got You
+              We&apos;ve Got You
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            From quick trips around town to airport transfers and courier deliveries, 
-            Cloud Cars has the right service for every journey.
+            From quick trips around town to airport transfers and courier
+            deliveries, Cloud Cars has the right service for every journey.
           </p>
         </div>
 
@@ -201,7 +222,19 @@ export default function Services() {
                     : "bg-secondary hover:bg-secondary/80 text-foreground"
                 }`}
               >
-                <a href="https://book.cloudcarsltd.com/portal/#/booking" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://book.cloudcarsltd.com/portal/#/booking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    track("book_now_click", {
+                      location: "services_card",
+                      service_id: service.id,
+                      service_title: service.title,
+                      popular: service.popular,
+                    })
+                  }
+                >
                   Book Now
                 </a>
               </Button>
@@ -227,7 +260,7 @@ export default function Services() {
                   </p>
                 </div>
               </div>
-              
+
               <p className="text-muted-foreground mb-6 leading-relaxed">
                 {largerVehicles.description}
               </p>
@@ -250,7 +283,7 @@ export default function Services() {
               <h4 className="text-lg font-bold text-foreground mb-4">
                 How to Book Larger Vehicles
               </h4>
-              
+
               <div className="space-y-4 mb-6">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -260,15 +293,21 @@ export default function Services() {
                     <p className="text-sm font-medium text-foreground mb-1">
                       Email Us
                     </p>
-                    <a 
-                      href={`mailto:${largerVehicles.email}`}
+                    <a
+                      href={`mailto:${largerVehicles.email}?subject=Larger%20Vehicle%20Booking%20Enquiry%20-%20Cloud%20Cars`}
+                      onClick={() =>
+                        track("contact_click", {
+                          type: "email",
+                          location: "larger_vehicles",
+                        })
+                      }
                       className="text-primary hover:underline font-medium"
                     >
                       {largerVehicles.email}
                     </a>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <Clock className="w-5 h-5 text-primary" />
@@ -278,7 +317,11 @@ export default function Services() {
                       Advance Notice Required
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      Please give us at least <span className="text-primary font-semibold">{largerVehicles.notice}</span> notice for larger vehicle bookings
+                      Please give us at least{" "}
+                      <span className="text-primary font-semibold">
+                        {largerVehicles.notice}
+                      </span>{" "}
+                      notice for larger vehicle bookings
                     </p>
                   </div>
                 </div>
@@ -286,7 +329,9 @@ export default function Services() {
 
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground">
-                  Include your pickup location, destination, date, time, and number of passengers in your email. We'll get back to you with a quote within a few hours.
+                  Include your pickup location, destination, date, time, and
+                  number of passengers in your email. We&apos;ll get back to you
+                  with a quote within a few hours.
                 </p>
               </div>
             </div>
@@ -299,7 +344,13 @@ export default function Services() {
             Need regular transport for your business?
           </p>
           <Button
-            onClick={scrollToCorporate}
+            onClick={() => {
+              scrollToCorporate();
+              track("cta_click", {
+                location: "services_section",
+                cta: "corporate_accounts",
+              });
+            }}
             variant="outline"
             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
           >
