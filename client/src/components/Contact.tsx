@@ -4,14 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Phone,
-  Mail,
-  CheckCircle2,
-  Loader2,
-} from "lucide-react";
+import { Phone, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+
+type TrackProps = Record<string, string | number | boolean | null | undefined>;
+
+function track(eventName: string, props: TrackProps = {}) {
+  if (typeof window === "undefined") return;
+
+  const w = window as any;
+
+  // ✅ Google Analytics 4 (gtag)
+  if (typeof w.gtag === "function") {
+    w.gtag("event", eventName, props);
+  }
+
+  // ✅ Plausible (if installed)
+  if (typeof w.plausible === "function") {
+    w.plausible(eventName, { props });
+  }
+
+  // (Optional) You can add other trackers here later (PostHog, Meta Pixel, etc.)
+}
 
 const contactInfo: Array<{
   icon: any;
@@ -25,6 +40,9 @@ const contactInfo: Array<{
     primary: (
       <a
         href="tel:+441158244244"
+        onClick={() =>
+          track("contact_click", { type: "phone", location: "contact_card" })
+        }
         className="text-foreground hover:text-primary transition-colors underline underline-offset-4"
       >
         0115 8 244 244
@@ -38,6 +56,9 @@ const contactInfo: Array<{
     primary: (
       <a
         href="mailto:bookings@cloudcarsltd.com?subject=Booking%20Enquiry%20-%20Cloud%20Cars"
+        onClick={() =>
+          track("contact_click", { type: "email", location: "contact_card" })
+        }
         className="text-foreground hover:text-primary transition-colors underline underline-offset-4"
       >
         bookings@cloudcarsltd.com
@@ -61,9 +82,11 @@ export default function Contact() {
     onSuccess: () => {
       setSubmitted(true);
       toast.success("Message sent! We'll get back to you soon.");
+      track("contact_form_submitted", { location: "contact_form" });
     },
     onError: (error) => {
       toast.error(error.message || "Something went wrong. Please try again.");
+      track("contact_form_error", { location: "contact_form" });
     },
   });
 
@@ -97,8 +120,8 @@ export default function Contact() {
               </span>
             </h2>
             <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-              Got a question? Need to book? Just want to say hello? 
-              We're here and happy to help however we can.
+              Got a question? Need to book? Just want to say hello? We&apos;re
+              here and happy to help however we can.
             </p>
 
             {/* Contact Cards */}
@@ -134,8 +157,8 @@ export default function Contact() {
                   Message Sent
                 </h3>
                 <p className="text-muted-foreground max-w-sm mx-auto">
-                  Thanks for getting in touch. We'll get back to you 
-                  as soon as we can.
+                  Thanks for getting in touch. We&apos;ll get back to you as soon
+                  as we can.
                 </p>
               </div>
             ) : (
@@ -144,7 +167,7 @@ export default function Contact() {
                   Send Us a Message
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  Fill in the form and we'll get back to you.
+                  Fill in the form and we&apos;ll get back to you.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
