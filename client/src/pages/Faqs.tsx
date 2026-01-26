@@ -407,7 +407,7 @@ export default function Faqs() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="tel:+441159700700"
+                    href="tel:+441158244244"
                     className="inline-flex"
                     onClick={() =>
                       track("contact_click", { type: "phone", location: "faqs_cta" })
