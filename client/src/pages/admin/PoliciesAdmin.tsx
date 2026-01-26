@@ -35,7 +35,7 @@ export default function PoliciesAdmin() {
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
   const policyQuery = trpc.cms.getPolicyDoc.useQuery({ slug });
-  const upsert = trpc.cms.upsertPolicyDoc.useMutation();
+  const upsert = trpc.cms.updatePolicyDoc.useMutation();
 
   const isSaving = upsert.isPending;
   const previewUrl = useMemo(() => publicPath(slug), [slug]);

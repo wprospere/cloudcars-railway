@@ -17,9 +17,9 @@ import { Link, useLocation } from "wouter";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/policies", label: "Policies", icon: FileText },
   { href: "/admin/content", label: "Edit Content", icon: FileText },
   { href: "/admin/images", label: "Manage Images", icon: Image },
-  { href: "/admin/policies", label: "Policies", icon: ScrollText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
