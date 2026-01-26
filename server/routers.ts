@@ -120,6 +120,7 @@ function calculateQuote(serviceType: string, distance: number): number {
     airport: 3500,
     executive: 550,
   };
+
   const perMileRates: Record<string, number> = {
     standard: 180,
     courier: 150,
@@ -815,7 +816,9 @@ export const appRouter = router({
        Corporate inquiries
     ============================ */
     getCorporateInquiries: adminProcedure
-      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
       .query(async ({ input }) => {
         const rows: any[] = await getAllCorporateInquiries();
         const limit = input?.limit ?? 200;
@@ -878,7 +881,9 @@ export const appRouter = router({
        Contact messages
     ============================ */
     getContactMessages: adminProcedure
-      .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
       .query(async ({ input }) => {
         const rows: any[] = await getAllContactMessages();
         const limit = input?.limit ?? 200;

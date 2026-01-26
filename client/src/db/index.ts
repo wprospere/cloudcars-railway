@@ -1,20 +1,21 @@
-/**
- * CLIENT-SIDE DB PLACEHOLDER
- *
- * ❌ No drizzle
- * ❌ No mysql
- * ❌ No schema imports
- *
- * The client NEVER talks directly to the database.
- * All data access happens via:
- *   - tRPC
- *   - REST APIs
- */
+// client/src/db/index.ts  (or server/src/db/index.ts)
+import "dotenv/config";
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
 
-export type ClientDB = never;
+// ✅ Export pool so migrate.ts can import it
+export const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT ?? 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 
-/**
- * This file exists only to prevent accidental DB usage
- * in the browser and to keep imports explicit.
- */
-export const db = null as unknown as ClientDB;
+  // optional but nice:
+  waitForConnections: true,
+  connectionLimit: Number(process.env.DB_POOL_LIMIT ?? 10),
+  queueLimit: 0,
+});
+
+// ✅ Drizzle DB from the pool
+export const db = drizzle(pool);

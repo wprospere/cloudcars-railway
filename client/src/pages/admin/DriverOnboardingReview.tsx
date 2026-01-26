@@ -321,7 +321,7 @@ export default function DriverOnboardingReview() {
           ) : activity.length === 0 ? (
             <div className="text-sm text-muted-foreground">No activity yet.</div>
           ) : (
-            <AdminActivityTimeline items={activity} />
+            <AdminActivityTimeline rows={activity} />
           )}
         </Card>
       </div>
