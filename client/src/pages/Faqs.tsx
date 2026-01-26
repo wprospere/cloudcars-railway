@@ -415,7 +415,7 @@ export default function Faqs() {
                   >
                     <Button className="gap-2 w-full sm:w-auto">
                       <Phone className="w-4 h-4" />
-                      Call 0115 970 0700
+                      Call 0115 8 244 244
                     </Button>
                   </a>
 
