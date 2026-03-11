@@ -1,50 +1,186 @@
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Helmet } from "react-helmet-async";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import PageLayout from "@/layouts/PageLayout";
+import ServiceHero from "@/components/ServiceHero";
+import FeatureCard from "@/components/FeatureCard";
 
 export default function CorporateTransport() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <PageLayout>
+      <Helmet>
+        <title>Corporate Transport Nottingham | Cloud Cars</title>
+        <meta
+          name="description"
+          content="Dependable corporate transport in Nottingham for staff travel, airport runs, hotel transport, shuttle services and business account journeys with Cloud Cars."
+        />
+        <link
+          rel="canonical"
+          href="https://cloudcarsltd.com/corporate-transport-nottingham"
+        />
+      </Helmet>
 
-      <main className="container mx-auto px-6 py-16">
-        <h1 className="text-4xl font-bold mb-6">
-          Corporate Transport Nottingham
-        </h1>
+      <ServiceHero
+        eyebrow="Cloud Cars Business Travel"
+        title="Corporate Transport Nottingham"
+        description="Cloud Cars provides dependable corporate transport services in Nottingham for staff travel, business accounts, airport runs, hotel transport and scheduled journeys."
+        ctaLabel="Book Corporate Travel"
+      />
 
-        <p className="mb-6">
-          Cloud Cars provides dependable corporate transport services in Nottingham for
-          staff travel, business accounts, airport runs, hotel transport and scheduled
-          journeys.
-        </p>
+      <section className="pb-16 lg:pb-24">
+        <div className="container max-w-6xl">
+          <div className="grid md:grid-cols-3 gap-6 mb-14">
+            <FeatureCard
+              title="Staff Transport"
+              text="Reliable transport support for employees, teams, shift coverage and regular business travel."
+            />
+            <FeatureCard
+              title="Account Support"
+              text="Practical account-based transport solutions for businesses that need invoicing and regular booking support."
+            />
+            <FeatureCard
+              title="Flexible Scheduling"
+              text="Ideal for airport runs, hotel transport, scheduled shuttles and ongoing operational transport needs."
+            />
+          </div>
 
-        <h2 className="text-2xl font-semibold mt-10 mb-4">
-          Corporate Services
-        </h2>
+          <section className="grid lg:grid-cols-2 gap-8 mb-14">
+            <div className="rounded-2xl border bg-card p-8">
+              <h2 className="text-2xl font-bold mb-4">
+                Corporate services
+              </h2>
 
-        <ul className="list-disc pl-6 mb-8 space-y-2">
-          <li>Staff transport</li>
-          <li>Airport transfers</li>
-          <li>Hotel and hospitality transport</li>
-          <li>Account and invoice-based bookings</li>
-          <li>Scheduled shuttle services</li>
-        </ul>
+              <ul className="space-y-3 text-muted-foreground">
+                <li>Staff transport</li>
+                <li>Airport transfers</li>
+                <li>Hotel and hospitality transport</li>
+                <li>Account and invoice-based bookings</li>
+                <li>Scheduled shuttle services</li>
+              </ul>
+            </div>
 
-        <h2 className="text-2xl font-semibold mt-10 mb-4">
-          Why Choose Cloud Cars
-        </h2>
+            <div className="rounded-2xl border bg-card p-8">
+              <h2 className="text-2xl font-bold mb-4">
+                Why businesses choose Cloud Cars
+              </h2>
 
-        <p className="mb-6">
-          We support businesses with reliable drivers, professional service and flexible
-          transport solutions tailored to operational needs.
-        </p>
+              <p className="text-muted-foreground mb-4">
+                We support businesses with reliable drivers, professional
+                service and flexible transport solutions tailored to operational
+                needs.
+              </p>
 
-        <p>
-          To discuss a business account or regular transport support, contact Cloud Cars
-          today.
-        </p>
-      </main>
+              <p className="text-muted-foreground mb-6">
+                Whether you need staff collections, guest transport, airport
+                journeys or regular shuttle support, Cloud Cars provides a
+                dependable and professional service.
+              </p>
 
-      <Footer />
-    </div>
+              <Button
+                asChild
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Link href="/executive-car-nottingham">
+                  <a>View Executive Travel</a>
+                </Link>
+              </Button>
+            </div>
+          </section>
+
+          <section className="grid lg:grid-cols-2 gap-8 mb-14">
+            <div className="rounded-2xl border bg-card p-8">
+              <h2 className="text-2xl font-bold mb-4">
+                Ideal for business transport needs
+              </h2>
+
+              <ul className="space-y-3 text-muted-foreground">
+                <li>Corporate airport transfers</li>
+                <li>Hotel guest and hospitality transport</li>
+                <li>Staff and apprentice shuttle journeys</li>
+                <li>Regular account bookings</li>
+                <li>Flexible pre-booked transport support</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-8">
+              <h2 className="text-2xl font-bold mb-4">
+                Related Cloud Cars services
+              </h2>
+
+              <div className="space-y-4">
+                <Link href="/executive-car-nottingham">
+                  <a className="block rounded-xl border p-4 hover:border-primary transition">
+                    <h3 className="font-semibold mb-1">Executive Car Service</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Premium business travel for meetings, airport journeys and
+                      professional bookings.
+                    </p>
+                  </a>
+                </Link>
+
+                <Link href="/airport-transfers-nottingham">
+                  <a className="block rounded-xl border p-4 hover:border-primary transition">
+                    <h3 className="font-semibold mb-1">Airport Transfers</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Reliable airport transport from Nottingham to major UK
+                      airports.
+                    </p>
+                  </a>
+                </Link>
+
+                <Link href="/courier-services-nottingham">
+                  <a className="block rounded-xl border p-4 hover:border-primary transition">
+                    <h3 className="font-semibold mb-1">Courier Services</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Practical delivery support for businesses, documents and
+                      urgent runs.
+                    </p>
+                  </a>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border bg-card p-8 lg:p-10 text-center">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Discuss your corporate transport needs
+            </h2>
+
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
+              To discuss a business account, regular transport support or
+              scheduled staff travel, contact Cloud Cars today.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                asChild
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <a
+                  href="https://book.cloudcarsltd.com/portal/#/booking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Book Now
+                </a>
+              </Button>
+
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <a href="mailto:bookings@cloudcarsltd.com">
+                  Email Us
+                </a>
+              </Button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </PageLayout>
   );
 }
