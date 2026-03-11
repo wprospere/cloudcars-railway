@@ -3,30 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Phone } from "lucide-react";
 
 const navLinks = [
-  { href: "#services", label: "Services" },
-  { href: "#corporate", label: "Corporate" },
-  { href: "#drivers", label: "Drive With Us" },
-  { href: "#about", label: "About" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#services", label: "Services" },
+  { href: "/#corporate", label: "Corporate" },
+  { href: "/#drivers", label: "Drive With Us" },
+  { href: "/#about", label: "About" },
+  { href: "/#contact", label: "Contact" },
 ];
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleNavClick = (href: string) => {
-    const isHomePage = window.location.pathname === "/";
-
-    if (isHomePage) {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    } else {
-      window.location.href = `/${href}`;
-    }
-
-    setMobileMenuOpen(false);
-  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -42,13 +27,13 @@ export default function Header() {
 
           <nav className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
-              <button
+              <a
                 key={link.href}
-                onClick={() => handleNavClick(link.href)}
+                href={link.href}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link.label}
-              </button>
+              </a>
             ))}
           </nav>
 
@@ -107,13 +92,14 @@ export default function Header() {
         <div className="lg:hidden glass border-t border-border/50">
           <nav className="container py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
-              <button
+              <a
                 key={link.href}
-                onClick={() => handleNavClick(link.href)}
-                className="py-3 px-4 text-left text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-3 px-4 text-left text-foreground hover:bg-secondary/50 rounded-lg transition-colors block"
               >
                 {link.label}
-              </button>
+              </a>
             ))}
 
             <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-3">

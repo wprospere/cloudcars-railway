@@ -17,15 +17,32 @@ export default function Home() {
       <Header />
       <main>
         <Hero />
-        <Services />
+
+        <section id="services">
+          <Services />
+        </section>
+
         <Trust />
-        <Corporate />
-        <Drivers />
+
+        <section id="corporate">
+          <Corporate />
+        </section>
+
+        <section id="drivers">
+          <Drivers />
+        </section>
+
         <AppPromo />
         <Booking />
         <Sustainability />
-        <About />
-        <Contact />
+
+        <section id="about">
+          <About />
+        </section>
+
+        <section id="contact">
+          <Contact />
+        </section>
       </main>
       <Footer />
     </div>
