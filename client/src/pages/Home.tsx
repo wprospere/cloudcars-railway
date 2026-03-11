@@ -18,17 +18,17 @@ export default function Home() {
       <main>
         <Hero />
 
-        <section id="services">
+        <section id="services" className="scroll-mt-24">
           <Services />
         </section>
 
         <Trust />
 
-        <section id="corporate">
+        <section id="corporate" className="scroll-mt-24">
           <Corporate />
         </section>
 
-        <section id="drivers">
+        <section id="drivers" className="scroll-mt-24">
           <Drivers />
         </section>
 
@@ -36,11 +36,11 @@ export default function Home() {
         <Booking />
         <Sustainability />
 
-        <section id="about">
+        <section id="about" className="scroll-mt-24">
           <About />
         </section>
 
-        <section id="contact">
+        <section id="contact" className="scroll-mt-24">
           <Contact />
         </section>
       </main>
