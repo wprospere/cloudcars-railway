@@ -195,3 +195,11 @@
     -webkit-backdrop-filter: blur(12px);
   }
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+section {
+  scroll-margin-top: 90px;
+}
