@@ -13,11 +13,18 @@ const navLinks = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+  const handleNavClick = (href: string) => {
+    const isHomePage = window.location.pathname === "/";
+
+    if (isHomePage) {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      window.location.href = `/${href}`;
     }
+
     setMobileMenuOpen(false);
   };
 
@@ -25,7 +32,6 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <div className="container">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
           <a href="/" className="flex items-center gap-2 group">
             <img
               src="/logo.png"
@@ -34,12 +40,11 @@ export default function Header() {
             />
           </a>
 
-          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               <button
                 key={link.href}
-                onClick={() => scrollToSection(link.href)}
+                onClick={() => handleNavClick(link.href)}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link.label}
@@ -47,7 +52,6 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-4">
             <a
               href="tel:01158244244"
@@ -57,13 +61,10 @@ export default function Header() {
               <span>0115 8 244 244</span>
             </a>
 
-            {/* Corporate Login */}
             <Button
               asChild
               variant="outline"
-              className="font-semibold px-6 border-primary text-primary
-                         hover:bg-primary hover:text-primary-foreground
-                         transition-colors"
+              className="font-semibold px-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
             >
               <a
                 href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
@@ -74,7 +75,6 @@ export default function Header() {
               </a>
             </Button>
 
-            {/* Book Now */}
             <Button
               asChild
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
@@ -89,7 +89,6 @@ export default function Header() {
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 text-foreground"
@@ -104,14 +103,13 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden glass border-t border-border/50">
           <nav className="container py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
               <button
                 key={link.href}
-                onClick={() => scrollToSection(link.href)}
+                onClick={() => handleNavClick(link.href)}
                 className="py-3 px-4 text-left text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
               >
                 {link.label}
@@ -127,13 +125,10 @@ export default function Header() {
                 <span>0115 8 244 244</span>
               </a>
 
-              {/* Corporate Login */}
               <Button
                 asChild
                 variant="outline"
-                className="w-full font-semibold border-primary text-primary
-                           hover:bg-primary hover:text-primary-foreground
-                           transition-colors"
+                className="w-full font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <a
                   href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
@@ -144,7 +139,6 @@ export default function Header() {
                 </a>
               </Button>
 
-              {/* Book Now */}
               <Button
                 asChild
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
