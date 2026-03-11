@@ -11,6 +11,10 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 import AirportTransfers from "./pages/AirportTransfers";
+import ExecutiveCar from "./pages/ExecutiveCar";
+import XL from "./pages/XLVehicles";
+import CourierServices from "./pages/CourierServices";
+import CorporateTransport from "./pages/CorporateTransport";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminLoginPage from "./pages/admin/Login";
@@ -33,6 +37,10 @@ function Router() {
       <Route path="/cookies" component={Cookies} />
       <Route path="/faqs" component={Faqs} />
       <Route path="/airport-transfers-nottingham" component={AirportTransfers} />
+      <Route path="/executive-car-nottingham" component={ExecutiveCar} />
+      <Route path="/7-seater-taxi-nottingham" component={XL} />
+      <Route path="/courier-services-nottingham" component={CourierServices} />
+      <Route path="/corporate-transport-nottingham" component={CorporateTransport} />
 
       {/* Driver onboarding (public) */}
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
