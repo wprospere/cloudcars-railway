@@ -1,14 +1,21 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Helmet } from "react-helmet-async";
 
 export default function AirportTransfers() {
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Airport Transfers Nottingham | Cloud Cars</title>
+        <meta
+          name="description"
+          content="Reliable airport transfers from Nottingham to Heathrow, Birmingham, Manchester and East Midlands Airport. Fixed prices and professional drivers."
+        />
+      </Helmet>
 
       <Header />
 
       <main className="container mx-auto px-6 py-16">
-
         <h1 className="text-4xl font-bold mb-6">
           Airport Transfers Nottingham
         </h1>
@@ -67,11 +74,9 @@ export default function AirportTransfers() {
           Book your airport transfer today with Cloud Cars for dependable service,
           professional drivers and competitive pricing.
         </p>
-
       </main>
 
       <Footer />
-
     </div>
   );
 }
