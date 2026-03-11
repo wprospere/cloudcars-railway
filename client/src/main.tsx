@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TRPCClientError, httpLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
+import { HelmetProvider } from "react-helmet-async";
+
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
@@ -42,10 +44,9 @@ queryClient.getMutationCache().subscribe((event) => {
 
 const trpcClient = trpc.createClient({
   links: [
-    // ✅ No batching (avoids “Input is too big for a single dispatch”)
     httpLink({
       url: "/api/trpc",
-      transformer: superjson, // ✅ moved here (fixes TS error)
+      transformer: superjson,
       fetch(url, options) {
         return fetch(url, { ...options, credentials: "include" });
       },
@@ -54,9 +55,11 @@ const trpcClient = trpc.createClient({
 });
 
 createRoot(document.getElementById("root")!).render(
-  <trpc.Provider client={trpcClient} queryClient={queryClient}>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </trpc.Provider>
+  <HelmetProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </trpc.Provider>
+  </HelmetProvider>
 );
