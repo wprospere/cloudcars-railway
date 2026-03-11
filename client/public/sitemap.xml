@@ -1,40 +1,31 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <url>
-    <loc>https://cloudcarsltd.com/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-
-  <url>
-    <loc>https://cloudcarsltd.com/airport-transfers-nottingham</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-
-  <url>
-  <loc>https://cloudcarsltd.com/executive-car-nottingham</loc>
-  <changefreq>weekly</changefreq>
-  <priority>0.9</priority>
+<url>
+<loc>https://cloudcarsltd.com/</loc>
 </url>
 
 <url>
-  <loc>https://cloudcarsltd.com/7-seater-taxi-nottingham</loc>
-  <changefreq>weekly</changefreq>
-  <priority>0.9</priority>
+<loc>https://cloudcarsltd.com/taxi-nottingham</loc>
 </url>
 
 <url>
-  <loc>https://cloudcarsltd.com/courier-services-nottingham</loc>
-  <changefreq>weekly</changefreq>
-  <priority>0.8</priority>
+<loc>https://cloudcarsltd.com/airport-transfers-nottingham</loc>
 </url>
 
 <url>
-  <loc>https://cloudcarsltd.com/corporate-transport-nottingham</loc>
-  <changefreq>weekly</changefreq>
-  <priority>0.8</priority>
+<loc>https://cloudcarsltd.com/executive-car-nottingham</loc>
+</url>
+
+<url>
+<loc>https://cloudcarsltd.com/7-seater-taxi-nottingham</loc>
+</url>
+
+<url>
+<loc>https://cloudcarsltd.com/courier-services-nottingham</loc>
+</url>
+
+<url>
+<loc>https://cloudcarsltd.com/corporate-transport-nottingham</loc>
 </url>
 
 </urlset>
