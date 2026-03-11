@@ -4,6 +4,7 @@ import {
   Plane,
   Crown,
   Users,
+  Briefcase,
   Check,
   Mail,
   Clock,
@@ -17,7 +18,6 @@ function track(eventName: string, props: TrackProps = {}) {
   if (typeof window === "undefined") return;
   const w = window as any;
 
-  // ✅ Google Analytics 4 (gtag)
   if (typeof w.gtag === "function") {
     w.gtag("event", eventName, props);
   }
@@ -29,7 +29,7 @@ const services = [
     icon: Car,
     title: "Car Service",
     subtitle: "Daily Rides",
-    slug: "/",
+    slug: "/taxi-nottingham",
     description:
       "Your go-to option for getting around Nottingham. Clean cars, friendly drivers, and fares that won't break the bank.",
     price: "Fixed Prices",
@@ -98,11 +98,31 @@ const services = [
       "Mercedes & BMW fleet",
       "Bottled water & phone chargers",
       "Professional chauffeurs",
-      "Corporate accounts welcome",
       "Book ahead guarantee",
+      "Business-ready travel",
     ],
     popular: false,
     bookingType: "instant",
+  },
+  {
+    id: "corporate",
+    icon: Briefcase,
+    title: "Corporate Transport",
+    subtitle: "Business Travel",
+    slug: "/corporate-transport-nottingham",
+    description:
+      "Reliable business transport for staff travel, airport runs, hospitality journeys and account-based bookings.",
+    price: "Account Options",
+    priceNote: "tailored support",
+    features: [
+      "Staff transport",
+      "Airport runs",
+      "Hotel and guest travel",
+      "Invoice-based bookings",
+      "Scheduled shuttle support",
+    ],
+    popular: false,
+    bookingType: "account",
   },
 ];
 
@@ -151,7 +171,7 @@ export default function Services() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {services.map((service) => (
             <div
               key={service.id}
