@@ -8,6 +8,7 @@ import {
   Mail,
   Clock,
 } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
@@ -28,6 +29,7 @@ const services = [
     icon: Car,
     title: "Car Service",
     subtitle: "Daily Rides",
+    slug: "/",
     description:
       "Your go-to option for getting around Nottingham. Clean cars, friendly drivers, and fares that won't break the bank.",
     price: "Fixed Prices",
@@ -47,6 +49,7 @@ const services = [
     icon: Package,
     title: "Courier Service",
     subtitle: "Local Deliveries",
+    slug: "/courier-services-nottingham",
     description:
       "Need something delivered across Nottingham? Our courier service handles packages, documents, and urgent deliveries with care.",
     price: "Fixed Prices",
@@ -66,6 +69,7 @@ const services = [
     icon: Plane,
     title: "Airport Transfers",
     subtitle: "Stress-Free Travel",
+    slug: "/airport-transfers-nottingham",
     description:
       "Getting to East Midlands Airport or beyond? We'll get you there on time, every time. Flight tracking included.",
     price: "Fixed Prices",
@@ -85,6 +89,7 @@ const services = [
     icon: Crown,
     title: "Executive Service",
     subtitle: "Travel in Style",
+    slug: "/executive-car-nottingham",
     description:
       "When you want something special. Premium vehicles for business meetings, nights out, or when you just fancy treating yourself.",
     price: "Premium Service",
@@ -116,16 +121,10 @@ const largerVehicles = {
   ],
   email: "bookings@cloudcarsltd.com",
   notice: "72 hours",
+  slug: "/7-seater-taxi-nottingham",
 };
 
 export default function Services() {
-  const scrollToBooking = () => {
-    const element = document.querySelector("#booking");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const scrollToCorporate = () => {
     const element = document.querySelector("#corporate");
     if (element) {
@@ -136,7 +135,6 @@ export default function Services() {
   return (
     <section id="services" className="py-20 lg:py-32 bg-secondary/30">
       <div className="container">
-        {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
             Our Services
@@ -153,7 +151,6 @@ export default function Services() {
           </p>
         </div>
 
-        {/* Service Cards - Main Services */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6 mb-12">
           {services.map((service) => (
             <div
@@ -164,7 +161,6 @@ export default function Services() {
                   : "border-border"
               }`}
             >
-              {/* Popular Badge */}
               {service.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="px-4 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">
@@ -173,12 +169,10 @@ export default function Services() {
                 </div>
               )}
 
-              {/* Icon */}
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
                 <service.icon className="w-6 h-6 text-primary" />
               </div>
 
-              {/* Title */}
               <h3 className="text-xl font-bold text-foreground mb-1">
                 {service.title}
               </h3>
@@ -186,12 +180,10 @@ export default function Services() {
                 {service.subtitle}
               </p>
 
-              {/* Description */}
               <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
                 {service.description}
               </p>
 
-              {/* Price */}
               <div className="mb-5">
                 <span className="text-2xl font-bold text-foreground">
                   {service.price}
@@ -201,7 +193,6 @@ export default function Services() {
                 </span>
               </div>
 
-              {/* Features */}
               <ul className="space-y-2 mb-6">
                 {service.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2">
@@ -213,39 +204,59 @@ export default function Services() {
                 ))}
               </ul>
 
-              {/* CTA */}
-              <Button
-                asChild
-                className={`w-full ${
-                  service.popular
-                    ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                    : "bg-secondary hover:bg-secondary/80 text-foreground"
-                }`}
-              >
-                <a
-                  href="https://book.cloudcarsltd.com/portal/#/booking"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    track("book_now_click", {
-                      location: "services_card",
-                      service_id: service.id,
-                      service_title: service.title,
-                      popular: service.popular,
-                    })
-                  }
+              <div className="space-y-3">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                 >
-                  Book Now
-                </a>
-              </Button>
+                  <Link href={service.slug}>
+                    <a
+                      onClick={() =>
+                        track("service_page_click", {
+                          location: "services_card",
+                          service_id: service.id,
+                          service_title: service.title,
+                          slug: service.slug,
+                        })
+                      }
+                    >
+                      Learn More
+                    </a>
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  className={`w-full ${
+                    service.popular
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : "bg-secondary hover:bg-secondary/80 text-foreground"
+                  }`}
+                >
+                  <a
+                    href="https://book.cloudcarsltd.com/portal/#/booking"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      track("book_now_click", {
+                        location: "services_card",
+                        service_id: service.id,
+                        service_title: service.title,
+                        popular: service.popular,
+                      })
+                    }
+                  >
+                    Book Now
+                  </a>
+                </Button>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Larger Vehicles Section */}
         <div className="bg-card rounded-2xl p-8 lg:p-10 border border-primary/30 shadow-lg shadow-primary/5">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
-            {/* Left - Content */}
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -265,7 +276,6 @@ export default function Services() {
                 {largerVehicles.description}
               </p>
 
-              {/* Features */}
               <ul className="grid sm:grid-cols-2 gap-3 mb-6">
                 {largerVehicles.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2">
@@ -276,9 +286,47 @@ export default function Services() {
                   </li>
                 ))}
               </ul>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Link href={largerVehicles.slug}>
+                    <a
+                      onClick={() =>
+                        track("service_page_click", {
+                          location: "larger_vehicles",
+                          service_title: largerVehicles.title,
+                          slug: largerVehicles.slug,
+                        })
+                      }
+                    >
+                      Learn More
+                    </a>
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <a
+                    href={`mailto:${largerVehicles.email}?subject=Larger%20Vehicle%20Booking%20Enquiry%20-%20Cloud%20Cars`}
+                    onClick={() =>
+                      track("contact_click", {
+                        type: "email",
+                        location: "larger_vehicles",
+                      })
+                    }
+                  >
+                    Email for Quote
+                  </a>
+                </Button>
+              </div>
             </div>
 
-            {/* Right - Booking Info */}
             <div className="bg-secondary/50 rounded-xl p-6 lg:p-8">
               <h4 className="text-lg font-bold text-foreground mb-4">
                 How to Book Larger Vehicles
@@ -338,7 +386,6 @@ export default function Services() {
           </div>
         </div>
 
-        {/* Business Accounts CTA */}
         <div className="mt-12 text-center">
           <p className="text-muted-foreground mb-4">
             Need regular transport for your business?
