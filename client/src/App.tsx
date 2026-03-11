@@ -10,6 +10,7 @@ import Faqs from "./pages/Faqs";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
+import AirportTransfers from "./pages/AirportTransfers";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminLoginPage from "./pages/admin/Login";
@@ -23,7 +24,6 @@ import PoliciesAdmin from "./pages/admin/PoliciesAdmin";
 import DriverOnboardingPage from "@/pages/DriverOnboarding";
 import DriverOnboardingReview from "@/pages/admin/DriverOnboardingReview";
 
-
 function Router() {
   return (
     <Switch>
@@ -31,8 +31,8 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/cookies" component={Cookies} />
-
-<Route path="/faqs" component={Faqs} />
+      <Route path="/faqs" component={Faqs} />
+      <Route path="/airport-transfers-nottingham" component={AirportTransfers} />
 
       {/* Driver onboarding (public) */}
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
