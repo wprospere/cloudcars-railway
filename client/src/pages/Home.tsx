@@ -14,6 +14,10 @@ import Sustainability from "@/components/Sustainability";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
+import TrustBar from "@/components/TrustBar";
+
+import RatingBar from "@/components/RatingBar";
+
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -100,6 +104,8 @@ export default function Home() {
 
         {/* Hero */}
         <Hero />
+<RatingBar />
+<TrustBar />
 
         {/* Services */}
         <section id="services" className="scroll-mt-28">

@@ -10,11 +10,11 @@ export default function Hero() {
   );
 
   return (
-    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+    <section className="relative min-h-screen flex items-center pt-24 lg:pt-28 overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0 z-0">
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-[1.02]"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 blur-[1px]"
           style={{
             backgroundImage: `url('${heroImage.url}')`,
           }}
