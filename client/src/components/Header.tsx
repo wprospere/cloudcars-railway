@@ -12,11 +12,18 @@ const navLinks = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
-      <div className="container">
+      <div className="container mx-auto">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          <a href="/" className="flex items-center gap-2 group">
+          <a
+            href="/"
+            className="flex items-center gap-2 group"
+            onClick={closeMobileMenu}
+            aria-label="Cloud Cars home"
+          >
             <img
               src="/logo.png"
               alt="Cloud Cars"
@@ -24,7 +31,7 @@ export default function Header() {
             />
           </a>
 
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-8" aria-label="Main navigation">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -40,6 +47,7 @@ export default function Header() {
             <a
               href="tel:01158244244"
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Call Cloud Cars on 0115 8 244 244"
             >
               <Phone className="w-4 h-4" />
               <span>0115 8 244 244</span>
@@ -82,9 +90,12 @@ export default function Header() {
           </div>
 
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            type="button"
+            onClick={() => setMobileMenuOpen((open) => !open)}
             className="lg:hidden p-2 text-foreground"
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileMenuOpen ? (
               <X className="w-6 h-6" />
@@ -96,13 +107,19 @@ export default function Header() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="lg:hidden glass border-t border-border/50">
-          <nav className="container py-4 flex flex-col gap-2">
+        <div
+          id="mobile-navigation"
+          className="lg:hidden glass border-t border-border/50"
+        >
+          <nav
+            className="container mx-auto py-4 flex flex-col gap-2"
+            aria-label="Mobile navigation"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
                 className="py-3 px-4 text-left text-foreground hover:bg-secondary/50 rounded-lg transition-colors block"
               >
                 {link.label}
@@ -112,7 +129,9 @@ export default function Header() {
             <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-3">
               <a
                 href="tel:01158244244"
+                onClick={closeMobileMenu}
                 className="flex items-center gap-2 py-3 px-4 text-muted-foreground"
+                aria-label="Call Cloud Cars on 0115 8 244 244"
               >
                 <Phone className="w-4 h-4" />
                 <span>0115 8 244 244</span>
@@ -123,7 +142,7 @@ export default function Header() {
                 variant="outline"
                 className="w-full font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
               >
-                <a href="/#drivers" onClick={() => setMobileMenuOpen(false)}>
+                <a href="/#drivers" onClick={closeMobileMenu}>
                   Become a Driver
                 </a>
               </Button>
@@ -137,6 +156,7 @@ export default function Header() {
                   href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={closeMobileMenu}
                 >
                   Corporate Login
                 </a>
@@ -150,6 +170,7 @@ export default function Header() {
                   href="https://book.cloudcarsltd.com/portal/#/booking"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={closeMobileMenu}
                 >
                   Book Now
                 </a>

@@ -9,9 +9,8 @@ const areas = [
 
 export default function Areas() {
   return (
-    <section className="py-20 lg:py-28 bg-secondary/30">
-      <div className="container max-w-6xl">
-
+    <div className="py-20 lg:py-28 bg-secondary/30">
+      <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-14">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
             Local Coverage
@@ -31,28 +30,26 @@ export default function Areas() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {areas.map((area) => (
             <Link key={area.slug} href={area.slug}>
-              <a className="bg-card rounded-2xl border border-border p-6 card-hover">
-
-                <h3 className="font-semibold text-lg mb-2">
+              <a
+                className="block h-full rounded-2xl border border-border bg-card p-6 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                aria-label={`View taxi services in ${area.name}`}
+              >
+                <h3 className="font-semibold text-lg text-foreground mb-2">
                   Taxi {area.name}
                 </h3>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground leading-6">
                   Reliable taxi service in {area.name} with airport transfers,
                   business travel and pre-booked journeys.
                 </p>
-
               </a>
             </Link>
           ))}
-
         </div>
-
       </div>
-    </section>
+    </div>
   );
 }
