@@ -149,8 +149,9 @@ export default function Drivers() {
 
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
               We are looking for reliable private hire drivers in Nottingham.
-              Airport transfers, corporate work and regular bookings available
-              for drivers who want flexible opportunities with a local company.
+              Airport transfers, corporate work and regular local bookings are
+              available for drivers who want flexible opportunities with a
+              growing local company.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
@@ -223,9 +224,21 @@ export default function Drivers() {
                   Apply to Drive
                 </h3>
 
+                <p className="text-sm text-primary font-medium mb-1">
+                  We are currently recruiting a limited number of new drivers.
+                </p>
+
+                <p className="text-xs text-muted-foreground mb-4">
+                  Most drivers complete this form in under 60 seconds. Prefer to
+                  speak to someone? Call us on{" "}
+                  <a href="tel:01158244244" className="text-primary font-semibold">
+                    0115 8 244 244
+                  </a>
+                </p>
+
                 <p className="text-muted-foreground mb-6">
-                  Fill in your details below and our team will contact you about
-                  the next step.
+                  Fill in your details and our team will get back to you as soon
+                  as possible.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
