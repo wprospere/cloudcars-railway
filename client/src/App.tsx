@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollToHash from "./components/ScrollToHash";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 import Home from "./pages/Home";
@@ -11,12 +13,22 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 
+import TaxiBeeston from "./pages/TaxiBeeston";
+import TaxiWestBridgford from "./pages/TaxiWestBridgford";
+import TaxiWollaton from "./pages/TaxiWollaton";
+import TaxiEdwalton from "./pages/TaxiEdwalton";
+
+import EastMidlandsAirportTaxi from "./pages/EastMidlandsAirportTaxi";
+import NottinghamToEMATaxi from "./pages/NottinghamToEMATaxi";
+
 import TaxiNottingham from "./pages/TaxiNottingham";
 import AirportTransfers from "./pages/AirportTransfers";
 import ExecutiveCar from "./pages/ExecutiveCar";
 import SevenSeater from "./pages/SevenSeater";
 import CourierServices from "./pages/CourierServices";
 import CorporateTransport from "./pages/CorporateTransport";
+
+import DriverOnboardingPage from "@/pages/DriverOnboarding";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminLoginPage from "./pages/admin/Login";
@@ -26,34 +38,55 @@ import AdminSettings from "./pages/admin/Settings";
 import Inquiries from "./pages/admin/Inquiries";
 import TeamMembers from "./pages/admin/TeamMembers";
 import PoliciesAdmin from "./pages/admin/PoliciesAdmin";
-
-import DriverOnboardingPage from "@/pages/DriverOnboarding";
 import DriverOnboardingReview from "@/pages/admin/DriverOnboardingReview";
 
 function Router() {
   return (
     <Switch>
+      {/* Main pages */}
       <Route path="/" component={Home} />
+      <Route path="/faqs" component={Faqs} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/cookies" component={Cookies} />
-      <Route path="/faqs" component={Faqs} />
+
+      {/* Area pages */}
+      <Route path="/taxi-beeston" component={TaxiBeeston} />
+      <Route path="/taxi-west-bridgford" component={TaxiWestBridgford} />
+      <Route path="/taxi-wollaton" component={TaxiWollaton} />
+      <Route path="/taxi-edwalton" component={TaxiEdwalton} />
+
+      {/* Airport pages */}
+      <Route
+        path="/east-midlands-airport-taxi"
+        component={EastMidlandsAirportTaxi}
+      />
+      <Route
+        path="/nottingham-to-east-midlands-airport"
+        component={NottinghamToEMATaxi}
+      />
 
       {/* Service pages */}
       <Route path="/taxi-nottingham" component={TaxiNottingham} />
-      <Route path="/airport-transfers-nottingham" component={AirportTransfers} />
+      <Route
+        path="/airport-transfers-nottingham"
+        component={AirportTransfers}
+      />
       <Route path="/executive-car-nottingham" component={ExecutiveCar} />
       <Route path="/7-seater-taxi-nottingham" component={SevenSeater} />
-      <Route path="/courier-services-nottingham" component={CourierServices} />
+      <Route
+        path="/courier-services-nottingham"
+        component={CourierServices}
+      />
       <Route
         path="/corporate-transport-nottingham"
         component={CorporateTransport}
       />
 
-      {/* Driver onboarding (public) */}
+      {/* Driver onboarding */}
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
 
-      {/* Admin routes */}
+      {/* Admin */}
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin/inquiries" component={Inquiries} />
       <Route path="/admin/team-members" component={TeamMembers} />
@@ -67,6 +100,7 @@ function Router() {
       />
       <Route path="/admin" component={AdminDashboard} />
 
+      {/* Fallbacks */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -79,6 +113,7 @@ export default function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <ScrollToHash />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

@@ -24,14 +24,39 @@ const executiveRoutes = [
   },
 ];
 
+const faqs = [
+  {
+    question: "What is an executive car service in Nottingham?",
+    answer:
+      "An executive car service provides a more refined and professional standard of travel, typically using premium vehicles for business journeys, airport transfers, client collections and important appointments.",
+  },
+  {
+    question: "Do you offer executive airport transfers from Nottingham?",
+    answer:
+      "Yes. Cloud Cars provides executive airport transfers from Nottingham to major UK airports including East Midlands, Birmingham, Manchester and Heathrow Airport.",
+  },
+  {
+    question: "Is executive travel suitable for business clients?",
+    answer:
+      "Yes. Executive transport is ideal for business travellers, directors, client pickups, hotel transfers and professional journeys where comfort and presentation matter.",
+  },
+  {
+    question: "Can I pre-book executive travel?",
+    answer:
+      "Yes. Executive travel is designed for pre-booked journeys so timings, vehicle requirements and service expectations can be arranged in advance.",
+  },
+];
+
 export default function ExecutiveCar() {
   return (
     <PageLayout>
       <Helmet>
-        <title>Executive Car Service Nottingham | Cloud Cars</title>
+        <title>
+          Executive Car Service Nottingham | Executive Travel | Cloud Cars
+        </title>
         <meta
           name="description"
-          content="Executive car service in Nottingham for business travel, airport transfers and professional transport with premium vehicles and experienced drivers."
+          content="Book executive car service in Nottingham with Cloud Cars. Premium vehicles for business travel, airport transfers, client collections and professional pre-booked transport."
         />
         <link
           rel="canonical"
@@ -42,7 +67,7 @@ export default function ExecutiveCar() {
       <ServiceHero
         eyebrow="Cloud Cars Executive Travel"
         title="Executive Car Service Nottingham"
-        description="Cloud Cars offers executive travel in Nottingham for business travel, airport transfers and professional transport requirements. Travel in comfort with premium vehicles and experienced drivers."
+        description="Cloud Cars offers executive travel in Nottingham for business appointments, airport transfers, client collections and professional transport requirements. Travel in comfort with premium vehicles and experienced drivers."
         ctaLabel="Book Executive Travel"
       />
 
@@ -51,17 +76,41 @@ export default function ExecutiveCar() {
           <div className="grid md:grid-cols-3 gap-6 mb-14">
             <FeatureCard
               title="Professional Image"
-              text="A polished and dependable transport option for meetings, clients, airport travel and business appointments."
+              text="A polished and dependable transport option for meetings, client collections, airport travel and business appointments."
             />
             <FeatureCard
               title="Premium Comfort"
-              text="Executive vehicles with a quieter, more refined journey for longer trips and important travel."
+              text="Executive vehicles for a quieter, more refined journey on both short and longer distance travel."
             />
             <FeatureCard
               title="Reliable Pre-Booking"
               text="Ideal for planned journeys where timing, presentation and service quality matter."
             />
           </div>
+
+          <section className="mb-14">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Executive travel in Nottingham for business and professional journeys
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground max-w-4xl">
+              <p>
+                Cloud Cars provides executive car service in Nottingham for
+                passengers who want a more refined standard of transport.
+                Whether you are travelling to a meeting, arranging a client
+                pickup, heading to the airport or booking transport for an
+                important event, our executive travel service is designed to
+                deliver comfort, professionalism and reliability.
+              </p>
+
+              <p>
+                Executive transport is especially suitable for business travel,
+                hotel transfers, professional appointments and airport journeys
+                where presentation matters. Our premium vehicles and experienced
+                drivers help create a smooth journey from pickup to destination.
+              </p>
+            </div>
+          </section>
 
           <section className="grid lg:grid-cols-2 gap-8 mb-14">
             <div className="rounded-2xl border bg-card p-8">
@@ -106,15 +155,64 @@ export default function ExecutiveCar() {
             </div>
           </section>
 
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              When executive transport makes the difference
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-6 text-muted-foreground">
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Business meetings and appointments
+                </h3>
+                <p>
+                  Ideal for professionals who want reliable, comfortable and
+                  presentable transport for meetings, conferences and business
+                  commitments.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Client and guest collections
+                </h3>
+                <p>
+                  A more polished option for collecting clients, visitors or
+                  senior staff from offices, hotels, airports and stations.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Executive airport transfers
+                </h3>
+                <p>
+                  Suitable for passengers who want a premium airport transfer
+                  experience from Nottingham to major UK airports.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Important events and longer journeys
+                </h3>
+                <p>
+                  Executive vehicles offer greater comfort and presentation for
+                  important occasions and extended travel.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section className="mb-14">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Typical Executive Pricing
+              Typical executive pricing
             </h2>
 
             <p className="text-muted-foreground mb-6 max-w-3xl">
-              Below are guide prices for some popular executive journeys.
-              Final pricing may vary depending on pickup location, waiting time,
-              parking, and booking requirements.
+              Below are guide prices for some popular executive journeys from
+              Nottingham. Final pricing may vary depending on pickup location,
+              waiting time, parking, route and booking requirements.
             </p>
 
             <div className="overflow-x-auto rounded-2xl border bg-card">
@@ -205,6 +303,23 @@ export default function ExecutiveCar() {
                 or arranging transport for a client, our executive service is
                 designed to deliver a higher standard of journey.
               </p>
+            </div>
+          </section>
+
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-6">
+              Frequently asked questions
+            </h2>
+
+            <div className="space-y-6">
+              {faqs.map((faq) => (
+                <div key={faq.question}>
+                  <h3 className="font-semibold text-foreground mb-2">
+                    {faq.question}
+                  </h3>
+                  <p className="text-muted-foreground">{faq.answer}</p>
+                </div>
+              ))}
             </div>
           </section>
 

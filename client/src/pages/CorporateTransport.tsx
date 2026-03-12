@@ -5,14 +5,39 @@ import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
 
+const faqs = [
+  {
+    question: "Do you provide corporate transport in Nottingham?",
+    answer:
+      "Yes. Cloud Cars provides corporate transport in Nottingham for staff travel, airport transfers, hotel transport, account bookings, scheduled shuttle services and other business transport requirements.",
+  },
+  {
+    question: "Can businesses open an account with Cloud Cars?",
+    answer:
+      "Yes. We support account-based business transport for companies that need regular bookings, invoicing and dependable transport support.",
+  },
+  {
+    question: "Do you offer airport transfers for business clients?",
+    answer:
+      "Yes. We provide corporate airport transfers from Nottingham for staff, directors, clients and guests travelling to major UK airports.",
+  },
+  {
+    question: "Is corporate transport suitable for hotels, staff teams and apprentices?",
+    answer:
+      "Yes. Our corporate transport service can support hotel guest transport, staff shuttle journeys, apprentice transport, shift travel and other scheduled business requirements.",
+  },
+];
+
 export default function CorporateTransport() {
   return (
     <PageLayout>
       <Helmet>
-        <title>Corporate Transport Nottingham | Cloud Cars</title>
+        <title>
+          Corporate Transport Nottingham | Business Travel Services | Cloud Cars
+        </title>
         <meta
           name="description"
-          content="Dependable corporate transport in Nottingham for staff travel, airport runs, hotel transport, shuttle services and business account journeys with Cloud Cars."
+          content="Dependable corporate transport in Nottingham for staff travel, airport runs, hotel transport, shuttle services and business account journeys. Book professional business travel with Cloud Cars."
         />
         <link
           rel="canonical"
@@ -43,6 +68,32 @@ export default function CorporateTransport() {
               text="Ideal for airport runs, hotel transport, scheduled shuttles and ongoing operational transport needs."
             />
           </div>
+
+          <section className="mb-14">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Reliable corporate transport for Nottingham businesses
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground max-w-4xl">
+              <p>
+                Cloud Cars supports businesses in Nottingham with dependable
+                corporate transport for staff, guests, clients and operational
+                travel requirements. Whether you need regular staff journeys,
+                airport runs, hotel collections, scheduled transport support or
+                account-based bookings, we provide a professional and flexible
+                service designed around business needs.
+              </p>
+
+              <p>
+                Our corporate transport service is suitable for companies that
+                require reliable travel arrangements, clear communication and a
+                transport partner that understands the importance of timing,
+                presentation and consistency. From one-off bookings to ongoing
+                account work, Cloud Cars helps businesses move people
+                efficiently.
+              </p>
+            </div>
+          </section>
 
           <section className="grid lg:grid-cols-2 gap-8 mb-14">
             <div className="rounded-2xl border bg-card p-8">
@@ -85,6 +136,56 @@ export default function CorporateTransport() {
                   <a>View Executive Travel</a>
                 </Link>
               </Button>
+            </div>
+          </section>
+
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Ideal for a wide range of business transport needs
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-6 text-muted-foreground">
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Staff and shift transport
+                </h3>
+                <p>
+                  Suitable for staff collections, shift coverage, late finishes,
+                  early starts and other regular employee transport needs.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Airport and station travel
+                </h3>
+                <p>
+                  We provide dependable transport for business travellers,
+                  directors, clients and guests heading to airports and rail
+                  stations.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Hotel and hospitality transport
+                </h3>
+                <p>
+                  Ideal for guest journeys, apprentice transport, event travel
+                  and hospitality-related transport requirements.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Account-based bookings
+                </h3>
+                <p>
+                  A practical solution for businesses that want regular
+                  transport support with invoicing and an organised booking
+                  process.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -142,14 +243,32 @@ export default function CorporateTransport() {
             </div>
           </section>
 
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-6">
+              Frequently asked questions
+            </h2>
+
+            <div className="space-y-6">
+              {faqs.map((faq) => (
+                <div key={faq.question}>
+                  <h3 className="font-semibold text-foreground mb-2">
+                    {faq.question}
+                  </h3>
+                  <p className="text-muted-foreground">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="rounded-2xl border bg-card p-8 lg:p-10 text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
               Discuss your corporate transport needs
             </h2>
 
             <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-              To discuss a business account, regular transport support or
-              scheduled staff travel, contact Cloud Cars today.
+              To discuss a business account, regular transport support,
+              scheduled staff travel or guest transport, contact Cloud Cars
+              today.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

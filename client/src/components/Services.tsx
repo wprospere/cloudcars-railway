@@ -31,7 +31,7 @@ const services = [
     subtitle: "Daily Rides",
     slug: "/taxi-nottingham",
     description:
-      "Your go-to option for getting around Nottingham. Clean cars, friendly drivers, and fares that won't break the bank.",
+      "Reliable taxi travel across Nottingham for local journeys, appointments, station runs and pre-booked everyday transport.",
     price: "Fixed Prices",
     priceNote: "quoted at booking",
     features: [
@@ -51,7 +51,7 @@ const services = [
     subtitle: "Local Deliveries",
     slug: "/courier-services-nottingham",
     description:
-      "Need something delivered across Nottingham? Our courier service handles packages, documents, and urgent deliveries with care.",
+      "Dependable courier services in Nottingham for parcels, documents, urgent runs and same-day delivery requirements.",
     price: "Fixed Prices",
     priceNote: "quoted upfront",
     features: [
@@ -71,7 +71,7 @@ const services = [
     subtitle: "Stress-Free Travel",
     slug: "/airport-transfers-nottingham",
     description:
-      "Getting to East Midlands Airport or beyond? We'll get you there on time, every time. Flight tracking included.",
+      "Pre-booked airport transfers from Nottingham to East Midlands Airport and all major UK airports, with dependable timing and professional service.",
     price: "Fixed Prices",
     priceNote: "no surprises",
     features: [
@@ -91,7 +91,7 @@ const services = [
     subtitle: "Travel in Style",
     slug: "/executive-car-nottingham",
     description:
-      "When you want something special. Premium vehicles for business meetings, nights out, or when you just fancy treating yourself.",
+      "Executive travel in Nottingham for business meetings, airport journeys, client collections and premium pre-booked transport.",
     price: "Premium Service",
     priceNote: "luxury travel",
     features: [
@@ -111,7 +111,7 @@ const services = [
     subtitle: "Business Travel",
     slug: "/corporate-transport-nottingham",
     description:
-      "Reliable business transport for staff travel, airport runs, hospitality journeys and account-based bookings.",
+      "Reliable business transport for staff travel, airport runs, hotel transport, account work and scheduled company journeys.",
     price: "Account Options",
     priceNote: "tailored support",
     features: [
@@ -131,7 +131,7 @@ const largerVehicles = {
   title: "Larger Vehicles",
   subtitle: "7 to 16 Seaters",
   description:
-    "Need transport for a group? We have minibuses from 7 to 16 seats for airport runs, events, corporate outings, and more.",
+    "Need transport for a group? We offer larger vehicles from 7 to 16 seats for airport runs, events, corporate outings, family travel and more.",
   features: [
     "7, 8, 12, and 16 seater options",
     "Perfect for airport groups",
@@ -155,19 +155,20 @@ export default function Services() {
   return (
     <section id="services" className="py-20 lg:py-32 bg-secondary/30">
       <div className="container">
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
             Our Services
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">
-            Whatever You Need,{" "}
+            Taxi, Airport, Courier and Business Travel in{" "}
             <span className="text-gradient-green font-['Playfair_Display',serif] italic">
-              We&apos;ve Got You
+              Nottingham
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            From quick trips around town to airport transfers and courier
-            deliveries, Cloud Cars has the right service for every journey.
+            From local taxi journeys and airport transfers to executive travel,
+            courier services and corporate transport, Cloud Cars provides
+            dependable travel solutions across Nottingham and surrounding areas.
           </p>
         </div>
 
@@ -397,9 +398,9 @@ export default function Services() {
 
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground">
-                  Include your pickup location, destination, date, time, and
-                  number of passengers in your email. We&apos;ll get back to you
-                  with a quote within a few hours.
+                  Include your pickup location, destination, date, time, number
+                  of passengers and any luggage requirements in your email.
+                  We&apos;ll get back to you with a quote as quickly as possible.
                 </p>
               </div>
             </div>

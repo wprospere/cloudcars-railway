@@ -7,7 +7,6 @@ function track(eventName: string, props: TrackProps = {}) {
   if (typeof window === "undefined") return;
   const w = window as any;
 
-  // ✅ Google Analytics 4 (gtag)
   if (typeof w.gtag === "function") {
     w.gtag("event", eventName, props);
   }
@@ -15,17 +14,28 @@ function track(eventName: string, props: TrackProps = {}) {
 
 const footerLinks = {
   services: [
-    { label: "Standard Taxi", href: "#services" },
-    { label: "Executive Cars", href: "#services" },
-    { label: "Business Accounts", href: "#corporate" },
-    { label: "Airport Runs", href: "#services" },
-    { label: "Book a Ride", href: "#booking" },
+    { label: "Taxi Nottingham", href: "/taxi-nottingham" },
+    { label: "Airport Transfers", href: "/airport-transfers-nottingham" },
+    {
+      label: "Taxi to East Midlands Airport",
+      href: "/nottingham-to-east-midlands-airport",
+    },
+    { label: "Executive Cars", href: "/executive-car-nottingham" },
+    { label: "7 Seater Taxi", href: "/7-seater-taxi-nottingham" },
+    { label: "Courier Services", href: "/courier-services-nottingham" },
+    { label: "Corporate Transport", href: "/corporate-transport-nottingham" },
   ],
   company: [
-    { label: "About Us", href: "#about" },
-    { label: "Drive for Us", href: "#drivers" },
-    { label: "Jobs", href: "#drivers" },
-    { label: "Contact", href: "#contact" },
+    { label: "About Us", href: "/#about" },
+    { label: "Drive for Us", href: "/#drivers" },
+    { label: "Business Accounts", href: "/#corporate" },
+    { label: "Contact", href: "/#contact" },
+  ],
+  areas: [
+    { label: "Taxi Beeston", href: "/taxi-beeston" },
+    { label: "Taxi West Bridgford", href: "/taxi-west-bridgford" },
+    { label: "Taxi Wollaton", href: "/taxi-wollaton" },
+    { label: "Taxi Edwalton", href: "/taxi-edwalton" },
   ],
   support: [
     { label: "FAQs", href: "/faqs" },
@@ -105,29 +115,19 @@ const socialLinks = [
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
-  const scrollToSection = (href: string) => {
-    if (href.startsWith("#") && href !== "#") {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  };
-
   return (
     <footer className="bg-card border-t border-border">
-      {/* Main Footer */}
       <div className="container py-12 lg:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
-          {/* Brand Column */}
-          <div className="col-span-2 md:col-span-4 lg:col-span-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
+          <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="/" className="flex items-center gap-3 mb-4">
               <img src="/logo.png" alt="Cloud Cars" className="h-12 w-auto" />
             </a>
+
             <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
-              Nottingham&apos;s local taxi company. Good drivers, clean cars, and
-              people who actually pick up the phone. Serving the city since
-              2012.
+              Nottingham&apos;s local taxi company providing reliable taxi
+              services, airport transfers, corporate transport, executive
+              travel, courier services and larger vehicle bookings.
             </p>
 
             <div className="space-y-2 mb-6">
@@ -154,7 +154,6 @@ export default function Footer() {
               </a>
             </div>
 
-            {/* Social Media Links */}
             <div className="flex items-center gap-4">
               {socialLinks.map((social, index) => (
                 <a
@@ -177,89 +176,93 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Services */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Services</h4>
             <ul className="space-y-2">
               {footerLinks.services.map((link, index) => (
                 <li key={index}>
-                  <button
-                    onClick={() => {
-                      scrollToSection(link.href);
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() =>
                       track("footer_nav_click", {
                         section: "services",
                         label: link.label,
                         href: link.href,
-                      });
-                    }}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      })
+                    }
                   >
                     {link.label}
-                  </button>
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Company */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Company</h4>
             <ul className="space-y-2">
               {footerLinks.company.map((link, index) => (
                 <li key={index}>
-                  <button
-                    onClick={() => {
-                      scrollToSection(link.href);
+                  <a
+                    href={link.href}
+                    onClick={() =>
                       track("footer_nav_click", {
                         section: "company",
                         label: link.label,
                         href: link.href,
-                      });
-                    }}
+                      })
+                    }
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Areas We Cover</h4>
+            <ul className="space-y-2">
+              {footerLinks.areas.map((link, index) => (
+                <li key={index}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() =>
+                      track("footer_nav_click", {
+                        section: "areas",
+                        label: link.label,
+                        href: link.href,
+                      })
+                    }
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <div>
             <h4 className="font-semibold text-foreground mb-4">Help</h4>
             <ul className="space-y-2">
               {footerLinks.support.map((link, index) => (
                 <li key={index}>
-                  {link.href.startsWith("/") ? (
-                    <Link
-                      href={link.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() =>
-                        track("footer_nav_click", {
-                          section: "support",
-                          label: link.label,
-                          href: link.href,
-                        })
-                      }
-                    >
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        scrollToSection(link.href);
-                        track("footer_nav_click", {
-                          section: "support",
-                          label: link.label,
-                          href: link.href,
-                        });
-                      }}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.label}
-                    </button>
-                  )}
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() =>
+                      track("footer_nav_click", {
+                        section: "support",
+                        label: link.label,
+                        href: link.href,
+                      })
+                    }
+                  >
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -267,7 +270,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="border-t border-border">
         <div className="container py-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
