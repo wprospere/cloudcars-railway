@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useCmsContent } from "@/hooks/useCmsContent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,9 +28,9 @@ import { trpc } from "@/lib/trpc";
 const benefits = [
   {
     icon: PoundSterling,
-    title: "Regular Earning Potential",
+    title: "Weekly Pay",
     description:
-      "Access airport runs, local journeys and account work with weekly pay.",
+      "Get paid every week directly to your bank account for completed work.",
   },
   {
     icon: Calendar,
@@ -66,8 +65,6 @@ const benefits = [
 ];
 
 export default function Drivers() {
-  const content = useCmsContent("drivers");
-
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -235,6 +232,22 @@ export default function Drivers() {
                     0115 8 244 244
                   </a>
                 </p>
+
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6">
+                  <p className="text-sm font-medium text-foreground mb-2">
+                    Currently onboarding drivers licensed with:
+                  </p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      Nottingham City Council
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      Rushcliffe Borough Council
+                    </li>
+                  </ul>
+                </div>
 
                 <p className="text-muted-foreground mb-6">
                   Fill in your details and our team will get back to you as soon
