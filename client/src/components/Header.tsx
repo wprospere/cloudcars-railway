@@ -5,7 +5,6 @@ import { Menu, X, Phone } from "lucide-react";
 const navLinks = [
   { href: "/#services", label: "Services" },
   { href: "/#corporate", label: "Corporate" },
-  { href: "/#drivers", label: "Drive With Us" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
 ];
@@ -45,6 +44,14 @@ export default function Header() {
               <Phone className="w-4 h-4" />
               <span>0115 8 244 244</span>
             </a>
+
+            <Button
+              asChild
+              variant="outline"
+              className="font-semibold px-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <a href="/#drivers">Become a Driver</a>
+            </Button>
 
             <Button
               asChild
@@ -110,6 +117,16 @@ export default function Header() {
                 <Phone className="w-4 h-4" />
                 <span>0115 8 244 244</span>
               </a>
+
+              <Button
+                asChild
+                variant="outline"
+                className="w-full font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                <a href="/#drivers" onClick={() => setMobileMenuOpen(false)}>
+                  Become a Driver
+                </a>
+              </Button>
 
               <Button
                 asChild

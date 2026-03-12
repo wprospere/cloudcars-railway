@@ -18,7 +18,7 @@ import {
   Car,
   Users,
   Shield,
-  TrendingUp,
+  Briefcase,
   CheckCircle2,
   Loader2,
 } from "lucide-react";
@@ -29,34 +29,39 @@ import { trpc } from "@/lib/trpc";
 const benefits = [
   {
     icon: PoundSterling,
-    title: "Good Money",
+    title: "Regular Earning Potential",
     description:
-      "Earn well with fair commission and weekly pay straight to your bank.",
+      "Access airport runs, local journeys and account work with weekly pay.",
   },
   {
     icon: Calendar,
-    title: "Your Hours",
-    description: "Full-time, part-time, weekends - you decide when you work.",
+    title: "Flexible Hours",
+    description:
+      "Full-time, part-time or weekends — work around your availability.",
   },
   {
     icon: Car,
-    title: "Car Sorted",
-    description: "Got your own? Great. Need one? We can help with that too.",
+    title: "Owner Drivers Welcome",
+    description:
+      "Got your own vehicle? Great. Need guidance on getting started? We can help.",
   },
   {
     icon: Users,
-    title: "Good People",
-    description: "Join a proper team. Drivers who look out for each other.",
+    title: "Local Support",
+    description:
+      "Join a proper Nottingham company with a real team behind you.",
   },
   {
     icon: Shield,
-    title: "Covered",
-    description: "Full insurance while you're working. No worries.",
+    title: "Professional Work",
+    description:
+      "Airport transfers, business travel and reliable local bookings available.",
   },
   {
-    icon: TrendingUp,
-    title: "Move Up",
-    description: "Training and opportunities to grow with us.",
+    icon: Briefcase,
+    title: "Corporate Opportunities",
+    description:
+      "Access higher-value corporate and account bookings as the business grows.",
   },
 ];
 
@@ -78,8 +83,6 @@ export default function Drivers() {
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // ✅ Correct tRPC mutation based on server/routers.ts:
-  // driver.submitApplication
   const submitApplication = trpc.driver.submitApplication.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,9 +103,12 @@ export default function Drivers() {
         yearsExperience: Number(formData.yearsExperience) || 0,
         vehicleOwner: Boolean(formData.vehicleOwner),
         vehicleType: formData.vehicleOwner
-          ? (formData.vehicleType || undefined)
+          ? formData.vehicleType || undefined
           : undefined,
-        availability: formData.availability as "fulltime" | "parttime" | "weekends",
+        availability: formData.availability as
+          | "fulltime"
+          | "parttime"
+          | "weekends",
         message: formData.message ? formData.message : undefined,
       });
 
@@ -129,22 +135,24 @@ export default function Drivers() {
     <section id="drivers" className="py-20 lg:py-32 bg-secondary/30">
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
-          {/* Left Column - Content */}
           <div>
             <span className="text-sm font-semibold text-primary uppercase tracking-wider">
-              Join the Team
+              Drivers Wanted
             </span>
+
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-6">
-              {content.title}{" "}
+              Drive for{" "}
               <span className="text-gradient-green font-['Playfair_Display',serif] italic">
-                {content.subtitle}
+                Cloud Cars
               </span>
             </h2>
+
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              {content.description}
+              We are looking for reliable private hire drivers in Nottingham.
+              Airport transfers, corporate work and regular bookings available
+              for drivers who want flexible opportunities with a local company.
             </p>
 
-            {/* Benefits Grid */}
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex gap-4">
@@ -163,49 +171,50 @@ export default function Drivers() {
               ))}
             </div>
 
-            {/* Requirements */}
             <div className="bg-card rounded-xl p-6 border border-border">
               <h4 className="font-semibold text-foreground mb-4">
                 What You'll Need
               </h4>
+
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  UK driving licence (held for at least 3 years)
+                  UK driving licence
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Private hire badge or happy to get one
+                  Private hire badge or willing to obtain one
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Clean DBS check
+                  Good knowledge of Nottingham routes
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Good knowledge of Nottingham
+                  Professional attitude and good customer service
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Smart appearance and friendly manner
+                  Suitable vehicle if you plan to drive your own car
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* Right Column - Form */}
           <div className="bg-card rounded-2xl p-6 lg:p-8 border border-border">
             {submitted ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-12">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-8 h-8 text-primary" />
                 </div>
+
                 <h3 className="text-2xl font-bold text-foreground mb-2">
                   Application Sent
                 </h3>
+
                 <p className="text-muted-foreground max-w-sm">
-                  Thanks for applying. We'll have a look at your details and
-                  give you a call within a couple of days.
+                  Thanks for applying to drive with Cloud Cars. We&apos;ll
+                  review your details and get back to you as soon as possible.
                 </p>
               </div>
             ) : (
@@ -213,8 +222,10 @@ export default function Drivers() {
                 <h3 className="text-xl font-bold text-foreground mb-2">
                   Apply to Drive
                 </h3>
+
                 <p className="text-muted-foreground mb-6">
-                  Fill in your details and we'll get back to you.
+                  Fill in your details below and our team will contact you about
+                  the next step.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -245,6 +256,7 @@ export default function Drivers() {
                         className="bg-background"
                       />
                     </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone *</Label>
                       <Input
@@ -273,8 +285,11 @@ export default function Drivers() {
                         className="bg-background"
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="yearsExperience">Years Driving *</Label>
+                      <Label htmlFor="yearsExperience">
+                        Years Driving Experience *
+                      </Label>
                       <Input
                         id="yearsExperience"
                         name="yearsExperience"
@@ -326,19 +341,19 @@ export default function Drivers() {
                       }
                     />
                     <Label htmlFor="vehicleOwner" className="text-sm">
-                      I have my own car
+                      I have my own vehicle
                     </Label>
                   </div>
 
                   {formData.vehicleOwner && (
                     <div className="space-y-2">
-                      <Label htmlFor="vehicleType">What Car?</Label>
+                      <Label htmlFor="vehicleType">Vehicle Details</Label>
                       <Input
                         id="vehicleType"
                         name="vehicleType"
                         value={formData.vehicleType}
                         onChange={handleChange}
-                        placeholder="e.g., Toyota Prius 2022"
+                        placeholder="e.g. Toyota Prius 2022"
                         className="bg-background"
                       />
                     </div>
@@ -351,7 +366,7 @@ export default function Drivers() {
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
-                      placeholder="Tell us a bit about yourself..."
+                      placeholder="Tell us about your experience, badge status, vehicle or anything else useful..."
                       rows={3}
                       className="bg-background resize-none"
                     />
