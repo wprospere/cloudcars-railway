@@ -15,8 +15,8 @@ export default function Header() {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
-      <div className="container mx-auto">
+    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/40 shadow-sm">
+      <div className="container mx-auto max-w-7xl">
         <div className="flex items-center justify-between h-16 lg:h-20">
           <a
             href="/"
@@ -27,11 +27,14 @@ export default function Header() {
             <img
               src="/logo.png"
               alt="Cloud Cars"
-              className="h-12 lg:h-14 w-auto"
+              className="h-12 lg:h-14 w-auto transition-opacity duration-200 group-hover:opacity-90"
             />
           </a>
 
-          <nav className="hidden lg:flex items-center gap-8" aria-label="Main navigation">
+          <nav
+            className="hidden lg:flex items-center gap-8"
+            aria-label="Main navigation"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -43,10 +46,10 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4">
             <a
               href="tel:01158244244"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Call Cloud Cars on 0115 8 244 244"
             >
               <Phone className="w-4 h-4" />
@@ -55,8 +58,7 @@ export default function Header() {
 
             <Button
               asChild
-              variant="outline"
-              className="font-semibold px-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="font-semibold px-6 bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all duration-200"
             >
               <a href="/#drivers">Become a Driver</a>
             </Button>
@@ -64,7 +66,7 @@ export default function Header() {
             <Button
               asChild
               variant="outline"
-              className="font-semibold px-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="font-semibold px-6 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
             >
               <a
                 href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
@@ -77,7 +79,7 @@ export default function Header() {
 
             <Button
               asChild
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-sm"
             >
               <a
                 href="https://book.cloudcarsltd.com/portal/#/booking"
@@ -109,7 +111,7 @@ export default function Header() {
       {mobileMenuOpen && (
         <div
           id="mobile-navigation"
-          className="lg:hidden glass border-t border-border/50"
+          className="lg:hidden backdrop-blur-xl bg-background/95 border-t border-border/50"
         >
           <nav
             className="container mx-auto py-4 flex flex-col gap-2"
@@ -130,7 +132,7 @@ export default function Header() {
               <a
                 href="tel:01158244244"
                 onClick={closeMobileMenu}
-                className="flex items-center gap-2 py-3 px-4 text-muted-foreground"
+                className="flex items-center gap-2 py-3 px-4 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Call Cloud Cars on 0115 8 244 244"
               >
                 <Phone className="w-4 h-4" />
@@ -138,16 +140,18 @@ export default function Header() {
               </a>
 
               <Button
-  asChild
-  className="font-semibold px-6 bg-green-500/15 text-green-600 border border-green-500/30 hover:bg-green-500 hover:text-white transition-colors"
->
-  <a href="/#drivers">Become a Driver</a>
-</Button>
+                asChild
+                className="w-full font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all duration-200"
+              >
+                <a href="/#drivers" onClick={closeMobileMenu}>
+                  Become a Driver
+                </a>
+              </Button>
 
               <Button
                 asChild
                 variant="outline"
-                className="w-full font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                className="w-full font-semibold border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <a
                   href="https://book.cloudcarsltd.com/portal/#/account/auth/CORPORATE"
@@ -161,7 +165,7 @@ export default function Header() {
 
               <Button
                 asChild
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
               >
                 <a
                   href="https://book.cloudcarsltd.com/portal/#/booking"
