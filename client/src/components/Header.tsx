@@ -138,14 +138,11 @@ export default function Header() {
               </a>
 
               <Button
-                asChild
-                variant="outline"
-                className="w-full font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <a href="/#drivers" onClick={closeMobileMenu}>
-                  Become a Driver
-                </a>
-              </Button>
+  asChild
+  className="font-semibold px-6 bg-green-500/15 text-green-600 border border-green-500/30 hover:bg-green-500 hover:text-white transition-colors"
+>
+  <a href="/#drivers">Become a Driver</a>
+</Button>
 
               <Button
                 asChild
