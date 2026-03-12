@@ -11,6 +11,14 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 
+import TaxiBeeston from "./pages/TaxiBeeston";
+import TaxiWestBridgford from "./pages/TaxiWestBridgford";
+import TaxiWollaton from "./pages/TaxiWollaton";
+import TaxiEdwalton from "./pages/TaxiEdwalton";
+
+import EastMidlandsAirportTaxi from "./pages/EastMidlandsAirportTaxi";
+import NottinghamToEMATaxi from "./pages/NottinghamToEMATaxi";
+
 import TaxiNottingham from "./pages/TaxiNottingham";
 import AirportTransfers from "./pages/AirportTransfers";
 import ExecutiveCar from "./pages/ExecutiveCar";
@@ -39,12 +47,34 @@ function Router() {
       <Route path="/cookies" component={Cookies} />
       <Route path="/faqs" component={Faqs} />
 
+      {/* Area pages */}
+      <Route path="/taxi-beeston" component={TaxiBeeston} />
+      <Route path="/taxi-west-bridgford" component={TaxiWestBridgford} />
+      <Route path="/taxi-wollaton" component={TaxiWollaton} />
+      <Route path="/taxi-edwalton" component={TaxiEdwalton} />
+
+      {/* Airport landing pages */}
+      <Route
+        path="/east-midlands-airport-taxi"
+        component={EastMidlandsAirportTaxi}
+      />
+      <Route
+        path="/nottingham-to-east-midlands-airport"
+        component={NottinghamToEMATaxi}
+      />
+
       {/* Service pages */}
       <Route path="/taxi-nottingham" component={TaxiNottingham} />
-      <Route path="/airport-transfers-nottingham" component={AirportTransfers} />
+      <Route
+        path="/airport-transfers-nottingham"
+        component={AirportTransfers}
+      />
       <Route path="/executive-car-nottingham" component={ExecutiveCar} />
       <Route path="/7-seater-taxi-nottingham" component={SevenSeater} />
-      <Route path="/courier-services-nottingham" component={CourierServices} />
+      <Route
+        path="/courier-services-nottingham"
+        component={CourierServices}
+      />
       <Route
         path="/corporate-transport-nottingham"
         component={CorporateTransport}

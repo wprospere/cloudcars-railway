@@ -91,6 +91,16 @@ export default function AirportTransfers() {
                 <a>Need a Larger Vehicle?</a>
               </Link>
             </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              <Link href="/nottingham-to-east-midlands-airport">
+                <a>Taxi to East Midlands Airport</a>
+              </Link>
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-14">
@@ -227,10 +237,19 @@ export default function AirportTransfers() {
                   East Midlands Airport transfers
                 </h3>
                 <p>
-                  A popular choice for local and international travel, East
-                  Midlands Airport is one of our most frequently requested
-                  airport transfer routes from Nottingham.
+                  East Midlands Airport is one of our most popular airport taxi
+                  routes from Nottingham. If you need a taxi from Nottingham to
+                  East Midlands Airport, Cloud Cars provides reliable pre-booked
+                  journeys with professional drivers and comfortable vehicles.
                 </p>
+
+                <div className="mt-4">
+                  <Link href="/nottingham-to-east-midlands-airport">
+                    <a className="text-primary hover:underline font-medium">
+                      View Nottingham to East Midlands Airport taxi page
+                    </a>
+                  </Link>
+                </div>
               </div>
 
               <div>
@@ -273,6 +292,18 @@ export default function AirportTransfers() {
             </h2>
 
             <div className="space-y-4">
+              <Link href="/nottingham-to-east-midlands-airport">
+                <a className="block rounded-xl border p-4 hover:border-primary transition">
+                  <h3 className="font-semibold mb-1">
+                    Taxi to East Midlands Airport
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Book a direct taxi from Nottingham to East Midlands Airport
+                    with fixed quoted pricing and dependable pickup times.
+                  </p>
+                </a>
+              </Link>
+
               <Link href="/executive-car-nottingham">
                 <a className="block rounded-xl border p-4 hover:border-primary transition">
                   <h3 className="font-semibold mb-1">Executive Car Service</h3>
