@@ -24,14 +24,39 @@ const courierPricing = [
   },
 ];
 
+const faqs = [
+  {
+    question: "Do you provide same-day courier services in Nottingham?",
+    answer:
+      "Yes. Cloud Cars provides same-day courier services in Nottingham for urgent parcels, business deliveries, documents, hospital runs and scheduled courier support.",
+  },
+  {
+    question: "Can businesses use your courier service regularly?",
+    answer:
+      "Yes. Our courier service is suitable for businesses that need regular delivery support, document runs, account work and dependable local transport for important items.",
+  },
+  {
+    question: "Do you offer urgent document and parcel delivery?",
+    answer:
+      "Yes. We can support urgent local and regional deliveries for parcels, documents and time-sensitive business items.",
+  },
+  {
+    question: "Is your courier service suitable for hospital and medical runs?",
+    answer:
+      "Yes. Cloud Cars supports hospital and medical-related courier work where reliable collection and delivery is important.",
+  },
+];
+
 export default function CourierServices() {
   return (
     <PageLayout>
       <Helmet>
-        <title>Courier Services Nottingham | Cloud Cars</title>
+        <title>
+          Courier Services Nottingham | Same Day Delivery | Cloud Cars
+        </title>
         <meta
           name="description"
-          content="Reliable same-day courier services in Nottingham for parcels, business documents, hospital runs and urgent local deliveries with Cloud Cars."
+          content="Book reliable courier services in Nottingham with Cloud Cars. Same-day parcel delivery, business documents, hospital runs and urgent local deliveries for businesses and individuals."
         />
         <link
           rel="canonical"
@@ -62,6 +87,31 @@ export default function CourierServices() {
               text="Courier coverage across Nottingham and surrounding areas with practical delivery solutions."
             />
           </div>
+
+          <section className="mb-14">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Reliable courier services in Nottingham
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground max-w-4xl">
+              <p>
+                Cloud Cars provides courier services in Nottingham for
+                businesses and individuals who need dependable same-day
+                collection and delivery support. Whether it is an urgent parcel,
+                important documents, scheduled delivery work or a time-sensitive
+                job, we offer a practical and professional solution.
+              </p>
+
+              <p>
+                Our Nottingham courier service is suitable for local businesses,
+                offices, hospitals, professional services and customers who need
+                urgent local or regional transport for items that need to arrive
+                safely and on time. From same-day parcel delivery to medical and
+                document runs, Cloud Cars supports a wide range of courier
+                requirements.
+              </p>
+            </div>
+          </section>
 
           <section className="grid lg:grid-cols-2 gap-8 mb-14">
             <div className="rounded-2xl border bg-card p-8">
@@ -107,16 +157,64 @@ export default function CourierServices() {
             </div>
           </section>
 
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Ideal for urgent and scheduled delivery work
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-6 text-muted-foreground">
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Business documents
+                </h3>
+                <p>
+                  Suitable for contracts, paperwork, office materials and other
+                  important items that need dependable delivery.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Same-day parcel runs
+                </h3>
+                <p>
+                  A practical option when an item needs to be collected and
+                  delivered quickly within Nottingham or the surrounding area.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Hospital and medical support
+                </h3>
+                <p>
+                  Helpful for time-sensitive runs where reliable transport and
+                  careful handling are important.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Regular business courier work
+                </h3>
+                <p>
+                  Ideal for businesses that need ongoing delivery support,
+                  account work and dependable scheduled collections.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section className="mb-14">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Courier Pricing
+              Courier pricing
             </h2>
 
             <p className="text-muted-foreground mb-6 max-w-3xl">
-              Courier pricing is based on a base fare, mileage and journey time,
-              with competitive rates for urgent and scheduled deliveries. Final
-              pricing may vary depending on distance, urgency, waiting time and
-              collection requirements.
+              Courier pricing is based on a base fare, mileage and journey
+              time, with competitive rates for urgent and scheduled deliveries.
+              Final pricing may vary depending on distance, urgency, waiting
+              time and collection requirements.
             </p>
 
             <div className="overflow-x-auto rounded-2xl border bg-card">
@@ -208,6 +306,23 @@ export default function CourierServices() {
                 work, document delivery, medical runs and time-sensitive
                 transport requirements.
               </p>
+            </div>
+          </section>
+
+          <section className="mb-14 rounded-2xl border bg-card p-8 lg:p-10">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-6">
+              Frequently asked questions
+            </h2>
+
+            <div className="space-y-6">
+              {faqs.map((faq) => (
+                <div key={faq.question}>
+                  <h3 className="font-semibold text-foreground mb-2">
+                    {faq.question}
+                  </h3>
+                  <p className="text-muted-foreground">{faq.answer}</p>
+                </div>
+              ))}
             </div>
           </section>
 
