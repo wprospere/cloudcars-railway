@@ -158,7 +158,7 @@ export default function Drivers() {
               <p className="text-sm text-muted-foreground leading-6">
                 At Cloud Cars, we value drivers who are friendly,
                 knowledgeable, and professional. We do not build our team
-                through anonymous sign-ups alone — we review drivers carefully
+                through anonymous sign-ups alone, we review drivers carefully
                 and look for people who represent the standards of our business
                 properly.
               </p>

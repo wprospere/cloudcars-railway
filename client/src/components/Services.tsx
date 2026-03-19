@@ -27,8 +27,8 @@ const services = [
   {
     id: "car-service",
     icon: Car,
-    title: "Car Service",
-    subtitle: "Daily Rides",
+    title: "Local Taxi Travel",
+    subtitle: "Everyday Journeys",
     slug: "/taxi-nottingham",
     description:
       "Reliable taxi travel across Nottingham for local journeys, appointments, station runs and pre-booked everyday transport.",
@@ -71,7 +71,7 @@ const services = [
     subtitle: "Stress-Free Travel",
     slug: "/airport-transfers-nottingham",
     description:
-      "Pre-booked airport transfers from Nottingham to East Midlands Airport and all major UK airports, with dependable timing and professional service.",
+      "Pre-booked airport transfers from Nottingham to East Midlands Airport and all major UK airports, with dependable timing, flight tracking, and professional service.",
     price: "Fixed Prices",
     priceNote: "no surprises",
     features: [
@@ -98,7 +98,7 @@ const services = [
       "Mercedes & BMW fleet",
       "Bottled water & phone chargers",
       "Professional chauffeurs",
-      "Book ahead guarantee",
+      "Book-ahead guarantee",
       "Business-ready travel",
     ],
     popular: false,
@@ -111,7 +111,7 @@ const services = [
     subtitle: "Business Travel",
     slug: "/corporate-transport-nottingham",
     description:
-      "Reliable business transport for staff travel, airport runs, hotel transport, account work and scheduled company journeys.",
+      "Reliable business transport for staff travel, airport runs, hotel transport, account work and scheduled company journeys with dependable service and invoice-based support.",
     price: "Account Options",
     priceNote: "tailored support",
     features: [
@@ -131,13 +131,13 @@ const largerVehicles = {
   title: "Larger Vehicles",
   subtitle: "7 to 16 Seaters",
   description:
-    "Need transport for a group? We offer larger vehicles from 7 to 16 seats for airport runs, events, corporate outings, family travel and more.",
+    "Need transport for a group? We offer larger vehicles from 7 to 16 seats for airport runs, events, corporate outings, family travel, school trips and more.",
   features: [
-    "7, 8, 12, and 16 seater options",
-    "Perfect for airport groups",
-    "Corporate events & outings",
+    "7, 8, 12 and 16 seater options",
+    "Ideal for airport groups",
+    "Corporate events and outings",
     "Wedding guest transport",
-    "School & sports team trips",
+    "School and sports team trips",
   ],
   email: "bookings@cloudcarsltd.com",
   notice: "72 hours",
@@ -159,16 +159,19 @@ export default function Services() {
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
             Our Services
           </span>
+
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">
             Taxi, Airport, Courier and Business Travel in{" "}
             <span className="text-gradient-green font-['Playfair_Display',serif] italic">
               Nottingham
             </span>
           </h2>
+
           <p className="text-muted-foreground text-lg">
             From local taxi journeys and airport transfers to executive travel,
             courier services and corporate transport, Cloud Cars provides
-            dependable travel solutions across Nottingham and surrounding areas.
+            dependable travel solutions across Nottingham and surrounding areas
+            with friendly, knowledgeable drivers and professional service.
           </p>
         </div>
 
@@ -342,7 +345,7 @@ export default function Services() {
                       })
                     }
                   >
-                    Email for Quote
+                    Request a Quote
                   </a>
                 </Button>
               </div>
@@ -386,11 +389,11 @@ export default function Services() {
                       Advance Notice Required
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      Please give us at least{" "}
+                      Please allow at least{" "}
                       <span className="text-primary font-semibold">
                         {largerVehicles.notice}
                       </span>{" "}
-                      notice for larger vehicle bookings
+                      notice for larger vehicle bookings.
                     </p>
                   </div>
                 </div>
@@ -399,8 +402,8 @@ export default function Services() {
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground">
                   Include your pickup location, destination, date, time, number
-                  of passengers and any luggage requirements in your email.
-                  We&apos;ll get back to you with a quote as quickly as possible.
+                  of passengers, and any luggage requirements in your email and
+                  we’ll get back to you with a quote as quickly as possible.
                 </p>
               </div>
             </div>
@@ -411,6 +414,7 @@ export default function Services() {
           <p className="text-muted-foreground mb-4">
             Need regular transport for your business?
           </p>
+
           <Button
             onClick={() => {
               scrollToCorporate();
