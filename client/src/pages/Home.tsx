@@ -15,7 +15,6 @@ import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
 import TrustBar from "@/components/TrustBar";
-
 import RatingBar from "@/components/RatingBar";
 
 export default function Home() {
@@ -104,22 +103,22 @@ export default function Home() {
 
         {/* Hero */}
         <Hero />
-<RatingBar />
-<TrustBar />
+        <RatingBar />
+        <TrustBar />
+
+        {/* Trust FIRST */}
+        <section id="trust" className="scroll-mt-28">
+          <Trust />
+        </section>
 
         {/* Services */}
         <section id="services" className="scroll-mt-28">
           <Services />
         </section>
 
-        {/* Local Areas */}
-        <section id="areas" className="scroll-mt-28">
-          <Areas />
-        </section>
-
-        {/* Trust */}
-        <section id="trust" className="scroll-mt-28">
-          <Trust />
+        {/* Booking (moved up) */}
+        <section id="booking" className="scroll-mt-28">
+          <Booking />
         </section>
 
         {/* Corporate */}
@@ -127,19 +126,19 @@ export default function Home() {
           <Corporate />
         </section>
 
+        {/* Areas */}
+        <section id="areas" className="scroll-mt-28">
+          <Areas />
+        </section>
+
         {/* Drivers */}
         <section id="drivers" className="scroll-mt-28">
           <Drivers />
         </section>
 
-        {/* App Promo */}
+        {/* App */}
         <section id="app" className="scroll-mt-28">
           <AppPromo />
-        </section>
-
-        {/* Booking */}
-        <section id="booking" className="scroll-mt-28">
-          <Booking />
         </section>
 
         {/* Sustainability */}
