@@ -83,6 +83,12 @@ export default function Hero() {
             </Button>
           </div>
 
+          {/* Driver trust message */}
+          <p className="text-sm text-muted-foreground mt-4 mb-8 max-w-xl leading-relaxed">
+            Drivers are friendly, knowledgeable and personally selected — not just approved online.
+            No strangers behind the wheel.
+          </p>
+
           {/* Trust indicators */}
           <div className="flex flex-wrap gap-4 lg:gap-6">
             <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/40 backdrop-blur-sm px-4 py-3">
