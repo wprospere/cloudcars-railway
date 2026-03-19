@@ -1,21 +1,21 @@
-import { ShieldCheck, Clock, Building2, Plane } from "lucide-react";
+import { ShieldCheck, Clock, Users, Plane } from "lucide-react";
 
 export default function TrustBar() {
   const items = [
     {
       icon: ShieldCheck,
-      title: "Licensed Operator",
-      desc: "Fully licensed Nottingham taxi service",
+      title: "Licensed & Insured",
+      desc: "Nottingham licensed & fully compliant",
+    },
+    {
+      icon: Users,
+      title: "Personally Selected Drivers",
+      desc: "Not just approved online",
     },
     {
       icon: Clock,
       title: "24/7 Service",
-      desc: "Airport transfers anytime",
-    },
-    {
-      icon: Building2,
-      title: "Corporate Accounts",
-      desc: "Trusted by Nottingham businesses",
+      desc: "Available whenever you need us",
     },
     {
       icon: Plane,
@@ -39,7 +39,9 @@ export default function TrustBar() {
 
                 <div>
                   <p className="text-sm font-semibold">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.desc}
+                  </p>
                 </div>
               </div>
             );

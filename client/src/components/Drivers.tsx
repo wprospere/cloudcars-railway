@@ -42,25 +42,25 @@ const benefits = [
     icon: Car,
     title: "Owner Drivers Welcome",
     description:
-      "Got your own vehicle? Great. Need guidance on getting started? We can help.",
+      "Have your own vehicle? Great. Need guidance on getting started? We can help.",
   },
   {
     icon: Users,
-    title: "Local Support",
+    title: "Local Team Support",
     description:
       "Join a proper Nottingham company with a real team behind you.",
   },
   {
     icon: Shield,
-    title: "Professional Work",
+    title: "Professional Standards",
     description:
-      "Airport transfers, business travel and reliable local bookings available.",
+      "We work with drivers who take pride in reliability, service, and presentation.",
   },
   {
     icon: Briefcase,
     title: "Corporate Opportunities",
     description:
-      "Access higher-value corporate and account bookings as the business grows.",
+      "Access airport transfers, business travel, and account bookings as the business grows.",
   },
 ];
 
@@ -144,12 +144,25 @@ export default function Drivers() {
               </span>
             </h2>
 
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
               We are looking for reliable private hire drivers in Nottingham.
-              Airport transfers, corporate work and regular local bookings are
-              available for drivers who want flexible opportunities with a
-              growing local company.
+              Airport transfers, corporate work, school transport, and regular
+              local bookings are available for drivers who want flexible
+              opportunities with a growing local company.
             </p>
+
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
+              <h4 className="font-semibold text-foreground mb-2">
+                A professional team, not just an app
+              </h4>
+              <p className="text-sm text-muted-foreground leading-6">
+                At Cloud Cars, we value drivers who are friendly,
+                knowledgeable, and professional. We do not build our team
+                through anonymous sign-ups alone — we review drivers carefully
+                and look for people who represent the standards of our business
+                properly.
+              </p>
+            </div>
 
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
               {benefits.map((benefit, index) => (
@@ -181,7 +194,7 @@ export default function Drivers() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Private hire badge or willing to obtain one
+                  Private hire badge or willingness to obtain one
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
@@ -189,7 +202,7 @@ export default function Drivers() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  Professional attitude and good customer service
+                  Professional attitude and strong customer service
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
