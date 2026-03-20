@@ -20,7 +20,6 @@ import RatingBar from "@/components/RatingBar";
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-
       {/* SEO */}
       <Helmet>
         <title>
@@ -76,7 +75,7 @@ export default function Home() {
               "Beeston",
               "West Bridgford",
               "Wollaton",
-              "Edwalton"
+              "Edwalton",
             ],
             serviceType: [
               "Taxi Service",
@@ -84,13 +83,13 @@ export default function Home() {
               "Executive Car Service",
               "Corporate Transport",
               "Courier Services",
-              "7 Seater Taxi"
+              "7 Seater Taxi",
             ],
             address: {
               "@type": "PostalAddress",
               addressLocality: "Nottingham",
-              addressCountry: "GB"
-            }
+              addressCountry: "GB",
+            },
           })}
         </script>
       </Helmet>
@@ -100,13 +99,12 @@ export default function Home() {
 
       {/* Main content */}
       <main className="flex-1">
-
         {/* Hero */}
         <Hero />
         <RatingBar />
         <TrustBar />
 
-        {/* Trust FIRST */}
+        {/* Trust */}
         <section id="trust" className="scroll-mt-28">
           <Trust />
         </section>
@@ -116,7 +114,7 @@ export default function Home() {
           <Services />
         </section>
 
-        {/* Booking (moved up) */}
+        {/* Booking */}
         <section id="booking" className="scroll-mt-28">
           <Booking />
         </section>
@@ -155,12 +153,10 @@ export default function Home() {
         <section id="contact" className="scroll-mt-28">
           <Contact />
         </section>
-
       </main>
 
       {/* Footer */}
       <Footer />
-
     </div>
   );
 }

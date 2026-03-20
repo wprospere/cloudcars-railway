@@ -21,32 +21,38 @@ const benefits = [
   {
     icon: CreditCard,
     title: "Clear Pricing",
-    description: "No surprises. Fixed rates agreed upfront so you can budget properly.",
+    description:
+      "Straightforward rates agreed in advance, helping your business plan and budget with confidence.",
   },
   {
     icon: FileText,
-    title: "One Monthly Bill",
-    description: "All your trips on one invoice with full breakdown. Makes expenses easy.",
+    title: "One Monthly Invoice",
+    description:
+      "All journeys on one clear invoice with a full breakdown for simple internal processing.",
   },
   {
     icon: Users,
-    title: "Team Booking",
-    description: "Your staff book directly. You set the rules, we handle the rest.",
+    title: "Staff & Guest Travel",
+    description:
+      "Reliable transport for staff, visitors, clients, hotel guests, and scheduled journeys.",
   },
   {
     icon: BarChart3,
-    title: "See Everything",
-    description: "Full reports on who's travelling where and what it's costing.",
+    title: "Journey Visibility",
+    description:
+      "A clearer view of travel activity, trip volumes, and transport usage across your account.",
   },
   {
     icon: Headphones,
-    title: "Direct Line",
-    description: "Your own account manager who actually picks up the phone.",
+    title: "Direct Support",
+    description:
+      "A responsive team you can contact directly when bookings need attention or flexibility.",
   },
   {
     icon: Building2,
     title: "Nottingham Based",
-    description: "We're here, we know the area, and we're not going anywhere.",
+    description:
+      "A local transport partner with real area knowledge, accountability, and long-term presence.",
   },
 ];
 
@@ -116,9 +122,21 @@ export default function Corporate() {
               </span>
             </h2>
 
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
               {content.description}
             </p>
+
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
+              <h3 className="text-base font-semibold text-foreground mb-2">
+                Reliable transport for staff, guests, and business travel
+              </h3>
+              <p className="text-sm text-muted-foreground leading-6">
+                Cloud Cars supports businesses with dependable transport for
+                airport runs, staff travel, hotel guest movements, client
+                collections, and scheduled journeys. We offer a more accountable,
+                professional alternative to app-based uncertainty.
+              </p>
+            </div>
 
             {/* Benefits Grid */}
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
@@ -148,21 +166,25 @@ export default function Corporate() {
                   <CheckCircle2 className="w-8 h-8 text-primary" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-2">
-                  Got It!
+                  Enquiry Received
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Thanks for getting in touch. Someone from our team will call you
-                  within 24 hours to chat about what you need.
+                  Thanks for getting in touch. A member of our team will contact
+                  you within 24 hours to discuss your business transport needs.
                 </p>
               </div>
             ) : (
               <>
                 <h3 className="text-xl font-bold text-foreground mb-2">
-                  Let's Talk Business
+                  Open a Business Account
                 </h3>
-                <p className="text-muted-foreground mb-6">
-                  Tell us a bit about your company and we'll put together a
-                  package that works for you.
+                <p className="text-muted-foreground mb-2">
+                  Tell us a little about your organisation and the type of
+                  journeys you need.
+                </p>
+                <p className="text-sm text-primary font-medium mb-6">
+                  Suitable for staff travel, airport runs, hotel guests, visitor
+                  transport, and repeat bookings.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -224,26 +246,26 @@ export default function Corporate() {
 
                   <div className="space-y-2">
                     <Label htmlFor="estimatedMonthlyTrips">
-                      Roughly How Many Trips Per Month?
+                      Estimated Monthly Journeys
                     </Label>
                     <Input
                       id="estimatedMonthlyTrips"
                       name="estimatedMonthlyTrips"
                       value={formData.estimatedMonthlyTrips}
                       onChange={handleChange}
-                      placeholder="e.g., 50-100 trips"
+                      placeholder="e.g. 20, 50-100, or ad hoc"
                       className="bg-background"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="requirements">What Do You Need?</Label>
+                    <Label htmlFor="requirements">Your Requirements</Label>
                     <Textarea
                       id="requirements"
                       name="requirements"
                       value={formData.requirements}
                       onChange={handleChange}
-                      placeholder="Airport runs, staff transport, client pickups..."
+                      placeholder="Tell us about staff transport, airport runs, client collections, hotel guest travel, regular routes, or any specific requirements..."
                       rows={4}
                       className="bg-background resize-none"
                     />
@@ -260,7 +282,7 @@ export default function Corporate() {
                         Sending...
                       </>
                     ) : (
-                      "Get in Touch"
+                      "Request a Call Back"
                     )}
                   </Button>
                 </form>
