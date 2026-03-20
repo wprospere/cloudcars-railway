@@ -12,6 +12,8 @@ const navLinks = [
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "";
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -36,15 +38,23 @@ export default function Header() {
             className="hidden lg:flex items-center gap-8"
             aria-label="Main navigation"
           >
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-foreground font-semibold relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-full after:bg-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
           </nav>
 
           <div className="hidden lg:flex items-center gap-3 xl:gap-4">
@@ -111,16 +121,24 @@ export default function Header() {
             className="container mx-auto py-4 flex flex-col gap-2"
             aria-label="Mobile navigation"
           >
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={closeMobileMenu}
-                className="py-3 px-4 text-left text-foreground hover:bg-secondary/50 rounded-lg transition-colors block"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeMobileMenu}
+                  className={`py-3 px-4 text-left rounded-lg transition-colors block ${
+                    isActive
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-foreground hover:bg-secondary/50"
+                  }`}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
 
             <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-3">
               <a
