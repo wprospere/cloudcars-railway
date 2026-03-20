@@ -29,6 +29,8 @@ import {
   Mail,
   Phone,
   FileBadge,
+  Quote,
+  Clock3,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -143,7 +145,7 @@ export default function DriveForCloudCars() {
 
       <main className="pt-16 lg:pt-20">
         <section className="relative overflow-hidden bg-gradient-to-b from-background via-secondary/20 to-secondary/40 py-16 lg:py-24">
-          <div className="absolute inset-0 pointer-events-none">
+          <div className="pointer-events-none absolute inset-0">
             <div className="absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
             <div className="absolute right-0 bottom-0 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
           </div>
@@ -152,9 +154,9 @@ export default function DriveForCloudCars() {
             <div className="mb-8">
               <a
                 href="/"
-                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                ← Back to Home
+                ← Return to Cloud Cars
               </a>
             </div>
 
@@ -173,8 +175,15 @@ export default function DriveForCloudCars() {
 
                 <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground lg:text-xl">
                   Join a professional Nottingham private hire company focused on
-                  quality journeys, reliable service, and drivers who take pride
-                  in what they do.
+                  quality journeys, dependable service, and drivers who take real
+                  pride in what they do.
+                </p>
+
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
+                  We are not a volume-based platform. We prioritise professional
+                  drivers who are reliable, well-presented, courteous, and
+                  committed to delivering an excellent standard of customer
+                  service.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -220,6 +229,24 @@ export default function DriveForCloudCars() {
                   </div>
                 </div>
 
+                <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Typical weekly opportunity
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    Drivers who are consistently available and deliver a high
+                    standard of service can benefit from a regular mix of airport
+                    transfers, corporate bookings, school transport, and local
+                    account work.
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    Earnings will vary depending on your availability, vehicle
+                    type, hours worked, and the type of jobs completed, but
+                    dependable drivers are best placed to benefit from steady
+                    ongoing work.
+                  </p>
+                </div>
+
                 <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/5 p-6">
                   <h2 className="text-lg font-semibold text-foreground">
                     We are selective about who joins our team
@@ -228,6 +255,23 @@ export default function DriveForCloudCars() {
                     We are not looking for just anyone. We want drivers who are
                     friendly, knowledgeable, presentable, and genuinely committed
                     to delivering a high standard of service.
+                  </p>
+                </div>
+
+                <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <Quote className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Drivers who fit our standards tend to do well here
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    Drivers who are punctual, polite, and consistent are usually
+                    the ones who benefit most from regular work and long-term
+                    opportunities with Cloud Cars.
+                  </p>
+                  <p className="mt-4 text-sm font-medium text-foreground">
+                    Professional drivers. Reliable work. Local support.
                   </p>
                 </div>
               </div>
@@ -280,17 +324,54 @@ export default function DriveForCloudCars() {
                           Why drivers choose Cloud Cars
                         </h4>
                         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                          <li>• Consistent work including airport, corporate and school runs</li>
-                          <li>• Weekly payments with local office support</li>
-                          <li>• Professional bookings, not low-quality fares</li>
-                          <li>• A company that values standards and reliability</li>
+                          <li>
+                            • Consistent work including airport, corporate and
+                            school runs
+                          </li>
+                          <li>
+                            • Weekly payments with local office support
+                          </li>
+                          <li>
+                            • Professional bookings, not low-quality fares
+                          </li>
+                          <li>
+                            • A company that values standards and reliability
+                          </li>
                         </ul>
+                      </div>
+
+                      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-border/60 bg-background p-4">
+                          <div className="mb-2 flex items-center gap-2 text-foreground">
+                            <Clock3 className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold">
+                              Quick review
+                            </span>
+                          </div>
+                          <p className="text-sm leading-6 text-muted-foreground">
+                            We aim to review suitable applications within 24–48
+                            hours.
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-border/60 bg-background p-4">
+                          <div className="mb-2 flex items-center gap-2 text-foreground">
+                            <Shield className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold">
+                              Secure onboarding
+                            </span>
+                          </div>
+                          <p className="text-sm leading-6 text-muted-foreground">
+                            Successful applicants receive a secure link for
+                            compliance and document upload.
+                          </p>
+                        </div>
                       </div>
 
                       <form
                         id="application-form"
                         onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-5"
+                        className="space-y-5 scroll-mt-24"
                       >
                         <div className="space-y-2">
                           <Label htmlFor="fullName">Full name</Label>
@@ -481,7 +562,7 @@ export default function DriveForCloudCars() {
                           <Button
                             type="submit"
                             disabled={submitApplication.isPending}
-                            className="w-full py-6 font-semibold text-primary-foreground bg-primary hover:bg-primary/90"
+                            className="w-full bg-primary py-6 font-semibold text-primary-foreground hover:bg-primary/90"
                           >
                             {submitApplication.isPending ? (
                               <span className="inline-flex items-center justify-center gap-2">
