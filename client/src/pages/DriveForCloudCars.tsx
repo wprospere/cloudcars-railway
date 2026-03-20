@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,9 @@ import {
   User,
   Mail,
   Phone,
-  MapPin,
+  FileBadge,
 } from "lucide-react";
-import { api } from "@/utils/api";
+import { trpc } from "@/lib/trpc";
 
 const benefits = [
   {
@@ -71,52 +71,44 @@ const benefits = [
 ];
 
 const applicationSchema = z.object({
-  firstName: z.string().min(2, "Please enter your first name"),
-  lastName: z.string().min(2, "Please enter your last name"),
+  fullName: z.string().min(2, "Please enter your full name"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(7, "Please enter a valid phone number"),
-  postcode: z.string().min(2, "Please enter your postcode"),
-  badgeType: z.string().min(1, "Please select your badge type"),
-  availability: z.string().min(1, "Please select your availability"),
-  licenceYears: z.string().min(1, "Please enter how long you have held your licence"),
-  hasOwnVehicle: z.boolean().default(false),
+  licenseNumber: z.string().min(2, "Please enter your licence or badge number"),
+  yearsExperience: z.coerce
+    .number()
+    .min(0, "Please enter valid years of experience"),
+  availability: z.enum(["fulltime", "parttime", "weekends"]),
+  vehicleOwner: z.boolean().optional().default(false),
   vehicleType: z.string().optional(),
-  experience: z.string().min(10, "Please tell us a little about your experience"),
-  notes: z.string().optional(),
-  agreeToContact: z.boolean().refine((val) => val === true, {
-    message: "You must agree before submitting",
-  }),
+  message: z.string().optional(),
 });
 
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
 const defaultValues: ApplicationFormValues = {
-  firstName: "",
-  lastName: "",
+  fullName: "",
   email: "",
   phone: "",
-  postcode: "",
-  badgeType: "",
-  availability: "",
-  licenceYears: "",
-  hasOwnVehicle: false,
+  licenseNumber: "",
+  yearsExperience: 0,
+  availability: "parttime",
+  vehicleOwner: false,
   vehicleType: "",
-  experience: "",
-  notes: "",
-  agreeToContact: false,
+  message: "",
 };
 
 export default function DriveForCloudCars() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const form = useForm<ApplicationFormValues>({
-    resolver: zodResolver(applicationSchema),
+    resolver: zodResolver(applicationSchema) as any,
     defaultValues,
   });
 
-  const hasOwnVehicle = form.watch("hasOwnVehicle");
+  const vehicleOwner = form.watch("vehicleOwner");
 
-  const submitApplication = api.driver.submitApplication.useMutation({
+  const submitApplication = trpc.driver.submitApplication.useMutation({
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset(defaultValues);
@@ -124,59 +116,65 @@ export default function DriveForCloudCars() {
     },
   });
 
-  const onSubmit = (values: ApplicationFormValues) => {
+  const onSubmit: SubmitHandler<ApplicationFormValues> = (values) => {
     submitApplication.mutate({
-      ...values,
-      hasOwnVehicle: values.hasOwnVehicle ?? false,
-      agreeToContact: values.agreeToContact ?? false,
-      vehicleType: values.hasOwnVehicle ? values.vehicleType : "",
+      fullName: values.fullName,
+      email: values.email,
+      phone: values.phone,
+      licenseNumber: values.licenseNumber,
+      yearsExperience: Number(values.yearsExperience),
+      availability: values.availability,
+      vehicleOwner: values.vehicleOwner ?? false,
+      vehicleType: values.vehicleOwner ? values.vehicleType : "",
+      message: values.message,
     });
   };
 
   return (
-    <section id="drivers" className="py-20 lg:py-32 bg-secondary/30">
+    <section id="drivers" className="bg-secondary/30 py-20 lg:py-32">
       <div className="container">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+        <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-20">
           <div>
-            <span className="text-sm font-semibold text-primary uppercase tracking-wider">
+            <span className="text-primary text-sm font-semibold uppercase tracking-wider">
               Drivers Wanted
             </span>
 
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-6">
+            <h2 className="text-foreground mt-3 mb-6 text-3xl font-bold sm:text-4xl lg:text-5xl">
               Drive for{" "}
               <span className="text-gradient-green font-['Playfair_Display',serif] italic">
                 Cloud Cars
               </span>
             </h2>
 
-            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+            <p className="text-muted-foreground mb-6 text-lg leading-relaxed">
               We are looking for professional private hire drivers in Nottingham
               who take pride in punctuality, presentation, and customer service.
-              Join a growing local company focused on quality journeys and dependable service.
+              Join a growing local company focused on quality journeys and
+              dependable service.
             </p>
 
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
-              <h4 className="font-semibold text-foreground mb-2">
+            <div className="border-primary/20 bg-primary/5 mb-8 rounded-xl border p-5">
+              <h4 className="text-foreground mb-2 font-semibold">
                 We are selective about who joins our team
               </h4>
-              <p className="text-sm text-muted-foreground leading-6">
+              <p className="text-muted-foreground text-sm leading-6">
                 We are not looking for just anyone. We want drivers who are
                 friendly, knowledgeable, presentable, and genuinely committed to
                 delivering a high standard of service.
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6 mb-10">
+            <div className="mb-10 grid gap-6 sm:grid-cols-2">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <benefit.icon className="w-5 h-5 text-primary" />
+                  <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                    <benefit.icon className="text-primary h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">
+                    <h4 className="text-foreground mb-1 font-semibold">
                       {benefit.title}
                     </h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {benefit.description}
                     </p>
                   </div>
@@ -184,44 +182,44 @@ export default function DriveForCloudCars() {
               ))}
             </div>
 
-            <div className="bg-card rounded-xl p-6 border border-border">
-              <h4 className="font-semibold text-foreground mb-4">
+            <div className="bg-card border-border rounded-xl border p-6">
+              <h4 className="text-foreground mb-4 font-semibold">
                 What You'll Need
               </h4>
 
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <ul className="text-muted-foreground space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                   UK driving licence
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                   Private hire badge or willingness to obtain one
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                   Good knowledge of Nottingham routes
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                   Professional attitude and strong customer service
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                   Suitable vehicle if you plan to drive your own car
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="bg-card rounded-2xl p-6 lg:p-8 border border-border">
+          <div className="bg-card border-border rounded-2xl border p-6 lg:p-8">
             {isSubmitted ? (
-              <div className="text-center py-6">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-7 h-7 text-primary" />
+              <div className="py-6 text-center">
+                <div className="bg-primary/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+                  <CheckCircle2 className="text-primary h-7 w-7" />
                 </div>
 
-                <h3 className="text-2xl font-bold text-foreground mb-3">
+                <h3 className="text-foreground mb-3 text-2xl font-bold">
                   Application Submitted
                 </h3>
 
@@ -230,69 +228,56 @@ export default function DriveForCloudCars() {
                   our team will review your application and be in touch.
                 </p>
 
-                <Button type="button" onClick={() => setIsSubmitted(false)} className="w-full">
+                <Button
+                  type="button"
+                  onClick={() => setIsSubmitted(false)}
+                  className="w-full"
+                >
                   Submit Another Application
                 </Button>
               </div>
             ) : (
               <>
-                <h3 className="text-2xl font-bold text-foreground mb-3">
+                <h3 className="text-foreground mb-3 text-2xl font-bold">
                   Apply to Drive
                 </h3>
 
-                <p className="text-sm text-primary font-medium mb-2">
+                <p className="text-primary mb-2 text-sm font-medium">
                   We are currently recruiting a limited number of new drivers.
                 </p>
 
                 <p className="text-muted-foreground mb-6 leading-7">
-                  Complete the form below and tell us a bit about yourself,
-                  your licence, and your availability.
+                  Complete the form below and tell us a bit about yourself, your
+                  licence, and your availability.
                 </p>
 
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First name</Label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                        <Input
-                          id="firstName"
-                          {...form.register("firstName")}
-                          className="pl-10"
-                          placeholder="First name"
-                        />
-                      </div>
-                      {form.formState.errors.firstName && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.firstName.message}
-                        </p>
-                      )}
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-5"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full name</Label>
+                    <div className="relative">
+                      <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                      <Input
+                        id="fullName"
+                        {...form.register("fullName")}
+                        className="pl-10"
+                        placeholder="Full name"
+                      />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last name</Label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                        <Input
-                          id="lastName"
-                          {...form.register("lastName")}
-                          className="pl-10"
-                          placeholder="Last name"
-                        />
-                      </div>
-                      {form.formState.errors.lastName && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.lastName.message}
-                        </p>
-                      )}
-                    </div>
+                    {form.formState.errors.fullName && (
+                      <p className="text-destructive text-sm">
+                        {form.formState.errors.fullName.message}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
                           id="email"
                           type="email"
@@ -302,7 +287,7 @@ export default function DriveForCloudCars() {
                         />
                       </div>
                       {form.formState.errors.email && (
-                        <p className="text-sm text-destructive">
+                        <p className="text-destructive text-sm">
                           {form.formState.errors.email.message}
                         </p>
                       )}
@@ -311,7 +296,7 @@ export default function DriveForCloudCars() {
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone number</Label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Phone className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
                           id="phone"
                           {...form.register("phone")}
@@ -320,129 +305,112 @@ export default function DriveForCloudCars() {
                         />
                       </div>
                       {form.formState.errors.phone && (
-                        <p className="text-sm text-destructive">
+                        <p className="text-destructive text-sm">
                           {form.formState.errors.phone.message}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="postcode">Postcode</Label>
-                    <div className="relative">
-                      <MapPin className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="licenseNumber">
+                        Licence / badge number
+                      </Label>
+                      <div className="relative">
+                        <FileBadge className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                        <Input
+                          id="licenseNumber"
+                          {...form.register("licenseNumber")}
+                          className="pl-10"
+                          placeholder="Enter licence or badge number"
+                        />
+                      </div>
+                      {form.formState.errors.licenseNumber && (
+                        <p className="text-destructive text-sm">
+                          {form.formState.errors.licenseNumber.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="yearsExperience">
+                        Years of experience
+                      </Label>
                       <Input
-                        id="postcode"
-                        {...form.register("postcode")}
-                        className="pl-10"
-                        placeholder="Postcode"
+                        id="yearsExperience"
+                        type="number"
+                        min="0"
+                        step="1"
+                        {...form.register("yearsExperience")}
+                        placeholder="e.g. 5"
                       />
-                    </div>
-                    {form.formState.errors.postcode && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.postcode.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Badge type</Label>
-                      <Select
-                        value={form.watch("badgeType")}
-                        onValueChange={(value) =>
-                          form.setValue("badgeType", value, { shouldValidate: true })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select badge type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="nottingham-city">
-                            Nottingham City Council
-                          </SelectItem>
-                          <SelectItem value="rushcliffe">
-                            Rushcliffe Borough Council
-                          </SelectItem>
-                          <SelectItem value="other">Other council</SelectItem>
-                          <SelectItem value="not-licensed">Not licensed yet</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.badgeType && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.badgeType.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Availability</Label>
-                      <Select
-                        value={form.watch("availability")}
-                        onValueChange={(value) =>
-                          form.setValue("availability", value, { shouldValidate: true })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select availability" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="full-time">Full-time</SelectItem>
-                          <SelectItem value="part-time">Part-time</SelectItem>
-                          <SelectItem value="weekends">Weekends</SelectItem>
-                          <SelectItem value="school-runs">School runs only</SelectItem>
-                          <SelectItem value="flexible">Flexible</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.availability && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.availability.message}
+                      {form.formState.errors.yearsExperience && (
+                        <p className="text-destructive text-sm">
+                          {form.formState.errors.yearsExperience.message}
                         </p>
                       )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="licenceYears">How long have you held your licence?</Label>
-                    <Input
-                      id="licenceYears"
-                      {...form.register("licenceYears")}
-                      placeholder="e.g. 5 years"
-                    />
-                    {form.formState.errors.licenceYears && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.licenceYears.message}
+                    <Label>Availability</Label>
+                    <Select
+                      value={form.watch("availability")}
+                      onValueChange={(value) =>
+                        form.setValue(
+                          "availability",
+                          value as "fulltime" | "parttime" | "weekends",
+                          { shouldValidate: true }
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select availability" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fulltime">Full-time</SelectItem>
+                        <SelectItem value="parttime">Part-time</SelectItem>
+                        <SelectItem value="weekends">Weekends</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.availability && (
+                      <p className="text-destructive text-sm">
+                        Please select your availability
                       </p>
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="border-primary/20 bg-primary/5 rounded-xl border p-4">
                     <div className="flex items-start gap-3">
                       <Checkbox
-                        id="hasOwnVehicle"
-                        checked={form.watch("hasOwnVehicle") ?? false}
+                        id="vehicleOwner"
+                        checked={form.watch("vehicleOwner") ?? false}
                         onCheckedChange={(checked) =>
-                          form.setValue("hasOwnVehicle", checked === true, {
+                          form.setValue("vehicleOwner", checked === true, {
                             shouldValidate: true,
                           })
                         }
                       />
                       <div className="space-y-1">
-                        <Label htmlFor="hasOwnVehicle" className="cursor-pointer">
+                        <Label
+                          htmlFor="vehicleOwner"
+                          className="cursor-pointer"
+                        >
                           I have my own vehicle
                         </Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Tick this if you already have a suitable vehicle.
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {hasOwnVehicle && (
+                  {vehicleOwner && (
                     <div className="space-y-2">
                       <Label htmlFor="vehicleType">Vehicle type</Label>
                       <div className="relative">
-                        <Car className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Car className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
                           id="vehicleType"
                           {...form.register("vehicleType")}
@@ -454,61 +422,18 @@ export default function DriveForCloudCars() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="experience">Experience</Label>
+                    <Label htmlFor="message">Additional information</Label>
                     <Textarea
-                      id="experience"
-                      {...form.register("experience")}
+                      id="message"
+                      {...form.register("message")}
                       placeholder="Tell us about your driving experience, local knowledge, customer service, airport work, school runs, or anything else relevant."
                       className="min-h-[120px]"
                     />
-                    {form.formState.errors.experience && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.experience.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Additional notes</Label>
-                    <Textarea
-                      id="notes"
-                      {...form.register("notes")}
-                      placeholder="Anything else you would like us to know?"
-                      className="min-h-[100px]"
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-border p-4">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id="agreeToContact"
-                        checked={form.watch("agreeToContact") ?? false}
-                        onCheckedChange={(checked) =>
-                          form.setValue("agreeToContact", checked === true, {
-                            shouldValidate: true,
-                          })
-                        }
-                      />
-                      <div className="space-y-1">
-                        <Label htmlFor="agreeToContact" className="cursor-pointer">
-                          I agree to be contacted about my application
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          By submitting this form, you consent to Cloud Cars
-                          contacting you regarding your application.
-                        </p>
-                      </div>
-                    </div>
-                    {form.formState.errors.agreeToContact && (
-                      <p className="text-sm text-destructive mt-2">
-                        {form.formState.errors.agreeToContact.message}
-                      </p>
-                    )}
                   </div>
 
                   {submitApplication.error && (
-                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                      <p className="text-sm text-destructive">
+                    <div className="border-destructive/20 bg-destructive/5 rounded-xl border p-4">
+                      <p className="text-destructive text-sm">
                         {submitApplication.error.message ||
                           "Something went wrong while submitting your application. Please try again."}
                       </p>
@@ -519,17 +444,17 @@ export default function DriveForCloudCars() {
                     <Button
                       type="submit"
                       disabled={submitApplication.isPending}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground w-full py-6 font-semibold"
                     >
                       {submitApplication.isPending ? (
                         <span className="inline-flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           Submitting Application...
                         </span>
                       ) : (
                         <span className="inline-flex items-center justify-center">
                           Submit Application
-                          <ArrowRight className="w-4 h-4 ml-2" />
+                          <ArrowRight className="ml-2 h-4 w-4" />
                         </span>
                       )}
                     </Button>
@@ -539,9 +464,10 @@ export default function DriveForCloudCars() {
                     </Button>
                   </div>
 
-                  <p className="text-xs text-muted-foreground leading-6">
+                  <p className="text-muted-foreground text-xs leading-6">
                     Drivers invited to join Cloud Cars will receive a separate
-                    secure onboarding link to upload vehicle and compliance documents.
+                    secure onboarding link to upload vehicle and compliance
+                    documents.
                   </p>
                 </form>
               </>
