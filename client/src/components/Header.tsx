@@ -59,13 +59,6 @@ export default function Header() {
 
             <Button
               asChild
-              className="font-semibold px-6 bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all duration-200"
-            >
-              <a href="/drive-for-cloud-cars">Become a Driver</a>
-            </Button>
-
-            <Button
-              asChild
               variant="outline"
               className="font-semibold px-6 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
             >
@@ -139,15 +132,6 @@ export default function Header() {
                 <Phone className="w-4 h-4" />
                 <span>0115 8 244 244</span>
               </a>
-
-              <Button
-                asChild
-                className="w-full font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all duration-200"
-              >
-                <a href="/drive-for-cloud-cars" onClick={closeMobileMenu}>
-                  Become a Driver
-                </a>
-              </Button>
 
               <Button
                 asChild
