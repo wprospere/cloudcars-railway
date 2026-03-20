@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ArrowRight,
 } from "lucide-react";
-import { Link } from "wouter";
 
 const benefits = [
   {
@@ -163,13 +162,17 @@ export default function Drivers() {
             </div>
 
             <div className="space-y-4">
-              <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6">
-                <Link href="/drive-for-cloud-cars">
-                  <span className="inline-flex items-center">
-                    View Driver Opportunities
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </span>
-                </Link>
+              <Button
+                asChild
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
+              >
+                <a
+                  href="/drive-for-cloud-cars"
+                  className="inline-flex items-center justify-center"
+                >
+                  View Driver Opportunities
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </a>
               </Button>
 
               <Button asChild variant="outline" className="w-full py-6">

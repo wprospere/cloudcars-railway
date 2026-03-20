@@ -1,5 +1,4 @@
 import { Helmet } from "react-helmet-async";
-import { Link } from "wouter";
 import {
   PoundSterling,
   Calendar,
@@ -63,7 +62,10 @@ export default function DriveForCloudCars() {
           name="description"
           content="Apply to drive for Cloud Cars in Nottingham. Private hire driver opportunities with weekly pay, flexible hours, local support, and quality work."
         />
-        <link rel="canonical" href="https://cloudcarsltd.com/drive-for-cloud-cars" />
+        <link
+          rel="canonical"
+          href="https://cloudcarsltd.com/drive-for-cloud-cars"
+        />
       </Helmet>
 
       <Header />
@@ -97,7 +99,12 @@ export default function DriveForCloudCars() {
                   </a>
                 </Button>
 
-                <Button asChild variant="outline" size="lg" className="px-8 py-6 text-lg">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="px-8 py-6 text-lg"
+                >
                   <a href="tel:01158244244">Call 0115 8 244 244</a>
                 </Button>
               </div>
@@ -124,7 +131,10 @@ export default function DriveForCloudCars() {
           <div className="container">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {benefits.map((benefit, index) => (
-                <div key={index} className="bg-card rounded-2xl p-6 border border-border">
+                <div
+                  key={index}
+                  className="bg-card rounded-2xl p-6 border border-border"
+                >
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                     <benefit.icon className="w-6 h-6 text-primary" />
                   </div>
@@ -172,10 +182,14 @@ export default function DriveForCloudCars() {
                 </ul>
               </div>
 
-              <div id="apply" className="bg-card rounded-2xl p-6 border border-border">
+              <div
+                id="apply"
+                className="bg-card rounded-2xl p-6 border border-border"
+              >
                 <h2 className="text-2xl font-bold text-foreground mb-3">
                   Ready to Apply?
                 </h2>
+
                 <p className="text-muted-foreground mb-6 leading-7">
                   To keep standards high, we review applications before inviting
                   drivers to complete onboarding and document upload.
@@ -183,16 +197,19 @@ export default function DriveForCloudCars() {
 
                 <div className="space-y-4">
                   <Button asChild className="w-full">
-                    <Link href="/#drivers">Apply Through Homepage Form</Link>
+                    <a href="tel:01158244244">Call to Apply</a>
                   </Button>
 
                   <Button asChild variant="outline" className="w-full">
-                    <a href="tel:01158244244">Call the Team</a>
+                    <a href="mailto:bookings@cloudcarsltd.com?subject=Driver%20Application%20-%20Cloud%20Cars">
+                      Email Your Interest
+                    </a>
                   </Button>
                 </div>
 
-                <p className="text-xs text-muted-foreground mt-4">
-                  Invited drivers will receive a separate secure onboarding link
+                <p className="text-xs text-muted-foreground mt-4 leading-6">
+                  Once we have reviewed your interest and confirmed suitability,
+                  invited drivers will receive a separate secure onboarding link
                   to upload vehicle and compliance documents.
                 </p>
               </div>

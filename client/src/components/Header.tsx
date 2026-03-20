@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/#corporate", label: "Corporate" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
+  { href: "/drive-for-cloud-cars", label: "Drive for Cloud Cars" },
 ];
 
 export default function Header() {
@@ -60,7 +61,7 @@ export default function Header() {
               asChild
               className="font-semibold px-6 bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all duration-200"
             >
-              <a href="/#drivers">Become a Driver</a>
+              <a href="/drive-for-cloud-cars">Become a Driver</a>
             </Button>
 
             <Button
@@ -143,7 +144,7 @@ export default function Header() {
                 asChild
                 className="w-full font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all duration-200"
               >
-                <a href="/#drivers" onClick={closeMobileMenu}>
+                <a href="/drive-for-cloud-cars" onClick={closeMobileMenu}>
                   Become a Driver
                 </a>
               </Button>
