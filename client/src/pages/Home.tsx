@@ -129,14 +129,14 @@ export default function Home() {
           <Areas />
         </section>
 
-        {/* Drivers */}
-        <section id="drivers" className="scroll-mt-28">
-          <Drivers />
-        </section>
-
         {/* App */}
         <section id="app" className="scroll-mt-28">
           <AppPromo />
+        </section>
+
+        {/* Drivers */}
+        <section id="drivers" className="scroll-mt-28">
+          <Drivers />
         </section>
 
         {/* Sustainability */}
