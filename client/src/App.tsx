@@ -28,6 +28,7 @@ import SevenSeater from "./pages/SevenSeater";
 import CourierServices from "./pages/CourierServices";
 import CorporateTransport from "./pages/CorporateTransport";
 
+import DriveForCloudCars from "./pages/DriveForCloudCars";
 import DriverOnboardingPage from "@/pages/DriverOnboarding";
 
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -83,8 +84,10 @@ function Router() {
         component={CorporateTransport}
       />
 
-      {/* Driver onboarding */}
+      {/* Driver pages */}
+      <Route path="/drive-for-cloud-cars" component={DriveForCloudCars} />
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
+      <Route path="/driver/onboarding/:token" component={DriverOnboardingPage} />
 
       {/* Admin */}
       <Route path="/admin/login" component={AdminLoginPage} />

@@ -54,13 +54,13 @@ const benefits = [
     icon: Shield,
     title: "Professional Standards",
     description:
-      "We work with drivers who take pride in reliability, service, and presentation.",
+      "We work with drivers who value reliability, presentation, and excellent customer service.",
   },
   {
     icon: Briefcase,
-    title: "Corporate Opportunities",
+    title: "Quality Work",
     description:
-      "Access airport transfers, business travel, and account bookings as the business grows.",
+      "Access airport transfers, business travel, school transport, and regular local bookings.",
   },
 ];
 
@@ -145,22 +145,21 @@ export default function Drivers() {
             </h2>
 
             <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-              We are looking for reliable private hire drivers in Nottingham.
-              Airport transfers, corporate work, school transport, and regular
-              local bookings are available for drivers who want flexible
-              opportunities with a growing local company.
+              We are looking for reliable private hire drivers in Nottingham who
+              take pride in professionalism, punctuality, and customer service.
+              Cloud Cars offers flexible driving opportunities with a growing
+              local company focused on quality journeys and dependable service.
             </p>
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
               <h4 className="font-semibold text-foreground mb-2">
-                A professional team, not just an app
+                We are selective about who joins our team
               </h4>
               <p className="text-sm text-muted-foreground leading-6">
-                At Cloud Cars, we value drivers who are friendly,
-                knowledgeable, and professional. We do not build our team
-                through anonymous sign-ups alone, we review drivers carefully
-                and look for people who represent the standards of our business
-                properly.
+                We are not looking for just anyone. We want drivers who are
+                friendly, knowledgeable, presentable, and genuinely committed to
+                delivering a high standard of service. If that sounds like you,
+                we’d love to hear from you.
               </p>
             </div>
 
@@ -224,8 +223,8 @@ export default function Drivers() {
                 </h3>
 
                 <p className="text-muted-foreground max-w-sm">
-                  Thanks for applying to drive with Cloud Cars. We&apos;ll
-                  review your details and get back to you as soon as possible.
+                  Thanks for applying to drive with Cloud Cars. We’ll review
+                  your details and get back to you as soon as possible.
                 </p>
               </div>
             ) : (
@@ -241,7 +240,10 @@ export default function Drivers() {
                 <p className="text-xs text-muted-foreground mb-4">
                   Most drivers complete this form in under 60 seconds. Prefer to
                   speak to someone? Call us on{" "}
-                  <a href="tel:01158244244" className="text-primary font-semibold">
+                  <a
+                    href="tel:01158244244"
+                    className="text-primary font-semibold"
+                  >
                     0115 8 244 244
                   </a>
                 </p>
@@ -263,8 +265,7 @@ export default function Drivers() {
                 </div>
 
                 <p className="text-muted-foreground mb-6">
-                  Fill in your details and our team will get back to you as soon
-                  as possible.
+                  Fill in your details and our team will review your application.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">

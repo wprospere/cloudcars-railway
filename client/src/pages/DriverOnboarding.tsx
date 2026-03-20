@@ -42,7 +42,7 @@ const DOCS: {
   {
     type: "PLATING",
     label: "Taxi Plating / Plate",
-    hint: "Certificate/photo showing vehicle + plate details.",
+    hint: "Certificate or photo showing vehicle and plate details.",
   },
   {
     type: "INSURANCE",
@@ -53,14 +53,10 @@ const DOCS: {
   {
     type: "MOT",
     label: "MOT",
-    hint: "Pass certificate or screenshot showing reg + expiry.",
+    hint: "Pass certificate or screenshot showing reg and expiry.",
     requiresExpiry: true,
   },
 ];
-
-// -------------------------
-// Token helpers
-// -------------------------
 
 function getTokenFromWindow(): string {
   if (typeof window === "undefined") return "";
@@ -68,18 +64,15 @@ function getTokenFromWindow(): string {
   return sp.get("token") || "";
 }
 
-/**
- * UK registration validation (covers common modern formats)
- */
 function isUkReg(reg: string): boolean {
   const v = reg.replace(/\s+/g, "").toUpperCase();
 
-  const current = /^[A-Z]{2}\d{2}[A-Z]{3}$/; // AB12CDE
-  const prefix = /^[A-Z]\d{1,3}[A-Z]{3}$/; // A123BCD
-  const suffix = /^[A-Z]{3}\d{1,3}[A-Z]$/; // ABC123D
+  const current = /^[A-Z]{2}\d{2}[A-Z]{3}$/;
+  const prefix = /^[A-Z]\d{1,3}[A-Z]{3}$/;
+  const suffix = /^[A-Z]{3}\d{1,3}[A-Z]$/;
 
-  const dateless1 = /^[A-Z]{1,3}\d{1,3}$/; // ABC123
-  const dateless2 = /^\d{1,3}[A-Z]{1,3}$/; // 123ABC
+  const dateless1 = /^[A-Z]{1,3}\d{1,3}$/;
+  const dateless2 = /^\d{1,3}[A-Z]{1,3}$/;
 
   return (
     current.test(v) ||
@@ -94,15 +87,10 @@ function formatUkReg(reg: string): string {
   return reg.replace(/\s+/g, "").toUpperCase();
 }
 
-// -------------------------
-// File helpers
-// -------------------------
-
 async function fileToBase64(
   file: File,
   onProgress?: (pct: number) => void
 ): Promise<string> {
-  // returns base64 WITHOUT the "data:mime;base64," prefix
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read file"));
@@ -162,10 +150,6 @@ function isPdfFile(file: File | null | undefined) {
   return !!file && file.type === "application/pdf";
 }
 
-// -------------------------
-// Premium: image rotation + compression
-// -------------------------
-
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
   try {
@@ -182,13 +166,6 @@ async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   }
 }
 
-/**
- * Auto-compress images:
- * - target ~4MB for speed
- * - hard max 6MB
- * - keep quality >= 0.60 to protect text
- * - shrink dimensions if needed instead of destroying quality
- */
 async function compressImageFile(
   file: File,
   opts?: {
@@ -248,7 +225,6 @@ async function compressImageFile(
 
   if (!needsWork) return file;
 
-  // Pass 1: resize to maxSidePx, lower quality to hit targetBytes (down to minQuality)
   let side = maxSidePx;
   let q = initialQuality;
   let blob = await renderToJpegBlob(side, q);
@@ -258,7 +234,6 @@ async function compressImageFile(
     blob = await renderToJpegBlob(side, q);
   }
 
-  // Pass 2: if still above HARD cap, shrink dimensions first
   if (blob.size > hardMaxBytes) {
     side = minSidePx;
     q = Math.max(q, minQuality);
@@ -270,9 +245,7 @@ async function compressImageFile(
     }
   }
 
-  const newName =
-    file.name.replace(/\.(\w+)$/, "") + "-optimised.jpg";
-
+  const newName = file.name.replace(/\.(\w+)$/, "") + "-optimised.jpg";
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
@@ -315,21 +288,12 @@ async function rotateImageFile(
   return new File([blob], newName, { type: outputType });
 }
 
-// -------------------------
-// UI helpers
-// -------------------------
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-// Simple “staged” progress:
-// - 0–35: optimise
-// - 35–85: base64 encode (FileReader progress mapped)
-// - 85–98: upload (tRPC request in-flight)
-// - 100: done
 function mapBase64ProgressToOverall(pct0to100: number) {
-  const mapped = 35 + (pct0to100 / 100) * 50; // 35..85
+  const mapped = 35 + (pct0to100 / 100) * 50;
   return Math.round(clamp(mapped, 35, 85));
 }
 
@@ -361,7 +325,7 @@ export default function DriverOnboardingPage() {
   const [model, setModel] = useState("");
   const [colour, setColour] = useState("");
   const [year, setYear] = useState("");
-  const [licencePlate, setLicencePlate] = useState("");
+  const [plateNumber, setPlateNumber] = useState("");
   const [capacity, setCapacity] = useState("");
 
   const [selectedFiles, setSelectedFiles] = useState<Record<DocType, File | null>>({
@@ -391,7 +355,6 @@ export default function DriverOnboardingPage() {
     MOT: false,
   });
 
-  // ✅ NEW: per-doc progress (0-100)
   const [uploadProgress, setUploadProgress] = useState<Record<DocType, number>>({
     LICENSE_FRONT: 0,
     LICENSE_BACK: 0,
@@ -401,7 +364,6 @@ export default function DriverOnboardingPage() {
     MOT: 0,
   });
 
-  // ✅ NEW: per-doc “optimised X→Y” hint
   const [optimisedNote, setOptimisedNote] = useState<Record<DocType, string | null>>({
     LICENSE_FRONT: null,
     LICENSE_BACK: null,
@@ -451,12 +413,8 @@ export default function DriverOnboardingPage() {
         if (url) URL.revokeObjectURL(url);
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFiles]);
+  }, [selectedFiles, previewUrls]);
 
-  // -------------------------
-  // tRPC calls
-  // -------------------------
   const profileQuery = trpc.driverOnboarding.getByToken.useQuery(
     { token },
     { enabled: !!token }
@@ -476,7 +434,7 @@ export default function DriverOnboardingPage() {
       setModel(vehicle.model ?? "");
       setColour(vehicle.colour ?? "");
       setYear(vehicle.year ?? "");
-      setLicencePlate(vehicle.plateNumber ?? "");
+      setPlateNumber(vehicle.plateNumber ?? "");
       setCapacity(vehicle.capacity ?? "");
     }
   }, [profileQuery.data]);
@@ -493,12 +451,9 @@ export default function DriverOnboardingPage() {
   const docsProgress = useMemo(() => {
     const total = DOCS.length;
     const uploaded = DOCS.filter((d) => uploadedDocs.has(d.type)).length;
-    const approved = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "approved")
-      .length;
-    const rejected = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "rejected")
-      .length;
-    const pending = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "pending")
-      .length;
+    const approved = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "approved").length;
+    const rejected = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "rejected").length;
+    const pending = DOCS.filter((d) => uploadedDocs.get(d.type)?.status === "pending").length;
     return { total, uploaded, approved, rejected, pending };
   }, [uploadedDocs]);
 
@@ -530,10 +485,10 @@ export default function DriverOnboardingPage() {
       return "Registration doesn't look like a valid UK reg (e.g. AB12CDE).";
     }
 
-    if (licencePlate) {
-      const lp = formatUkReg(licencePlate);
+    if (plateNumber) {
+      const lp = formatUkReg(plateNumber);
       if (!isUkReg(lp)) {
-        return "Licence Plate doesn't look like a valid UK reg (e.g. AB12CDE).";
+        return "Plate Number doesn't look like a valid UK reg (e.g. AB12CDE).";
       }
     }
 
@@ -556,7 +511,7 @@ export default function DriverOnboardingPage() {
       model,
       colour,
       year: year || undefined,
-      plateNumber: licencePlate ? formatUkReg(licencePlate) : undefined,
+      plateNumber: plateNumber ? formatUkReg(plateNumber) : undefined,
       capacity: capacity || undefined,
     });
 
@@ -585,7 +540,6 @@ export default function DriverOnboardingPage() {
     setUploadProgress((p) => ({ ...p, [type]: 0 }));
   }
 
-  // ✅ NEW: auto-optimise on select
   async function handleSelectFile(type: DocType, file: File | null) {
     setStatusErr(null);
     setStatusMsg(null);
@@ -601,7 +555,6 @@ export default function DriverOnboardingPage() {
 
     const hardMax = 6 * 1024 * 1024;
 
-    // PDF: no optimisation, but enforce size limit
     if (isPdfFile(file)) {
       if (file.size > hardMax) {
         showError("PDF is too large. Please upload a PDF under 6MB.");
@@ -611,7 +564,6 @@ export default function DriverOnboardingPage() {
       return;
     }
 
-    // Image: optimise immediately if needed
     if (isImageFile(file)) {
       try {
         setUploading((prev) => ({ ...prev, [type]: true }));
@@ -619,7 +571,6 @@ export default function DriverOnboardingPage() {
 
         const before = file.size;
 
-        // Optimise (this may also convert to JPEG)
         const optimised = await compressImageFile(file, {
           targetBytes: 4 * 1024 * 1024,
           hardMaxBytes: 6 * 1024 * 1024,
@@ -657,7 +608,6 @@ export default function DriverOnboardingPage() {
       return;
     }
 
-    // Other allowed types (octet-stream) – just enforce max size
     if (file.size > hardMax) {
       showError("File is too large. Please upload a file under 6MB.");
       return;
@@ -749,14 +699,10 @@ export default function DriverOnboardingPage() {
       setUploading((prev) => ({ ...prev, [type]: true }));
       setUploadProgress((p) => ({ ...p, [type]: 5 }));
 
-      const before = file.size;
-
-      // Base64 encode with progress mapped into overall progress
       const base64Data = await fileToBase64(file, (pct) => {
         setUploadProgress((p) => ({ ...p, [type]: mapBase64ProgressToOverall(pct) }));
       });
 
-      // “Upload” stage (tRPC doesn’t expose network byte progress, so we show in-flight stage)
       setUploadProgress((p) => ({ ...p, [type]: 90 }));
 
       await uploadDocument.mutateAsync({
@@ -799,26 +745,24 @@ export default function DriverOnboardingPage() {
     if (!token) return showError("Missing token in URL.");
 
     const validationError = validateVehicle();
-    if (validationError)
+    if (validationError) {
       return showError("Please fix vehicle details first: " + validationError);
+    }
 
     if (!allRequiredUploaded) {
       return showError("Please upload all required documents before submitting.");
     }
 
     await submitOnboarding.mutateAsync({ token });
-    showMsg("✅ Onboarding submitted! We’ll review your documents and contact you.");
+    showMsg("✅ Onboarding submitted. Our team will now review your documents.");
     profileQuery.refetch();
   }
 
-  // -------------------------
-  // Render states
-  // -------------------------
   if (!token) {
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Card className="p-6">
-          <h1 className="text-2xl font-bold mb-2">Driver Onboarding</h1>
+          <h1 className="text-2xl font-bold mb-2">Cloud Cars Onboarding</h1>
           <p className="text-muted-foreground">
             This link is missing a token. Please use the onboarding link sent to you.
           </p>
@@ -839,7 +783,7 @@ export default function DriverOnboardingPage() {
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Card className="p-6">
-          <h1 className="text-2xl font-bold mb-2">Driver Onboarding</h1>
+          <h1 className="text-2xl font-bold mb-2">Cloud Cars Onboarding</h1>
           <p className="text-destructive">
             {profileQuery.error.message || "Invalid onboarding link."}
           </p>
@@ -861,14 +805,30 @@ export default function DriverOnboardingPage() {
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
-      {/* Header + Status */}
+      <Card className="p-6 space-y-4 border-primary/20 bg-primary/5">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Complete Your Cloud Cars Onboarding
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Thanks for progressing with Cloud Cars. Please complete your vehicle details
+            and upload your documents below so our team can review your onboarding.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background/70 p-4 text-sm text-muted-foreground leading-6">
+          We are selective about who joins our team, and this process helps us maintain
+          the professional standards our customers expect from Cloud Cars.
+        </div>
+      </Card>
+
       <Card className="p-6 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Driver Onboarding</h1>
+            <h2 className="text-2xl font-bold">Driver Onboarding</h2>
             <p className="text-muted-foreground">
-              Complete your vehicle details and upload your documents. Most drivers finish in{" "}
-              <span className="font-medium">5–8 minutes</span>.
+              Complete your vehicle details and upload your documents below. Most
+              drivers finish this process in <span className="font-medium">5–8 minutes</span>.
             </p>
 
             {driver?.fullName && (
@@ -889,7 +849,6 @@ export default function DriverOnboardingPage() {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progress</span>
@@ -908,7 +867,9 @@ export default function DriverOnboardingPage() {
             {docsProgress.pending > 0 && (
               <span className="mr-2">⏳ {docsProgress.pending} pending</span>
             )}
-            {docsProgress.rejected > 0 && <span>❌ {docsProgress.rejected} rejected</span>}
+            {docsProgress.rejected > 0 && (
+              <span>❌ {docsProgress.rejected} rejected</span>
+            )}
           </div>
         </div>
 
@@ -924,7 +885,6 @@ export default function DriverOnboardingPage() {
         )}
       </Card>
 
-      {/* Vehicle Details */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -977,17 +937,17 @@ export default function DriverOnboardingPage() {
             <Input value={year} onChange={(e) => setYear(e.target.value)} />
           </div>
           <div>
-            <Label>Licence Plate</Label>
+            <Label>Plate Number</Label>
             <Input
-              value={licencePlate}
-              onChange={(e) => setLicencePlate(formatUkReg(e.target.value))}
+              value={plateNumber}
+              onChange={(e) => setPlateNumber(formatUkReg(e.target.value))}
               placeholder="Optional"
               inputMode="text"
               autoCapitalize="characters"
             />
           </div>
           <div>
-            <Label>Capacity</Label>
+            <Label>Passenger Capacity</Label>
             <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
           </div>
         </div>
@@ -997,7 +957,6 @@ export default function DriverOnboardingPage() {
         </div>
       </Card>
 
-      {/* Documents */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -1012,7 +971,6 @@ export default function DriverOnboardingPage() {
           </Badge>
         </div>
 
-        {/* Checklist */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {DOCS.map((d) => {
             const existing = uploadedDocs.get(d.type);
@@ -1049,7 +1007,6 @@ export default function DriverOnboardingPage() {
           })}
         </div>
 
-        {/* Focused uploader */}
         {(() => {
           const doc = DOCS.find((d) => d.type === activeDoc)!;
           const existing = uploadedDocs.get(activeDoc);
@@ -1089,14 +1046,14 @@ export default function DriverOnboardingPage() {
                   <div className="font-medium">Rejected</div>
                   <div className="text-sm mt-1">{existing.rejectionReason}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Please re-upload a clearer/correct document.
+                    Please re-upload a clearer or correct document.
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label>Choose file (image or PDF, under 6MB)</Label>
+                  <Label>Upload file (image or PDF, under 6MB)</Label>
                   <Input
                     type="file"
                     accept="image/*,application/pdf"
@@ -1139,7 +1096,6 @@ export default function DriverOnboardingPage() {
                 </div>
               </div>
 
-              {/* ✅ Upload progress */}
               {isUploading && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -1158,7 +1114,6 @@ export default function DriverOnboardingPage() {
                 </div>
               )}
 
-              {/* ✅ Premium Preview */}
               {file && previewUrl && (
                 <div className="rounded-lg border p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
@@ -1258,13 +1213,13 @@ export default function DriverOnboardingPage() {
         })()}
       </Card>
 
-      {/* Submit */}
       <Card className="p-6 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Submit for Review</h2>
+            <h2 className="text-lg font-semibold">Submit Your Onboarding</h2>
             <p className="text-sm text-muted-foreground">
-              When vehicle details are saved and all documents are uploaded, submit for review.
+              Once your vehicle details are saved and all required documents have
+              been uploaded, you can submit everything for review.
             </p>
           </div>
           <Badge variant={canSubmit ? "default" : "secondary"}>
@@ -1273,7 +1228,7 @@ export default function DriverOnboardingPage() {
         </div>
 
         <Button onClick={handleSubmit} disabled={!canSubmit}>
-          {submitOnboarding.isPending ? "Submitting..." : "Submit"}
+          {submitOnboarding.isPending ? "Submitting..." : "Submit Onboarding"}
         </Button>
 
         {!allRequiredUploaded && (
