@@ -17,34 +17,6 @@ import Footer from "@/components/Footer";
 import TrustBar from "@/components/TrustBar";
 import RatingBar from "@/components/RatingBar";
 
-function QuickBookerEmbed() {
-  return (
-    <section className="mt-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-          <div className="border-b border-border px-6 py-5">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Book online with instant quote
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground">
-              Enter your pickup and drop-off, choose your vehicle, and book your
-              journey in seconds using our secure online booking system.
-            </p>
-          </div>
-
-          <iframe
-            src="https://book.cloudcarsltd.com/qb/#/?token=DCFvUodLCOojAxpf"
-            title="Cloud Cars QuickBooker"
-            className="w-full h-[720px] md:h-[820px]"
-            frameBorder="0"
-            scrolling="yes"
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -135,7 +107,6 @@ export default function Home() {
 
         <section id="booking" className="scroll-mt-28">
           <Booking />
-          <QuickBookerEmbed />
         </section>
 
         <section id="corporate" className="scroll-mt-28">
