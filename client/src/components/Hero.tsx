@@ -6,18 +6,28 @@ export default function Hero() {
   const content = useCmsContent("hero");
   const heroImage = useCmsImage(
     "hero-background",
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=2070&auto=format&fit=crop"
+    // Smaller default (1600px wide, quality 70) instead of the 2070px original.
+    // Cloud Cars should set a real optimised image in the CMS to replace this.
+    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=70&w=1600&auto=format&fit=crop"
   );
 
   return (
     <section className="relative min-h-screen flex items-center pt-24 lg:pt-28 overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0 z-0">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 blur-[1px]"
-          style={{
-            backgroundImage: `url('${heroImage.url}')`,
-          }}
+        {/* ✅ Rendered as a real <img> (not a CSS background) so the browser's
+            preload scanner can fetch it immediately. fetchpriority="high"
+            marks it as the LCP element; width/height prevent layout shift. */}
+        <img
+          src={heroImage.url}
+          alt={heroImage.altText || ""}
+          // @ts-expect-error fetchpriority is valid HTML but not yet in React's types
+          fetchpriority="high"
+          decoding="async"
+          width={1600}
+          height={900}
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-105 object-cover blur-[1px]"
         />
 
         {/* Premium overlays */}
