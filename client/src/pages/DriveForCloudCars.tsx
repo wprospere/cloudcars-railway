@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +33,20 @@ import {
   Clock3,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+
+// Cloudflare Turnstile site key (public — safe to expose in the client).
+// The matching SECRET key lives only on the server.
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string;
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+      reset: (id?: string) => void;
+      remove: (id?: string) => void;
+    };
+  }
+}
 
 const benefits = [
   {
@@ -104,6 +118,15 @@ const defaultValues: ApplicationFormValues = {
 export default function DriveForCloudCars() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Honeypot: a real user never fills this (it is visually hidden).
+  const [honeypot, setHoneypot] = useState("");
+
+  // Cloudflare Turnstile token + widget management
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileError, setTurnstileError] = useState("");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
   const form = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationSchema) as any,
     defaultValues,
@@ -115,11 +138,76 @@ export default function DriveForCloudCars() {
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset(defaultValues);
+      setHoneypot("");
+      // Token is single-use; reset the widget for any future submission.
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+        setTurnstileToken("");
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    onError: () => {
+      // Token is single-use; reset the widget so the user can retry.
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+        setTurnstileToken("");
+      }
     },
   });
 
+  useEffect(() => {
+    // Load the Turnstile script once.
+    const SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    let script = document.querySelector<HTMLScriptElement>(
+      `script[src="${SRC}"]`
+    );
+
+    const renderWidget = () => {
+      if (
+        window.turnstile &&
+        turnstileRef.current &&
+        widgetIdRef.current === null
+      ) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: "auto",
+          callback: (token: string) => {
+            setTurnstileToken(token);
+            setTurnstileError("");
+          },
+          "expired-callback": () => setTurnstileToken(""),
+          "error-callback": () => setTurnstileToken(""),
+        });
+      }
+    };
+
+    if (!script) {
+      script = document.createElement("script");
+      script.src = SRC;
+      script.async = true;
+      script.defer = true;
+      script.onload = renderWidget;
+      document.head.appendChild(script);
+    } else if (window.turnstile) {
+      renderWidget();
+    } else {
+      script.addEventListener("load", renderWidget);
+    }
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+    };
+  }, []);
+
   const onSubmit: SubmitHandler<ApplicationFormValues> = (values) => {
+    if (!turnstileToken) {
+      setTurnstileError("Please complete the verification before submitting.");
+      return;
+    }
+
     submitApplication.mutate({
       fullName: values.fullName,
       email: values.email,
@@ -130,6 +218,8 @@ export default function DriveForCloudCars() {
       vehicleOwner: values.vehicleOwner ?? false,
       vehicleType: values.vehicleOwner ? values.vehicleType : "",
       message: values.message,
+      turnstileToken, // ✅ verified server-side
+      company_website: honeypot, // ✅ honeypot (empty for real users)
     });
   };
 
@@ -215,7 +305,9 @@ export default function DriveForCloudCars() {
                   </div>
 
                   <div className="rounded-2xl border border-border/60 bg-card/80 p-5 shadow-sm">
-                    <p className="text-2xl font-bold text-foreground">Flexible</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      Flexible
+                    </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Full-time, part-time or weekends
                     </p>
@@ -328,12 +420,8 @@ export default function DriveForCloudCars() {
                             • Consistent work including airport, corporate and
                             school runs
                           </li>
-                          <li>
-                            • Weekly payments with local office support
-                          </li>
-                          <li>
-                            • Professional bookings, not low-quality fares
-                          </li>
+                          <li>• Weekly payments with local office support</li>
+                          <li>• Professional bookings, not low-quality fares</li>
                           <li>
                             • A company that values standards and reliability
                           </li>
@@ -549,6 +637,43 @@ export default function DriveForCloudCars() {
                           />
                         </div>
 
+                        {/* Honeypot — hidden from real users, attractive to bots.
+                            aria-hidden + tabIndex -1 keep it away from screen readers and keyboard. */}
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            left: "-9999px",
+                            width: "1px",
+                            height: "1px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <label htmlFor="company_website">
+                            Company website (leave blank)
+                          </label>
+                          <input
+                            id="company_website"
+                            name="company_website"
+                            type="text"
+                            tabIndex={-1}
+                            autoComplete="off"
+                            value={honeypot}
+                            onChange={(e) => setHoneypot(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Cloudflare Turnstile widget */}
+                        <div ref={turnstileRef} className="flex justify-center" />
+
+                        {turnstileError && (
+                          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+                            <p className="text-sm text-destructive">
+                              {turnstileError}
+                            </p>
+                          </div>
+                        )}
+
                         {submitApplication.error && (
                           <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
                             <p className="text-sm text-destructive">
@@ -561,7 +686,9 @@ export default function DriveForCloudCars() {
                         <div className="space-y-4 pt-2">
                           <Button
                             type="submit"
-                            disabled={submitApplication.isPending}
+                            disabled={
+                              submitApplication.isPending || !turnstileToken
+                            }
                             className="w-full bg-primary py-6 font-semibold text-primary-foreground hover:bg-primary/90"
                           >
                             {submitApplication.isPending ? (
