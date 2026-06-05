@@ -1,8 +1,20 @@
 // server/routers.ts
-import { publicProcedure, protectedProcedure, router } from "./railway-trpc";
+import {
+  publicProcedure,
+  protectedProcedure,
+  router,
+  type Context,
+} from "./railway-trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
+
+// ✅ Shared spam protection (Turnstile + honeypot)
+import {
+  verifyTurnstile,
+  honeypotTripped,
+  clientIpFromReq,
+} from "./security/turnstile.js";
 
 import {
   // Bookings / leads
@@ -65,6 +77,43 @@ import { storagePut, storageGet, refreshUrlFromStored } from "./storage";
 
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
+
+/* ----------------------------------------
+   ✅ Spam guard for PUBLIC forms
+   - Honeypot trips silently (caller pretends success so bots don't learn).
+   - Missing / invalid Turnstile token is rejected before any DB write.
+   - Fails closed if TURNSTILE_SECRET_KEY is missing (see turnstile.ts).
+---------------------------------------- */
+async function assertHumanOrThrow(opts: {
+  ctx: Context;
+  turnstileToken?: unknown;
+  honeypot?: unknown;
+}): Promise<{ human: boolean; honeypot: boolean }> {
+  // 1. Honeypot — caller should silently accept & drop.
+  if (honeypotTripped(opts.honeypot)) {
+    return { human: false, honeypot: true };
+  }
+
+  // 2. Turnstile token must be present.
+  if (!opts.turnstileToken || typeof opts.turnstileToken !== "string") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Verification required.",
+    });
+  }
+
+  // 3. Verify with Cloudflare.
+  const ip = clientIpFromReq(opts.ctx.req);
+  const ok = await verifyTurnstile(opts.turnstileToken, ip);
+  if (!ok) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Verification failed. Please try again.",
+    });
+  }
+
+  return { human: true, honeypot: false };
+}
 
 /* ----------------------------------------
    ✅ CRON helpers (INLINE)
@@ -287,13 +336,27 @@ export const appRouter = router({
           passengers: z.number().min(1).max(8).default(1),
           specialRequests: z.string().optional(),
           estimatedPrice: z.number().optional(),
+          // ✅ spam protection
+          turnstileToken: z.string().optional(),
+          company_website: z.string().optional(), // honeypot
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const { turnstileToken, company_website, ...payload } = input;
+
+        const guard = await assertHumanOrThrow({
+          ctx,
+          turnstileToken,
+          honeypot: company_website,
+        });
+        if (guard.honeypot) {
+          return { success: true, bookingId: null };
+        }
+
         const result = await createBooking({
-          ...input,
-          specialRequests: input.specialRequests ?? null,
-          estimatedPrice: input.estimatedPrice ?? null,
+          ...payload,
+          specialRequests: payload.specialRequests ?? null,
+          estimatedPrice: payload.estimatedPrice ?? null,
         } as any);
 
         return {
@@ -333,21 +396,35 @@ export const appRouter = router({
           vehicleType: z.string().optional(),
           availability: z.enum(["fulltime", "parttime", "weekends"]),
           message: z.string().optional(),
+          // ✅ spam protection
+          turnstileToken: z.string().optional(),
+          company_website: z.string().optional(), // honeypot
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const { turnstileToken, company_website, ...payload } = input;
+
+        const guard = await assertHumanOrThrow({
+          ctx,
+          turnstileToken,
+          honeypot: company_website,
+        });
+        if (guard.honeypot) {
+          return { success: true, applicationId: null };
+        }
+
         try {
           const result = await createDriverApplication({
-            ...input,
-            vehicleType: input.vehicleType ?? null,
-            message: input.message ?? null,
+            ...payload,
+            vehicleType: payload.vehicleType ?? null,
+            message: payload.message ?? null,
             internalNotes: null,
             assignedTo: null,
           } as any);
 
           notifyOwner({
             title: "New Driver Application",
-            content: `${input.fullName} applied. Phone: ${input.phone}`,
+            content: `${payload.fullName} applied. Phone: ${payload.phone}`,
           }).catch((err) => console.error("⚠️ notifyOwner failed", err));
 
           return {
@@ -375,20 +452,34 @@ export const appRouter = router({
           phone: z.string().min(1),
           estimatedMonthlyTrips: z.string().optional(),
           requirements: z.string().optional(),
+          // ✅ spam protection
+          turnstileToken: z.string().optional(),
+          company_website: z.string().optional(), // honeypot
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const { turnstileToken, company_website, ...payload } = input;
+
+        const guard = await assertHumanOrThrow({
+          ctx,
+          turnstileToken,
+          honeypot: company_website,
+        });
+        if (guard.honeypot) {
+          return { success: true, inquiryId: null };
+        }
+
         const result = await createCorporateInquiry({
-          ...input,
-          estimatedMonthlyTrips: input.estimatedMonthlyTrips ?? null,
-          requirements: input.requirements ?? null,
+          ...payload,
+          estimatedMonthlyTrips: payload.estimatedMonthlyTrips ?? null,
+          requirements: payload.requirements ?? null,
           internalNotes: null,
           assignedTo: null,
         } as any);
 
         await notifyOwner({
           title: "New Corporate Inquiry",
-          content: `${input.companyName} (${input.contactName})`,
+          content: `${payload.companyName} (${payload.contactName})`,
         });
 
         return {
@@ -408,19 +499,33 @@ export const appRouter = router({
           phone: z.string().optional(),
           subject: z.string().min(1),
           message: z.string().min(1),
+          // ✅ spam protection
+          turnstileToken: z.string().optional(),
+          company_website: z.string().optional(), // honeypot
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const { turnstileToken, company_website, ...payload } = input;
+
+        const guard = await assertHumanOrThrow({
+          ctx,
+          turnstileToken,
+          honeypot: company_website,
+        });
+        if (guard.honeypot) {
+          return { success: true, messageId: null };
+        }
+
         const result = await createContactMessage({
-          ...input,
-          phone: input.phone ?? null,
+          ...payload,
+          phone: payload.phone ?? null,
           internalNotes: null,
           assignedTo: null,
         } as any);
 
         await notifyOwner({
           title: "New Contact Message",
-          content: `${input.name}: ${input.subject}`,
+          content: `${payload.name}: ${payload.subject}`,
         });
 
         return {
@@ -489,7 +594,8 @@ export const appRouter = router({
             "";
 
           const lastUpdated =
-            (typeof extra.lastUpdated === "string" && extra.lastUpdated.trim()) ||
+            (typeof extra.lastUpdated === "string" &&
+              extra.lastUpdated.trim()) ||
             null;
 
           return {
@@ -826,7 +932,9 @@ export const appRouter = router({
           vehicleOwner: r.vehicleOwner,
           availability: r.availability,
           message:
-            typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+            typeof r.message === "string"
+              ? r.message.slice(0, 5000)
+              : r.message,
           status: r.status,
           assignedTo: r.assignedTo,
 
@@ -965,7 +1073,9 @@ export const appRouter = router({
           phone: r.phone,
           subject: r.subject,
           message:
-            typeof r.message === "string" ? r.message.slice(0, 5000) : r.message,
+            typeof r.message === "string"
+              ? r.message.slice(0, 5000)
+              : r.message,
           isRead: r.isRead,
           assignedTo: r.assignedTo,
           internalNotes:
@@ -1057,7 +1167,8 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const template = emailTemplates[input.templateType as EmailTemplateType];
+        const template =
+          emailTemplates[input.templateType as EmailTemplateType];
         if (!template) throw new Error("Invalid template type");
 
         let subject = template.subject;
