@@ -1,45 +1,55 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToHash from "./components/ScrollToHash";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
+// ✅ Home is eagerly loaded so the landing page paints instantly (no flash).
 import Home from "./pages/Home";
-import Faqs from "./pages/Faqs";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Cookies from "./pages/Cookies";
 
-import TaxiBeeston from "./pages/TaxiBeeston";
-import TaxiWestBridgford from "./pages/TaxiWestBridgford";
-import TaxiWollaton from "./pages/TaxiWollaton";
-import TaxiEdwalton from "./pages/TaxiEdwalton";
+// ✅ Everything else is lazy-loaded: each route's JS only downloads when the
+//    user actually visits it. This trims the initial bundle the homepage ships.
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
-import EastMidlandsAirportTaxi from "./pages/EastMidlandsAirportTaxi";
-import NottinghamToEMATaxi from "./pages/NottinghamToEMATaxi";
+const Faqs = lazy(() => import("./pages/Faqs"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Cookies = lazy(() => import("./pages/Cookies"));
 
-import TaxiNottingham from "./pages/TaxiNottingham";
-import AirportTransfers from "./pages/AirportTransfers";
-import ExecutiveCar from "./pages/ExecutiveCar";
-import SevenSeater from "./pages/SevenSeater";
-import CourierServices from "./pages/CourierServices";
-import CorporateTransport from "./pages/CorporateTransport";
+const TaxiBeeston = lazy(() => import("./pages/TaxiBeeston"));
+const TaxiWestBridgford = lazy(() => import("./pages/TaxiWestBridgford"));
+const TaxiWollaton = lazy(() => import("./pages/TaxiWollaton"));
+const TaxiEdwalton = lazy(() => import("./pages/TaxiEdwalton"));
 
-import DriveForCloudCars from "./pages/DriveForCloudCars";
-import DriverOnboardingPage from "@/pages/DriverOnboarding";
+const EastMidlandsAirportTaxi = lazy(
+  () => import("./pages/EastMidlandsAirportTaxi")
+);
+const NottinghamToEMATaxi = lazy(() => import("./pages/NottinghamToEMATaxi"));
 
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminLoginPage from "./pages/admin/Login";
-import ContentEditor from "./pages/admin/ContentEditor";
-import ImageManager from "./pages/admin/ImageManager";
-import AdminSettings from "./pages/admin/Settings";
-import Inquiries from "./pages/admin/Inquiries";
-import TeamMembers from "./pages/admin/TeamMembers";
-import PoliciesAdmin from "./pages/admin/PoliciesAdmin";
-import DriverOnboardingReview from "@/pages/admin/DriverOnboardingReview";
+const TaxiNottingham = lazy(() => import("./pages/TaxiNottingham"));
+const AirportTransfers = lazy(() => import("./pages/AirportTransfers"));
+const ExecutiveCar = lazy(() => import("./pages/ExecutiveCar"));
+const SevenSeater = lazy(() => import("./pages/SevenSeater"));
+const CourierServices = lazy(() => import("./pages/CourierServices"));
+const CorporateTransport = lazy(() => import("./pages/CorporateTransport"));
+
+const DriveForCloudCars = lazy(() => import("./pages/DriveForCloudCars"));
+const DriverOnboardingPage = lazy(() => import("@/pages/DriverOnboarding"));
+
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminLoginPage = lazy(() => import("./pages/admin/Login"));
+const ContentEditor = lazy(() => import("./pages/admin/ContentEditor"));
+const ImageManager = lazy(() => import("./pages/admin/ImageManager"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const Inquiries = lazy(() => import("./pages/admin/Inquiries"));
+const TeamMembers = lazy(() => import("./pages/admin/TeamMembers"));
+const PoliciesAdmin = lazy(() => import("./pages/admin/PoliciesAdmin"));
+const DriverOnboardingReview = lazy(
+  () => import("@/pages/admin/DriverOnboardingReview")
+);
 
 function Router() {
   return (
@@ -117,7 +127,16 @@ export default function App() {
         <TooltipProvider>
           <Toaster />
           <ScrollToHash />
-          <Router />
+          {/* Suspense fallback shows briefly while a lazy route's chunk loads. */}
+          <Suspense
+            fallback={
+              <div className="flex min-h-screen items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            }
+          >
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
