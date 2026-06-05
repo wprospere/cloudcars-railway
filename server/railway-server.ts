@@ -369,7 +369,20 @@ app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
 app.use("/uploads", express.static(uploadsDir));
 
 // ✅ Serve built frontend (Vite output)
-app.use(express.static(clientDist));
+//    Vite fingerprints asset filenames (e.g. index-a1b2c3.js), so they can be
+//    cached aggressively — a new build changes the filename. index.html is
+//    served with no-cache so users always get the latest asset references.
+app.use(
+  express.static(clientDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+      } else if (/\.(js|css|woff2?|png|jpe?g|svg|webp|avif|ico)$/i.test(filePath)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    },
+  })
+);
 
 // ✅ Force homepage to always be the React app
 app.get("/", (_req, res) => {
