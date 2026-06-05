@@ -33,6 +33,36 @@ const PORT = Number(process.env.PORT) || 8080;
 // Railway / reverse proxy
 app.set("trust proxy", 1);
 
+// ============================================================================
+// ✅ NEW: Cloudflare Turnstile verification helper
+// Verifies a Turnstile token server-side using the SECRET key.
+// Set TURNSTILE_SECRET_KEY in Railway → Variables.
+// Uses global fetch (available on Node 18+).
+// ============================================================================
+async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.error("TURNSTILE_SECRET_KEY not set — rejecting form submit");
+    return false;
+  }
+  const form = new URLSearchParams();
+  form.append("secret", secret);
+  form.append("response", token);
+  if (ip) form.append("remoteip", ip);
+
+  try {
+    const r = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      { method: "POST", body: form }
+    );
+    const data = (await r.json()) as { success?: boolean };
+    return data.success === true;
+  } catch (e) {
+    console.error("Turnstile verify request failed:", e);
+    return false;
+  }
+}
+
 // --------------------
 // Middleware
 // --------------------
@@ -169,9 +199,44 @@ app.post("/api/driver-apply", async (req, res) => {
   }
 });
 
+// ============================================================================
+// ✅ UPDATED: corporate inquiry route — now spam-protected.
+//   1. Honeypot (company_website): bots fill it; we silently accept & drop.
+//   2. Turnstile token verified with Cloudflare BEFORE writing to the DB.
+//   3. Token + honeypot stripped from the payload so they never hit the schema.
+//   Response shape is unchanged: { ok, result } / { ok:false, error }.
+// ============================================================================
 app.post("/api/corporate-inquiry", async (req, res) => {
   try {
-    const result = await createCorporateInquiry(req.body);
+    const { company_website, turnstileToken, ...payload } = req.body ?? {};
+
+    // 1. Honeypot — real users never fill this hidden field. Pretend success
+    //    so bots don't learn they were filtered.
+    if (typeof company_website === "string" && company_website.trim() !== "") {
+      return res.json({ ok: true, result: null });
+    }
+
+    // 2. Turnstile must be present and valid before we touch the DB.
+    if (!turnstileToken || typeof turnstileToken !== "string") {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Verification required." });
+    }
+
+    const ip =
+      (req.headers["cf-connecting-ip"] as string) ||
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip;
+
+    const human = await verifyTurnstile(turnstileToken, ip);
+    if (!human) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Verification failed. Please try again." });
+    }
+
+    // 3. Passed checks — save the clean payload (no token, no honeypot).
+    const result = await createCorporateInquiry(payload);
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createCorporateInquiry failed:", e?.message || e);
