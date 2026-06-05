@@ -27,41 +27,14 @@ import {
   runMigrations,
 } from "./db.js";
 
+// ✅ Shared spam protection (Turnstile + honeypot) — same helpers tRPC uses
+import { verifyTurnstile } from "./security/turnstile.js";
+
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
 // Railway / reverse proxy
 app.set("trust proxy", 1);
-
-// ============================================================================
-// ✅ NEW: Cloudflare Turnstile verification helper
-// Verifies a Turnstile token server-side using the SECRET key.
-// Set TURNSTILE_SECRET_KEY in Railway → Variables.
-// Uses global fetch (available on Node 18+).
-// ============================================================================
-async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) {
-    console.error("TURNSTILE_SECRET_KEY not set — rejecting form submit");
-    return false;
-  }
-  const form = new URLSearchParams();
-  form.append("secret", secret);
-  form.append("response", token);
-  if (ip) form.append("remoteip", ip);
-
-  try {
-    const r = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      { method: "POST", body: form }
-    );
-    const data = (await r.json()) as { success?: boolean };
-    return data.success === true;
-  } catch (e) {
-    console.error("Turnstile verify request failed:", e);
-    return false;
-  }
-}
 
 // --------------------
 // Middleware
@@ -186,10 +159,40 @@ app.use(
   })
 );
 
-// Example public form endpoints (optional)
+// ============================================================================
+// ✅ Driver apply REST route — now spam-protected (honeypot + Turnstile).
+//    Mirrors the corporate route below. The main driver form uses tRPC, but
+//    this REST endpoint is closed off too so it can't be used as a back door.
+// ============================================================================
 app.post("/api/driver-apply", async (req, res) => {
   try {
-    const result = await createDriverApplication(req.body);
+    const { company_website, turnstileToken, ...payload } = req.body ?? {};
+
+    // 1. Honeypot — real users never fill this. Pretend success & drop.
+    if (typeof company_website === "string" && company_website.trim() !== "") {
+      return res.json({ ok: true, result: null });
+    }
+
+    // 2. Turnstile token required.
+    if (!turnstileToken || typeof turnstileToken !== "string") {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Verification required." });
+    }
+
+    const ip =
+      (req.headers["cf-connecting-ip"] as string) ||
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip;
+
+    const human = await verifyTurnstile(turnstileToken, ip);
+    if (!human) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Verification failed. Please try again." });
+    }
+
+    const result = await createDriverApplication(payload);
     res.json({ ok: true, result });
   } catch (e: any) {
     console.error("createDriverApplication failed:", e?.message || e);
@@ -200,7 +203,7 @@ app.post("/api/driver-apply", async (req, res) => {
 });
 
 // ============================================================================
-// ✅ UPDATED: corporate inquiry route — now spam-protected.
+// ✅ Corporate inquiry route — spam-protected.
 //   1. Honeypot (company_website): bots fill it; we silently accept & drop.
 //   2. Turnstile token verified with Cloudflare BEFORE writing to the DB.
 //   3. Token + honeypot stripped from the payload so they never hit the schema.
