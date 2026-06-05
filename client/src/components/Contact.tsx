@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Phone, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+
+// Cloudflare Turnstile site key (public — safe to expose in the client).
+// The matching SECRET key lives only on the server.
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string;
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+      reset: (id?: string) => void;
+      remove: (id?: string) => void;
+    };
+  }
+}
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -68,24 +82,92 @@ export default function Contact() {
     phone: "",
     subject: "",
     message: "",
+    // Honeypot: a real user never fills this (it is visually hidden).
+    company_website: "",
   });
   const [submitted, setSubmitted] = useState(false);
+
+  // Cloudflare Turnstile token + widget management
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
   const contactMutation = trpc.contact.send.useMutation({
     onSuccess: () => {
       setSubmitted(true);
       toast.success("Message sent! We'll get back to you soon.");
       track("contact_form_submitted", { location: "contact_form" });
+      // Token is single-use; reset the widget.
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+        setTurnstileToken("");
+      }
     },
     onError: (error) => {
       toast.error(error.message || "Something went wrong. Please try again.");
       track("contact_form_error", { location: "contact_form" });
+      // Token is single-use; reset the widget so the user can retry.
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+        setTurnstileToken("");
+      }
     },
   });
 
+  useEffect(() => {
+    // Load the Turnstile script once.
+    const SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    let script = document.querySelector<HTMLScriptElement>(
+      `script[src="${SRC}"]`
+    );
+
+    const renderWidget = () => {
+      if (
+        window.turnstile &&
+        turnstileRef.current &&
+        widgetIdRef.current === null
+      ) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: "auto",
+          callback: (token: string) => setTurnstileToken(token),
+          "expired-callback": () => setTurnstileToken(""),
+          "error-callback": () => setTurnstileToken(""),
+        });
+      }
+    };
+
+    if (!script) {
+      script = document.createElement("script");
+      script.src = SRC;
+      script.async = true;
+      script.defer = true;
+      script.onload = renderWidget;
+      document.head.appendChild(script);
+    } else if (window.turnstile) {
+      renderWidget();
+    } else {
+      script.addEventListener("load", renderWidget);
+    }
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+    };
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    contactMutation.mutate(formData);
+    if (contactMutation.isPending) return;
+
+    if (!turnstileToken) {
+      toast.error("Please complete the verification before submitting.");
+      return;
+    }
+
+    contactMutation.mutate({ ...formData, turnstileToken });
   };
 
   const handleChange = (
@@ -233,9 +315,38 @@ export default function Contact() {
                     />
                   </div>
 
+                  {/* Honeypot — hidden from real users, attractive to bots.
+                      aria-hidden + tabIndex -1 keep it away from screen readers and keyboard. */}
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      left: "-9999px",
+                      width: "1px",
+                      height: "1px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <label htmlFor="company_website">
+                      Company website (leave blank)
+                    </label>
+                    <input
+                      id="company_website"
+                      name="company_website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={formData.company_website}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  {/* Cloudflare Turnstile widget */}
+                  <div ref={turnstileRef} className="flex justify-center" />
+
                   <Button
                     type="submit"
-                    disabled={contactMutation.isPending}
+                    disabled={contactMutation.isPending || !turnstileToken}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
                   >
                     {contactMutation.isPending ? (
