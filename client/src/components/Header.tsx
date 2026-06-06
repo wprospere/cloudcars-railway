@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone } from "lucide-react";
 
@@ -28,7 +28,7 @@ export default function Header() {
             aria-label="Cloud Cars home"
           >
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="Cloud Cars"
               width="56"
               height="56"

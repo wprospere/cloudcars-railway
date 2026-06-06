@@ -1,4 +1,4 @@
-// client/src/pages/Privacy.tsx
+﻿// client/src/pages/Privacy.tsx
 import { Link } from "wouter";
 import { ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ function track(eventName: string, props: TrackProps = {}) {
   if (typeof window === "undefined") return;
   const w = window as any;
 
-  // ✅ Google Analytics 4 (gtag)
+  // âœ… Google Analytics 4 (gtag)
   if (typeof w.gtag === "function") {
     w.gtag("event", eventName, props);
   }
@@ -37,7 +37,7 @@ function PolicyLoading() {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <Link href="/">
-              <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
             </Link>
 
             <Link href="/">
@@ -117,7 +117,7 @@ export default function Privacy() {
                 track("nav_click", { location: "privacy_header", to: "home_logo" })
               }
             >
-              <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
             </Link>
 
             <Link
@@ -249,3 +249,4 @@ export default function Privacy() {
     </div>
   );
 }
+

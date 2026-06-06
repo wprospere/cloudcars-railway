@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+﻿import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -46,7 +46,7 @@ export default function AdminLayout({
     );
   }
 
-  // ✅ If not logged in, send them to your local admin login page
+  // âœ… If not logged in, send them to your local admin login page
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -113,7 +113,7 @@ export default function AdminLayout({
           {/* Logo */}
           <div className="p-6 border-b border-border">
             <Link href="/" className="flex items-center gap-3">
-              <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
               <div>
                 <span className="font-semibold text-foreground">Cloud Cars</span>
                 <span className="block text-xs text-muted-foreground">
@@ -193,3 +193,4 @@ export default function AdminLayout({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-// client/src/pages/Cookies.tsx
+﻿// client/src/pages/Cookies.tsx
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Cookie, Shield } from "lucide-react";
@@ -14,7 +14,7 @@ function track(eventName: string, props: TrackProps = {}) {
   if (typeof window === "undefined") return;
   const w = window as any;
 
-  // ✅ Google Analytics 4 (gtag)
+  // âœ… Google Analytics 4 (gtag)
   if (typeof w.gtag === "function") {
     w.gtag("event", eventName, props);
   }
@@ -37,7 +37,7 @@ export default function Cookies() {
   });
 
   const lastUpdatedLabel = useMemo(
-    () => formatLastUpdated(data?.lastUpdated) ?? "—",
+    () => formatLastUpdated(data?.lastUpdated) ?? "â€”",
     [data?.lastUpdated]
   );
 
@@ -55,7 +55,7 @@ export default function Cookies() {
               track("nav_click", { location: "cookies_header", to: "home_logo" })
             }
           >
-            <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+            <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
           </Link>
 
           <Link
@@ -95,7 +95,7 @@ export default function Cookies() {
           </p>
 
           <p className="text-sm text-muted-foreground mt-4">
-            Last updated: {isLoading ? "Loading…" : lastUpdatedLabel}
+            Last updated: {isLoading ? "Loadingâ€¦" : lastUpdatedLabel}
           </p>
 
           {error ? (
@@ -111,7 +111,7 @@ export default function Cookies() {
         <div className="container max-w-4xl">
           <div className="rounded-2xl bg-card border border-border p-6 md:p-8">
             {isLoading ? (
-              <div className="text-muted-foreground">Loading policy…</div>
+              <div className="text-muted-foreground">Loading policyâ€¦</div>
             ) : markdown ? (
               <article className="prose prose-invert max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -200,3 +200,4 @@ export default function Cookies() {
     </div>
   );
 }
+

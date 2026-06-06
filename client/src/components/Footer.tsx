@@ -1,4 +1,4 @@
-import { Phone, Mail } from "lucide-react";
+﻿import { Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
@@ -121,7 +121,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="/" className="flex items-center gap-3 mb-4">
-              <img src="/logo.png" alt="Cloud Cars" width="48" height="48" className="h-12 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" width="48" height="48" className="h-12 w-auto" />
             </a>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
@@ -274,14 +274,14 @@ export default function Footer() {
         <div className="container py-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © {currentYear} Cloud Cars Ltd. All rights reserved.
+              Â© {currentYear} Cloud Cars Ltd. All rights reserved.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
               <span className="text-sm text-muted-foreground">
                 Licensed by Rushcliffe Borough Council & Nottingham City Council
               </span>
               <div className="flex items-center gap-1">
-                <span className="text-sm">🇬🇧</span>
+                <span className="text-sm">ðŸ‡¬ðŸ‡§</span>
                 <span className="text-xs text-muted-foreground">
                   British Company
                 </span>

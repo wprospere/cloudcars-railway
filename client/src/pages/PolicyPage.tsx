@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+﻿import { Link, useLocation } from "wouter";
 import { ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -32,7 +32,7 @@ function PolicyLoading() {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <Link href="/">
-              <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
             </Link>
 
             <Link href="/">
@@ -49,7 +49,7 @@ function PolicyLoading() {
         <div className="container">
           <div className="flex items-center gap-3 mb-4">
             <Shield className="w-8 h-8 text-primary" />
-            <span className="text-primary font-medium">Loading policy…</span>
+            <span className="text-primary font-medium">Loading policyâ€¦</span>
           </div>
 
           <div className="h-10 w-64 bg-muted rounded animate-pulse" />
@@ -88,7 +88,7 @@ function PolicyLoading() {
   );
 }
 
-// ✅ Pull slug from URL using wouter (example routes: /policy/privacy, /policy/terms, /policy/cookies)
+// âœ… Pull slug from URL using wouter (example routes: /policy/privacy, /policy/terms, /policy/cookies)
 function getSlugFromPath(path: string): "privacy" | "terms" | "cookies" {
   const parts = path.split("?")[0].split("#")[0].split("/").filter(Boolean);
   const maybe = parts[parts.length - 1] as string | undefined;
@@ -130,7 +130,7 @@ export default function PolicyPage() {
               href="/"
               onClick={() => track("nav_click", { location: "policy_header", to: "home_logo" })}
             >
-              <img src="/logo.png" alt="Cloud Cars" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Cloud Cars" className="h-10 w-auto" />
             </Link>
 
             <Link
@@ -233,3 +233,4 @@ export default function PolicyPage() {
     </div>
   );
 }
+
