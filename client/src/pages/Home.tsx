@@ -3,22 +3,21 @@ import { Helmet } from "react-helmet-async";
 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import EcoStrip from "@/components/EcoStrip";
 import RatingBar from "@/components/RatingBar";
 import TrustBar from "@/components/TrustBar";
 
 // Below-fold sections — code-split out of the main bundle
-const Sustainability = lazy(() => import("@/components/Sustainability"));
-const Trust = lazy(() => import("@/components/Trust"));
 const Services = lazy(() => import("@/components/Services"));
-const Footer = lazy(() => import("@/components/Footer"));
 const Booking = lazy(() => import("@/components/Booking"));
 const Corporate = lazy(() => import("@/components/Corporate"));
+const Trust = lazy(() => import("@/components/Trust"));
+const Sustainability = lazy(() => import("@/components/Sustainability"));
 const Areas = lazy(() => import("@/components/Areas"));
 const AppPromo = lazy(() => import("@/components/AppPromo"));
 const Drivers = lazy(() => import("@/components/Drivers"));
 const About = lazy(() => import("@/components/About"));
 const Contact = lazy(() => import("@/components/Contact"));
+const Footer = lazy(() => import("@/components/Footer"));
 
 export default function Home() {
   return (
@@ -97,27 +96,39 @@ export default function Home() {
 
       <main className="flex-1">
         <Hero />
-        <EcoStrip />
         <RatingBar />
         <TrustBar />
 
-        <section id="sustainability" className="scroll-mt-28">
-          <Suspense fallback={<div className="min-h-[500px]" />}>
-            <Sustainability />
-          </Suspense>
-        </section>
-
-        <section id="trust" className="scroll-mt-28">
-          <Suspense fallback={<div className="min-h-[500px]" />}>
-            <Trust />
-          </Suspense>
-        </section>
-
+        {/* Passenger journey: services → book */}
         <section id="services" className="scroll-mt-28">
           <Suspense fallback={<div className="min-h-[800px]" />}>
             <Services />
           </Suspense>
         </section>
+
+        {/* Corporate early-entry strip */}
+        <div className="bg-card border-y border-primary/20 py-7">
+          <div className="container">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-foreground">Travelling for work?</p>
+                <p className="text-sm text-muted-foreground">
+                  Set up a business account for invoiced journeys, staff bookings, and priority service.
+                </p>
+              </div>
+              <a
+                href="#corporate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.querySelector("#corporate")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="shrink-0 text-sm font-semibold text-primary border border-primary/40 rounded-lg px-4 py-2 hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
+              >
+                Learn about corporate accounts →
+              </a>
+            </div>
+          </div>
+        </div>
 
         <section id="booking" className="scroll-mt-28">
           <Suspense fallback={<div className="min-h-[900px]" />}>
@@ -128,6 +139,19 @@ export default function Home() {
         <section id="corporate" className="scroll-mt-28">
           <Suspense fallback={<div className="min-h-[500px]" />}>
             <Corporate />
+          </Suspense>
+        </section>
+
+        {/* Credibility sections — for visitors who want to know more */}
+        <section id="trust" className="scroll-mt-28">
+          <Suspense fallback={<div className="min-h-[500px]" />}>
+            <Trust />
+          </Suspense>
+        </section>
+
+        <section id="sustainability" className="scroll-mt-28">
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <Sustainability />
           </Suspense>
         </section>
 

@@ -8,6 +8,9 @@ import {
   Phone,
   ExternalLink,
   ShieldCheck,
+  Star,
+  Clock,
+  Users,
 } from "lucide-react";
 
 const serviceTypes = [
@@ -192,6 +195,25 @@ export default function Booking() {
             ref={sentinelRef}
             className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5"
           >
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 px-6 py-3 bg-primary/5 border-b border-primary/10 text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <Star className="w-4 h-4 text-primary fill-primary" />
+                4.9/5 rated
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="w-4 h-4 text-primary" />
+                99% on-time arrivals
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Users className="w-4 h-4 text-primary" />
+                100K+ journeys completed
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Local DBS-checked drivers
+              </span>
+            </div>
+
             <div className="border-b border-border px-6 py-5 bg-secondary/40">
               <h3 className="text-2xl font-bold text-foreground">
                 Instant Quote & Online Booking

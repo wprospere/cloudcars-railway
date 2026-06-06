@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Clock, Leaf } from "lucide-react";
+import { ArrowRight, Shield, Clock, Phone } from "lucide-react";
 import { useCmsContent, useCmsImage } from "@/hooks/useCmsContent";
 
 export default function Hero() {
@@ -64,39 +64,43 @@ export default function Hero() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-8 mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 mt-8 mb-3">
             <Button
-              asChild
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg group shadow-sm"
+              onClick={() => {
+                const el = document.querySelector("#booking");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
             >
-              <a
-                href="https://book.cloudcarsltd.com/portal/#/booking"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {content.buttonText || "Book Your Ride"}
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </a>
+              {content.buttonText || "Book Your Ride"}
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
 
             <Button
+              asChild
               variant="outline"
               size="lg"
-              onClick={() => {
-                const el = document.querySelector("#corporate");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
               className="border-border/70 bg-background/30 backdrop-blur-sm hover:bg-secondary/60 text-foreground font-semibold px-8 py-6 text-lg"
             >
-              Business Accounts
+              <a href="tel:01158244244">
+                <Phone className="w-5 h-5 mr-2" />
+                0115 8 244 244
+              </a>
             </Button>
           </div>
 
-          {/* Driver trust message */}
-          <p className="text-sm text-muted-foreground mt-4 mb-8 max-w-xl leading-relaxed">
-            Drivers are friendly, knowledgeable and personally selected — not just approved online.
-            No strangers behind the wheel.
+          <p className="text-xs text-muted-foreground mb-10">
+            Or{" "}
+            <a
+              href="https://book.cloudcarsltd.com/portal/#/booking"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              open the full booking portal
+            </a>
+            {" "}for manage-booking and account options.
           </p>
 
           {/* Trust indicators */}
@@ -129,19 +133,22 @@ export default function Hero() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/40 backdrop-blur-sm px-4 py-3">
+            <a
+              href="tel:01158244244"
+              className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/40 backdrop-blur-sm px-4 py-3 hover:border-primary/40 transition-colors"
+            >
               <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                <Leaf className="w-6 h-6 text-primary" />
+                <Phone className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Hybrid Fleet
+                  Call Any Time
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  30% Less CO₂
+                <p className="text-xs text-primary font-semibold">
+                  0115 8 244 244
                 </p>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </div>

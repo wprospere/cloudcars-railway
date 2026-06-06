@@ -7,7 +7,6 @@ const navLinks = [
   { href: "/#corporate", label: "Corporate" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
-  { href: "/drive-for-cloud-cars", label: "Drive for Cloud Cars" },
 ];
 
 export default function Header() {
@@ -57,6 +56,13 @@ export default function Header() {
                 </a>
               );
             })}
+
+            <a
+              href="/drive-for-cloud-cars"
+              className="text-xs font-semibold text-primary border border-primary/40 rounded-full px-3 py-1 hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
+            >
+              Drive with Us
+            </a>
           </nav>
 
           <div className="hidden lg:flex items-center gap-3 xl:gap-4">
@@ -141,6 +147,14 @@ export default function Header() {
                 </a>
               );
             })}
+
+            <a
+              href="/drive-for-cloud-cars"
+              onClick={closeMobileMenu}
+              className="py-2.5 px-4 text-sm font-semibold text-primary border border-primary/40 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors text-center"
+            >
+              Drive with Us
+            </a>
 
             <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-3">
               <a
