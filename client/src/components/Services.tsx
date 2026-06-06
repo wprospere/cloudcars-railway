@@ -175,8 +175,8 @@ export default function Services() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {services.map((service) => (
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {services.filter((s) => s.bookingType === "instant").map((service) => (
             <div
               key={service.id}
               className={`relative bg-card rounded-2xl p-6 border card-hover ${
@@ -277,6 +277,40 @@ export default function Services() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Corporate Transport — account-based, presented separately from instant-booking cards */}
+        <div className="bg-card rounded-2xl p-6 lg:p-8 border border-primary/30 shadow-lg shadow-primary/5 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Briefcase className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-foreground">Corporate Transport</h3>
+                <p className="text-sm text-primary font-medium">Business Travel · Invoiced Accounts</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Reliable staff transport, airport runs, hotel guest travel and scheduled journeys — with invoiced accounts and a team who answers the phone.
+            </p>
+            <div className="flex gap-3 shrink-0">
+              <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                <Link
+                  href="/corporate-transport-nottingham"
+                  onClick={() => track("service_page_click", { location: "services_card", service_id: "corporate", service_title: "Corporate Transport", slug: "/corporate-transport-nottingham" })}
+                >
+                  Learn More
+                </Link>
+              </Button>
+              <Button
+                onClick={() => { scrollToCorporate(); track("cta_click", { location: "services_card", cta: "corporate_accounts" }); }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Open an Account
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-card rounded-2xl p-8 lg:p-10 border border-primary/30 shadow-lg shadow-primary/5">

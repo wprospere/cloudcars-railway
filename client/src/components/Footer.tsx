@@ -274,14 +274,14 @@ export default function Footer() {
         <div className="container py-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              Â© {currentYear} Cloud Cars Ltd. All rights reserved.
+              © {currentYear} Cloud Cars Ltd. All rights reserved.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
               <span className="text-sm text-muted-foreground">
                 Licensed by Rushcliffe Borough Council & Nottingham City Council
               </span>
               <div className="flex items-center gap-1">
-                <span className="text-sm">ðŸ‡¬ðŸ‡§</span>
+                <span className="text-sm">🇬🇧</span>
                 <span className="text-xs text-muted-foreground">
                   British Company
                 </span>

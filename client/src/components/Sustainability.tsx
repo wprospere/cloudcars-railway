@@ -25,14 +25,8 @@ const sustainabilityFeatures = [
 
 export default function Sustainability() {
   return (
-    <section id="sustainability" className="section-light py-20 lg:py-28 bg-gradient-to-b from-background to-card relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-20">
-        <div className="absolute top-20 left-10 w-32 h-32 rounded-full bg-primary blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-48 h-48 rounded-full bg-primary blur-3xl" />
-      </div>
-
-      <div className="container relative z-10">
+    <section id="sustainability" className="py-20 lg:py-28 bg-secondary/30">
+      <div className="container">
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
@@ -41,7 +35,7 @@ export default function Sustainability() {
           </div>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
             Sustainable Travel,{" "}
-            <span className="text-primary">One Mile at a Time</span>
+            <span className="text-gradient-green font-['Playfair_Display',serif] italic">One Mile at a Time</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Cloud Cars is proud to operate a 100% hybrid fleet. We're committed to reducing 
@@ -103,22 +97,11 @@ export default function Sustainability() {
               </p>
             </div>
 
-            {/* Quote */}
             <div className="p-6 rounded-xl bg-card border border-border">
-              <blockquote className="text-lg text-foreground italic mb-4">
-                "We believe that providing excellent taxi services and caring for our 
-                environment go hand in hand. Every journey with Cloud Cars is a step 
-                towards a greener Nottingham."
-              </blockquote>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-primary font-semibold">CC</span>
-                </div>
-                <div>
-                  <div className="font-medium text-foreground">Cloud Cars Team</div>
-                  <div className="text-sm text-muted-foreground">Nottingham, UK</div>
-                </div>
-              </div>
+              <h3 className="text-base font-semibold text-foreground mb-3">Nottingham's eco-conscious taxi firm</h3>
+              <p className="text-sm text-muted-foreground leading-6">
+                We switched to a fully hybrid fleet before it was the norm — not because it was a trend, but because it was the right thing to do for Nottingham. Every journey with Cloud Cars produces up to 30% less CO₂ than a conventional taxi.
+              </p>
             </div>
           </div>
         </div>

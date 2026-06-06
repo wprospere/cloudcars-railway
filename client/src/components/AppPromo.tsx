@@ -19,7 +19,7 @@ const appFeatures = [
   {
     icon: Star,
     title: "Choose Your Ride",
-    description: "Standard, Executive, or Xtra - pick what suits you",
+    description: "Standard or Executive — pick what suits you",
   },
 ];
 
@@ -78,7 +78,7 @@ export default function AppPromo() {
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
               Get the Cloud Cars app and you're just a few taps away from your next journey. 
-              Choose from Standard, Executive, or Xtra vehicles - all with upfront fixed pricing 
+              Choose from Standard or Executive vehicles — all with upfront fixed pricing
               and real-time driver tracking across Nottingham.
             </p>
 

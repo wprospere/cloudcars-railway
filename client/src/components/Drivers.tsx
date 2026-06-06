@@ -56,7 +56,7 @@ export default function Drivers() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
           <div>
             <span className="text-sm font-semibold text-primary uppercase tracking-wider">
-              Drivers Wanted
+              Now Recruiting
             </span>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-6">
@@ -135,10 +135,6 @@ export default function Drivers() {
             <h3 className="text-2xl font-bold text-foreground mb-3">
               Apply to Drive
             </h3>
-
-            <p className="text-sm text-primary font-medium mb-2">
-              We are currently recruiting a limited number of new drivers.
-            </p>
 
             <p className="text-muted-foreground mb-6 leading-7">
               Learn more about driving opportunities with Cloud Cars, what we

@@ -1,10 +1,10 @@
 import { Link } from "wouter";
 
 const areas = [
-  { name: "Beeston", slug: "/taxi-beeston" },
-  { name: "West Bridgford", slug: "/taxi-west-bridgford" },
-  { name: "Wollaton", slug: "/taxi-wollaton" },
-  { name: "Edwalton", slug: "/taxi-edwalton" },
+  { name: "Beeston", slug: "/taxi-beeston", detail: "QMC, university campus, and Beeston town centre" },
+  { name: "West Bridgford", slug: "/taxi-west-bridgford", detail: "Trent Bridge, Lady Bay, and regular city-centre runs" },
+  { name: "Wollaton", slug: "/taxi-wollaton", detail: "Wollaton Park, Middleton Boulevard, and local routes" },
+  { name: "Edwalton", slug: "/taxi-edwalton", detail: "Edwalton village, Gamston, and routes to the A52" },
 ];
 
 export default function Areas() {
@@ -42,8 +42,7 @@ export default function Areas() {
                 </h3>
 
                 <p className="text-sm text-muted-foreground leading-6">
-                  Reliable taxi service in {area.name} with airport transfers,
-                  business travel and pre-booked journeys.
+                  {area.detail}
                 </p>
               </a>
             </Link>

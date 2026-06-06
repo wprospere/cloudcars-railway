@@ -80,7 +80,7 @@ export default function Contact() {
     name: "",
     email: "",
     phone: "",
-    subject: "",
+    subject: "General Enquiry",
     message: "",
     // Honeypot: a real user never fills this (it is visually hidden).
     company_website: "",
@@ -194,10 +194,23 @@ export default function Contact() {
                 Cloud Cars
               </span>
             </h2>
-            <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-              Got a question? Need to book? Just want to say hello? We&apos;re
-              here and happy to help however we can.
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+              Got a question, need a quote, or want to discuss a regular booking? The quickest way to reach us is always by phone.
             </p>
+
+            <a
+              href="tel:+441158244244"
+              onClick={() => track("contact_click", { type: "phone", location: "contact_hero" })}
+              className="flex items-center gap-4 mb-10 group"
+            >
+              <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Phone className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Available 24/7</p>
+                <p className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">0115 8 244 244</p>
+              </div>
+            </a>
 
             {/* Contact Cards */}
             <div className="grid sm:grid-cols-2 gap-4 mb-10">
@@ -274,27 +287,26 @@ export default function Contact() {
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="0115 123 4567"
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="hidden">
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="0115 123 4567"
-                        className="bg-background"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">Subject *</Label>
+                      <Label htmlFor="subject">Subject</Label>
                       <Input
                         id="subject"
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        required
                         placeholder="What's this about?"
                         className="bg-background"
                       />

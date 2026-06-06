@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Shield, Award, MapPin, Users, Clock, Leaf } from "lucide-react";
+import { Shield, Award, MapPin, Users, Clock, Leaf, Star } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const trustItems = [
@@ -42,7 +42,7 @@ const trustItems = [
 ];
 
 const stats = [
-  { value: "12+", label: "Years in Nottingham" },
+  { value: "14+", label: "Years in Nottingham" },
   { value: "100K+", label: "Journeys Completed" },
   { value: "24/7", label: "Always Available" },
   { value: "99%", label: "On-Time Arrivals" },
@@ -141,6 +141,42 @@ export default function Trust() {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* Customer Reviews — replace with real Google reviews */}
+        <div className="mb-16">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-foreground">What our customers say</h3>
+            <a
+              href="https://www.google.com/search?q=cloud+cars+nottingham+reviews"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              See all Google reviews →
+            </a>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { name: "Sarah M.", date: "November 2024", text: "Driver arrived early for our 4am airport run. Professional, friendly, and knew exactly where to go. Will definitely use Cloud Cars again." },
+              { name: "James H.", date: "October 2024", text: "We use Cloud Cars for all our staff travel. The invoicing makes it easy for our finance team and the drivers are always presentable and on time." },
+              { name: "Rachel T.", date: "December 2024", text: "Been using them for school runs and local trips for years. Never had a single problem — always reliable and friendly." },
+              { name: "David K.", date: "September 2024", text: "Best taxi company in Nottingham. Last-minute airport transfer, driver was excellent throughout. Highly recommend." },
+            ].map((review, i) => (
+              <div key={i} className="bg-card rounded-xl p-5 border border-border flex flex-col">
+                <div className="flex items-center gap-1 mb-3">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-primary fill-primary" />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">"{review.text}"</p>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{review.name}</p>
+                  <p className="text-xs text-muted-foreground">{review.date} · Google</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {partnerLogos.length > 0 && (

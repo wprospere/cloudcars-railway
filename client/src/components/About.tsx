@@ -124,7 +124,7 @@ export default function About() {
 
   const yearsLabel = useMemo(() => `${YEARS_IN_NOTTINGHAM}+`, []);
   const yearsSentence = useMemo(
-    () => `${YEARS_IN_NOTTINGHAM} years on, we're still here and still doing things the same way.`,
+    () => `${YEARS_IN_NOTTINGHAM} years on, the standards haven't changed — local drivers, local knowledge, proper service.`,
     []
   );
 
