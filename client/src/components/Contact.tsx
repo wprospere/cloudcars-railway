@@ -211,7 +211,7 @@ export default function Contact() {
                   </div>
                   <h3 className="font-semibold text-foreground mb-1">
                     {item.title}
-                  </h4>
+                  </h3>
                   <p className="text-foreground">{item.primary}</p>
                   <p className="text-sm text-muted-foreground">
                     {item.secondary}

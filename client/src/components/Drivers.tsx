@@ -75,7 +75,7 @@ export default function Drivers() {
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
               <h3 className="font-semibold text-foreground mb-2">
                 We are selective about who joins our team
-              </h4>
+              </h3>
               <p className="text-sm text-muted-foreground leading-6">
                 We are not looking for just anyone. We want drivers who are
                 friendly, knowledgeable, presentable, and genuinely committed to
