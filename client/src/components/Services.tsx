@@ -236,7 +236,6 @@ export default function Services() {
                 >
                   <Link
                     href={service.slug}
-                    aria-label={`Learn more about ${service.title} in Nottingham`}
                     onClick={() =>
                       track("service_page_click", {
                         location: "services_card",
@@ -247,6 +246,7 @@ export default function Services() {
                     }
                   >
                     Learn More
+                    <span className="sr-only"> about {service.title} in Nottingham</span>
                   </Link>
                 </Button>
 
@@ -319,7 +319,6 @@ export default function Services() {
                 >
                   <Link
                     href={largerVehicles.slug}
-                    aria-label={`Learn more about ${largerVehicles.title} in Nottingham`}
                     onClick={() =>
                       track("service_page_click", {
                         location: "larger_vehicles",
@@ -329,6 +328,7 @@ export default function Services() {
                     }
                   >
                     Learn More
+                    <span className="sr-only"> about {largerVehicles.title} in Nottingham</span>
                   </Link>
                 </Button>
 
