@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Car,
@@ -42,6 +42,12 @@ const serviceTypes = [
 
 const IFRAME_SRC = "https://book.cloudcarsltd.com/qb/#/?token=DCFvUodLCOojAxpf";
 
+function track(eventName: string, props: Record<string, string | number | boolean | null | undefined> = {}) {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+  if (typeof w.gtag === "function") w.gtag("event", eventName, props);
+}
+
 export default function Booking() {
   const [iframeSrc, setIframeSrc] = useState("");
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -53,6 +59,7 @@ export default function Booking() {
       ([entry]) => {
         if (entry.isIntersecting) {
           setIframeSrc(IFRAME_SRC);
+          track("quickbooker_visible", { location: "booking_section" });
           obs.disconnect();
         }
       },
@@ -138,7 +145,10 @@ export default function Booking() {
                     size="lg"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg group"
                   >
-                    <a href="#quickbooker">
+                    <a
+                      href="#quickbooker"
+                      onClick={() => track("cta_click", { location: "booking_section", cta: "start_booking" })}
+                    >
                       Start Booking
                     </a>
                   </Button>

@@ -2,6 +2,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Clock, Phone } from "lucide-react";
 import { useCmsContent, useCmsImage } from "@/hooks/useCmsContent";
 
+function track(eventName: string, props: Record<string, string | number | boolean | null | undefined> = {}) {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+  if (typeof w.gtag === "function") w.gtag("event", eventName, props);
+}
+
 export default function Hero() {
   const content = useCmsContent("hero");
   const heroImage = useCmsImage(
@@ -69,6 +75,7 @@ export default function Hero() {
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg group shadow-sm"
               onClick={() => {
+                track("cta_click", { location: "hero", cta: "book_ride" });
                 const el = document.querySelector("#booking");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
               }}
@@ -97,6 +104,7 @@ export default function Hero() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
+              onClick={() => track("cta_click", { location: "hero", cta: "full_portal_link" })}
             >
               open the full booking portal
             </a>

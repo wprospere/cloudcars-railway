@@ -120,6 +120,8 @@ export default function Home() {
                 href="#corporate"
                 onClick={(e) => {
                   e.preventDefault();
+                  const w = window as any;
+                  if (typeof w.gtag === "function") w.gtag("event", "cta_click", { location: "corporate_strip", cta: "corporate_accounts" });
                   document.querySelector("#corporate")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="shrink-0 text-sm font-semibold text-primary border border-primary/40 rounded-lg px-4 py-2 hover:bg-primary hover:text-primary-foreground transition-colors whitespace-nowrap"
