@@ -76,6 +76,7 @@ export default function Hero() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg group shadow-sm"
               onClick={() => {
                 track("cta_click", { location: "hero", cta: "book_ride" });
+                window.dispatchEvent(new CustomEvent("cloudcars:load-booking"));
                 const el = document.querySelector("#booking");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
               }}

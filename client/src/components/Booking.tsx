@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Car,
@@ -49,28 +49,26 @@ function track(eventName: string, props: Record<string, string | number | boolea
 }
 
 export default function Booking() {
-  const [iframeSrc, setIframeSrc] = useState("");
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
+  // Allow parent components (e.g. Hero CTA) to trigger the iframe load
+  // without requiring a second click once the user has scrolled here.
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIframeSrc(IFRAME_SRC);
-          track("quickbooker_visible", { location: "booking_section" });
-          obs.disconnect();
-        }
-      },
-      { rootMargin: "300px" }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    const handler = () => setLoaded(true);
+    window.addEventListener("cloudcars:load-booking", handler);
+    return () => window.removeEventListener("cloudcars:load-booking", handler);
   }, []);
 
+  const handleLoad = () => {
+    setLoaded(true);
+    track("quickbooker_loaded", { location: "booking_section" });
+    setTimeout(() => {
+      document.getElementById("quickbooker")?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
   return (
-    <section id="booking" className="py-20 lg:py-32 bg-secondary/30">
+    <section className="py-20 lg:py-32 bg-secondary/30">
       <div className="container">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -141,16 +139,11 @@ export default function Booking() {
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                   <Button
-                    asChild
                     size="lg"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-lg group"
+                    onClick={handleLoad}
                   >
-                    <a
-                      href="#quickbooker"
-                      onClick={() => track("cta_click", { location: "booking_section", cta: "start_booking" })}
-                    >
-                      Start Booking
-                    </a>
+                    Start Booking
                   </Button>
 
                   <Button
@@ -202,7 +195,6 @@ export default function Booking() {
 
           <div
             id="quickbooker"
-            ref={sentinelRef}
             className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5 scroll-mt-28"
           >
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 px-6 py-3 bg-primary/5 border-b border-primary/10 text-sm">
@@ -234,17 +226,37 @@ export default function Booking() {
               </p>
             </div>
 
-            {iframeSrc ? (
+            {loaded ? (
               <iframe
-                src={iframeSrc}
+                src={IFRAME_SRC}
                 title="Cloud Cars QuickBooker"
                 className="w-full h-[720px] md:h-[820px] bg-white"
                 frameBorder="0"
                 scrolling="yes"
               />
             ) : (
-              <div className="w-full h-[720px] md:h-[820px] bg-secondary/20 flex items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="w-full h-[720px] md:h-[820px] bg-secondary/20 flex flex-col items-center justify-center gap-5 text-center p-8">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Car className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground mb-1">Ready to get a quote?</p>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Click below to load our instant online booking form.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleLoad}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3"
+                >
+                  Load Booking Form
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Or call{" "}
+                  <a href="tel:01158244244" className="text-primary font-semibold">
+                    0115 8 244 244
+                  </a>
+                </p>
               </div>
             )}
           </div>

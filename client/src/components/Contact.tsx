@@ -115,18 +115,11 @@ export default function Contact() {
   });
 
   useEffect(() => {
-    // Load the Turnstile script once.
-    const SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-    let script = document.querySelector<HTMLScriptElement>(
-      `script[src="${SRC}"]`
-    );
+    const container = turnstileRef.current;
+    if (!container) return;
 
     const renderWidget = () => {
-      if (
-        window.turnstile &&
-        turnstileRef.current &&
-        widgetIdRef.current === null
-      ) {
+      if (window.turnstile && turnstileRef.current && widgetIdRef.current === null) {
         widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
           theme: "auto",
@@ -137,20 +130,38 @@ export default function Contact() {
       }
     };
 
-    if (!script) {
-      script = document.createElement("script");
-      script.src = SRC;
-      script.async = true;
-      script.defer = true;
-      script.onload = renderWidget;
-      document.head.appendChild(script);
-    } else if (window.turnstile) {
-      renderWidget();
-    } else {
-      script.addEventListener("load", renderWidget);
-    }
+    const loadScript = () => {
+      const SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      let script = document.querySelector<HTMLScriptElement>(`script[src="${SRC}"]`);
+      if (!script) {
+        script = document.createElement("script");
+        script.src = SRC;
+        script.async = true;
+        script.defer = true;
+        script.onload = renderWidget;
+        document.head.appendChild(script);
+      } else if (window.turnstile) {
+        renderWidget();
+      } else {
+        script.addEventListener("load", renderWidget);
+      }
+    };
+
+    // Only load Turnstile when the widget container is near-viewport — avoids
+    // spawning challenge iframes on every page load for visitors who never reach the form.
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          obs.disconnect();
+          loadScript();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    obs.observe(container);
 
     return () => {
+      obs.disconnect();
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;
