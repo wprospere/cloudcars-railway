@@ -9,10 +9,10 @@ import TrustBar from "@/components/TrustBar";
 import Sustainability from "@/components/Sustainability";
 import Trust from "@/components/Trust";
 import Services from "@/components/Services";
-import Booking from "@/components/Booking";
 import Footer from "@/components/Footer";
 
 // Below-fold sections — loaded after the critical path paints
+const Booking = lazy(() => import("@/components/Booking"));
 const Corporate = lazy(() => import("@/components/Corporate"));
 const Areas = lazy(() => import("@/components/Areas"));
 const AppPromo = lazy(() => import("@/components/AppPromo"));
@@ -114,7 +114,9 @@ export default function Home() {
         </section>
 
         <section id="booking" className="scroll-mt-28">
-          <Booking />
+          <Suspense fallback={<div className="min-h-[900px]" />}>
+            <Booking />
+          </Suspense>
         </section>
 
         <section id="corporate" className="scroll-mt-28">

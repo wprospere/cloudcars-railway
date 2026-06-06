@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Car,
@@ -36,7 +37,28 @@ const serviceTypes = [
   },
 ];
 
+const IFRAME_SRC = "https://book.cloudcarsltd.com/qb/#/?token=DCFvUodLCOojAxpf";
+
 export default function Booking() {
+  const [iframeSrc, setIframeSrc] = useState("");
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIframeSrc(IFRAME_SRC);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <section id="booking" className="py-20 lg:py-32 bg-secondary/30">
       <div className="container">
@@ -167,6 +189,7 @@ export default function Booking() {
 
           <div
             id="quickbooker"
+            ref={sentinelRef}
             className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5"
           >
             <div className="border-b border-border px-6 py-5 bg-secondary/40">
@@ -180,18 +203,24 @@ export default function Booking() {
               </p>
             </div>
 
-            <iframe
-              src="https://book.cloudcarsltd.com/qb/#/?token=DCFvUodLCOojAxpf"
-              title="Cloud Cars QuickBooker"
-              className="w-full h-[720px] md:h-[820px] bg-white"
-              frameBorder="0"
-              scrolling="yes"
-            />
+            {iframeSrc ? (
+              <iframe
+                src={iframeSrc}
+                title="Cloud Cars QuickBooker"
+                className="w-full h-[720px] md:h-[820px] bg-white"
+                frameBorder="0"
+                scrolling="yes"
+              />
+            ) : (
+              <div className="w-full h-[720px] md:h-[820px] bg-secondary/20 flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
           </div>
 
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              <span className="text-primary font-semibold">12+ years</span>{" "}
+              <span className="text-primary font-semibold">14+ years</span>{" "}
               serving Nottingham •
               <span className="text-primary font-semibold ml-1">100K+</span>{" "}
               journeys completed •
