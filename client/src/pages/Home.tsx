@@ -1,22 +1,24 @@
+import { lazy, Suspense } from "react";
 import { Helmet } from "react-helmet-async";
 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import Services from "@/components/Services";
-import Areas from "@/components/Areas";
-import Corporate from "@/components/Corporate";
-import Drivers from "@/components/Drivers";
-import Trust from "@/components/Trust";
-import AppPromo from "@/components/AppPromo";
-import Booking from "@/components/Booking";
-import About from "@/components/About";
-import Sustainability from "@/components/Sustainability";
 import EcoStrip from "@/components/EcoStrip";
-import Contact from "@/components/Contact";
+import RatingBar from "@/components/RatingBar";
+import TrustBar from "@/components/TrustBar";
+import Sustainability from "@/components/Sustainability";
+import Trust from "@/components/Trust";
+import Services from "@/components/Services";
+import Booking from "@/components/Booking";
 import Footer from "@/components/Footer";
 
-import TrustBar from "@/components/TrustBar";
-import RatingBar from "@/components/RatingBar";
+// Below-fold sections — loaded after the critical path paints
+const Corporate = lazy(() => import("@/components/Corporate"));
+const Areas = lazy(() => import("@/components/Areas"));
+const AppPromo = lazy(() => import("@/components/AppPromo"));
+const Drivers = lazy(() => import("@/components/Drivers"));
+const About = lazy(() => import("@/components/About"));
+const Contact = lazy(() => import("@/components/Contact"));
 
 export default function Home() {
   return (
@@ -116,27 +118,39 @@ export default function Home() {
         </section>
 
         <section id="corporate" className="scroll-mt-28">
-          <Corporate />
+          <Suspense fallback={<div className="min-h-[500px]" />}>
+            <Corporate />
+          </Suspense>
         </section>
 
         <section id="areas" className="scroll-mt-28">
-          <Areas />
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <Areas />
+          </Suspense>
         </section>
 
         <section id="app" className="scroll-mt-28">
-          <AppPromo />
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <AppPromo />
+          </Suspense>
         </section>
 
         <section id="drivers" className="scroll-mt-28">
-          <Drivers />
+          <Suspense fallback={<div className="min-h-[500px]" />}>
+            <Drivers />
+          </Suspense>
         </section>
 
         <section id="about" className="scroll-mt-28">
-          <About />
+          <Suspense fallback={<div className="min-h-[600px]" />}>
+            <About />
+          </Suspense>
         </section>
 
         <section id="contact" className="scroll-mt-28">
-          <Contact />
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <Contact />
+          </Suspense>
         </section>
       </main>
 

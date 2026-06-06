@@ -1,5 +1,8 @@
 import { Suspense, lazy } from "react";
-import { Toaster } from "@/components/ui/sonner";
+
+const Toaster = lazy(() =>
+  import("@/components/ui/sonner").then((m) => ({ default: m.Toaster }))
+);
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 
@@ -125,7 +128,9 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
+          <Suspense fallback={null}>
+            <Toaster />
+          </Suspense>
           <ScrollToHash />
           {/* Suspense fallback shows briefly while a lazy route's chunk loads. */}
           <Suspense
