@@ -6,12 +6,12 @@ import Hero from "@/components/Hero";
 import EcoStrip from "@/components/EcoStrip";
 import RatingBar from "@/components/RatingBar";
 import TrustBar from "@/components/TrustBar";
-import Sustainability from "@/components/Sustainability";
-import Trust from "@/components/Trust";
-import Services from "@/components/Services";
 import Footer from "@/components/Footer";
 
-// Below-fold sections — loaded after the critical path paints
+// Below-fold sections — code-split out of the main bundle
+const Sustainability = lazy(() => import("@/components/Sustainability"));
+const Trust = lazy(() => import("@/components/Trust"));
+const Services = lazy(() => import("@/components/Services"));
 const Booking = lazy(() => import("@/components/Booking"));
 const Corporate = lazy(() => import("@/components/Corporate"));
 const Areas = lazy(() => import("@/components/Areas"));
@@ -102,15 +102,21 @@ export default function Home() {
         <TrustBar />
 
         <section id="sustainability" className="scroll-mt-28">
-          <Sustainability />
+          <Suspense fallback={<div className="min-h-[500px]" />}>
+            <Sustainability />
+          </Suspense>
         </section>
 
         <section id="trust" className="scroll-mt-28">
-          <Trust />
+          <Suspense fallback={<div className="min-h-[500px]" />}>
+            <Trust />
+          </Suspense>
         </section>
 
         <section id="services" className="scroll-mt-28">
-          <Services />
+          <Suspense fallback={<div className="min-h-[800px]" />}>
+            <Services />
+          </Suspense>
         </section>
 
         <section id="booking" className="scroll-mt-28">
