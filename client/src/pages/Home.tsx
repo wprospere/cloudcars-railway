@@ -6,12 +6,12 @@ import Hero from "@/components/Hero";
 import EcoStrip from "@/components/EcoStrip";
 import RatingBar from "@/components/RatingBar";
 import TrustBar from "@/components/TrustBar";
-import Footer from "@/components/Footer";
 
 // Below-fold sections — code-split out of the main bundle
 const Sustainability = lazy(() => import("@/components/Sustainability"));
 const Trust = lazy(() => import("@/components/Trust"));
 const Services = lazy(() => import("@/components/Services"));
+const Footer = lazy(() => import("@/components/Footer"));
 const Booking = lazy(() => import("@/components/Booking"));
 const Corporate = lazy(() => import("@/components/Corporate"));
 const Areas = lazy(() => import("@/components/Areas"));
@@ -162,7 +162,9 @@ export default function Home() {
         </section>
       </main>
 
-      <Footer />
+      <Suspense fallback={<div className="min-h-[320px]" />}>
+        <Footer />
+      </Suspense>
     </div>
   );
 }
