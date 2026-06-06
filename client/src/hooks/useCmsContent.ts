@@ -41,7 +41,7 @@ const defaultContent: Record<string, {
   about: {
     title: "Nottingham Born,",
     subtitle: "Nottingham Proud",
-    description: "Cloud Cars started in 2009 with a simple idea: Nottingham deserves a taxi company that actually cares. We know the city because we live here. We know the shortcuts, the school run times, the match day traffic.",
+    description: "Cloud Cars started in 2012 with a simple idea: Nottingham deserves a taxi company that actually cares. We know the city because we live here. We know the shortcuts, the school run times, the match day traffic.",
   },
   contact: {
     title: "Talk to",
