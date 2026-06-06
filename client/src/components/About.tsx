@@ -6,7 +6,7 @@ import path from "path";
 import { useCmsContent, useCmsImage } from "@/hooks/useCmsContent";
 
 // Single source of truth
-const YEARS_IN_NOTTINGHAM = 12;
+const YEARS_IN_NOTTINGHAM = 14;
 
 function useCountUp(trigger: boolean, to: number, durationMs = 900) {
   const [value, setValue] = useState(0);
