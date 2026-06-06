@@ -92,7 +92,7 @@ export default function AppPromo() {
                   <div>
                     <h3 className="font-semibold text-foreground text-sm">
                       {feature.title}
-                    </h4>
+                    </h3>
                     <p className="text-xs text-muted-foreground">
                       {feature.description}
                     </p>
