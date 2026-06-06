@@ -30,7 +30,6 @@ import {
   Phone,
   FileBadge,
   Quote,
-  Clock3,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -253,7 +252,7 @@ export default function DriveForCloudCars() {
             <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
               <div>
                 <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  Drivers Wanted
+                  Now Recruiting
                 </span>
 
                 <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
@@ -282,7 +281,7 @@ export default function DriveForCloudCars() {
                     onClick={scrollToForm}
                     className="bg-primary px-8 font-semibold text-primary-foreground hover:bg-primary/90"
                   >
-                    Apply Now
+                    Join the Fleet
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
 
@@ -300,7 +299,7 @@ export default function DriveForCloudCars() {
                   <div className="rounded-2xl border border-border/60 bg-card/80 p-5 shadow-sm">
                     <p className="text-2xl font-bold text-foreground">Weekly</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Pay direct to your bank
+                      Paid every Friday, direct to your bank
                     </p>
                   </div>
 
@@ -316,7 +315,7 @@ export default function DriveForCloudCars() {
                   <div className="rounded-2xl border border-border/60 bg-card/80 p-5 shadow-sm">
                     <p className="text-2xl font-bold text-foreground">Local</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Nottingham team support
+                      A real company, not a global app
                     </p>
                   </div>
                 </div>
@@ -326,16 +325,16 @@ export default function DriveForCloudCars() {
                     Typical weekly opportunity
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    Drivers who are consistently available and deliver a high
-                    standard of service can benefit from a regular mix of airport
-                    transfers, corporate bookings, school transport, and local
-                    account work.
+                    Drivers who are consistently available benefit from a regular
+                    mix of airport transfers, corporate bookings, school
+                    transport, and local account work. Airport and corporate
+                    jobs — typically the highest-earning types — go first to
+                    drivers who are reliable and well-presented.
                   </p>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    Earnings will vary depending on your availability, vehicle
-                    type, hours worked, and the type of jobs completed, but
-                    dependable drivers are best placed to benefit from steady
-                    ongoing work.
+                    Earnings vary by availability, vehicle type, and job mix.
+                    Full-time drivers who are consistent and punctual are best
+                    placed to build a strong, regular run of work.
                   </p>
                 </div>
 
@@ -355,12 +354,12 @@ export default function DriveForCloudCars() {
                     <Quote className="h-5 w-5 text-primary" />
                   </div>
                   <h2 className="text-lg font-semibold text-foreground">
-                    Drivers who fit our standards tend to do well here
+                    Consistent drivers get consistent work
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                    Drivers who are punctual, polite, and consistent are usually
-                    the ones who benefit most from regular work and long-term
-                    opportunities with Cloud Cars.
+                    Airport runs, corporate bookings, and school contracts tend
+                    to go to the same trusted drivers week after week. Build a
+                    reputation for reliability and you'll be the first call.
                   </p>
                   <p className="mt-4 text-sm font-medium text-foreground">
                     Professional drivers. Reliable work. Local support.
@@ -400,10 +399,6 @@ export default function DriveForCloudCars() {
                           Apply to Drive
                         </h3>
 
-                        <p className="mt-2 text-sm font-semibold text-primary">
-                          Limited driver positions available this month
-                        </p>
-
                         <p className="mt-3 leading-7 text-muted-foreground">
                           Complete the form below and tell us about your
                           experience, availability, and whether you have your own
@@ -426,34 +421,6 @@ export default function DriveForCloudCars() {
                             • A company that values standards and reliability
                           </li>
                         </ul>
-                      </div>
-
-                      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-border/60 bg-background p-4">
-                          <div className="mb-2 flex items-center gap-2 text-foreground">
-                            <Clock3 className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-semibold">
-                              Quick review
-                            </span>
-                          </div>
-                          <p className="text-sm leading-6 text-muted-foreground">
-                            We aim to review suitable applications within 24–48
-                            hours.
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-border/60 bg-background p-4">
-                          <div className="mb-2 flex items-center gap-2 text-foreground">
-                            <Shield className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-semibold">
-                              Secure onboarding
-                            </span>
-                          </div>
-                          <p className="text-sm leading-6 text-muted-foreground">
-                            Successful applicants receive a secure link for
-                            compliance and document upload.
-                          </p>
-                        </div>
                       </div>
 
                       <form
@@ -769,9 +736,14 @@ export default function DriveForCloudCars() {
                     <CheckCircle2 className="h-4 w-4 text-primary" />
                     UK driving licence
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                    Private hire badge or willingness to obtain one
+                  <li className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      Private hire badge or willingness to obtain one
+                    </span>
+                    <span className="ml-6 text-xs text-muted-foreground">
+                      Don't have your badge yet? We can point you in the right direction.
+                    </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -790,13 +762,14 @@ export default function DriveForCloudCars() {
 
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-foreground">
-                  Looking for quality drivers, not just numbers
+                  Quality jobs, not leftover fares
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  Cloud Cars is building a driver team that reflects the
-                  standards of the company — reliable, professional, polite, and
-                  committed to excellent customer service across local,
-                  corporate, airport, and specialist journeys.
+                  Cloud Cars is not a mass platform that floods the area with
+                  drivers and distributes whatever is left. We work with a
+                  smaller, trusted group — which means drivers who are with us
+                  consistently get the airport transfers, corporate bookings, and
+                  school contracts.
                 </p>
 
                 <div className="mt-6">

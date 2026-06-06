@@ -51,7 +51,7 @@ export default function Hero() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-6 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <span className="text-sm font-medium text-primary">
-              100% Hybrid Fleet · Greener Nottingham
+              Serving Nottingham since 2012 · 100% Hybrid Fleet
             </span>
           </div>
 

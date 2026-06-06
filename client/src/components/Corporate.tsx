@@ -43,16 +43,16 @@ import { toast } from "sonner";
  */
 const benefits = [
   {
-    icon: FileText,
-    title: "Flexible Consolidated Invoicing",
+    icon: Building2,
+    title: "A Fleet We Own & Run",
     description:
-      "All journeys on one clear invoice — weekly, fortnightly, or monthly, whichever suits your finance team — with a full breakdown for easy processing.",
+      "One of the few Nottingham firms to own its own fleet — that means consistency, accountability, and a single point of contact, not a rota of strangers.",
   },
   {
-    icon: BarChart3,
-    title: "Journey Visibility",
+    icon: ShieldCheck,
+    title: "Vetted, Licensed Drivers",
     description:
-      "Account clients get a clear view of travel activity and trip history, so you can see how and where your business is travelling.",
+      "Every driver is DBS-checked, licensed by Nottingham City Council, and fully insured — duty of care covered when you put a colleague or client in one of our vehicles.",
   },
   {
     icon: Users,
@@ -61,22 +61,22 @@ const benefits = [
       "A nominated person in your team can arrange travel for staff, visitors, clients, and hotel guests in seconds.",
   },
   {
-    icon: ShieldCheck,
-    title: "Vetted, Licensed Drivers",
+    icon: FileText,
+    title: "Flexible Consolidated Invoicing",
     description:
-      "Every driver is DBS-checked, fully licensed, and insured — duty of care covered when you put a colleague or client in a car.",
+      "All journeys on one clear invoice — weekly, fortnightly, or monthly — with a full breakdown for your finance team and easy expenses reconciliation.",
   },
   {
-    icon: Building2,
-    title: "A Fleet We Own & Run",
+    icon: BarChart3,
+    title: "Full Journey Visibility",
     description:
-      "One of the few Nottingham firms to own its own fleet. That means consistency and accountability, not a rota of drivers you've never met.",
+      "Log in to review journey history, costs, and routes for every trip. Downloadable records make it straightforward for your finance or travel team.",
   },
   {
     icon: Leaf,
     title: "Eco-Friendly Hybrid Fleet",
     description:
-      "Nottingham's first environmentally conscious taxi company. Lower-emission journeys that support your organisation's sustainability goals.",
+      "Nottingham's first environmentally conscious taxi company. Lower-emission journeys that support your organisation's sustainability reporting.",
   },
 ];
 
@@ -99,7 +99,7 @@ const faqs = [
   },
   {
     q: "Are your drivers vetted?",
-    a: "Yes. Every Cloud Cars driver is DBS-checked, fully licensed, and insured.",
+    a: "Yes. Every driver is DBS-checked, licensed by Nottingham City Council, and carries full liability insurance — so your duty of care obligations are covered whenever you put a colleague or client in one of our vehicles.",
   },
 ];
 
@@ -253,13 +253,13 @@ export default function Corporate() {
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
               <h3 className="text-base font-semibold text-foreground mb-2">
-                Reliable transport for staff, guests, and business travel
+                The accountable alternative to app-based transport
               </h3>
               <p className="text-sm text-muted-foreground leading-6">
-                Cloud Cars supports businesses with dependable transport for
-                airport runs, staff travel, hotel guest movements, client
-                collections, and scheduled journeys — a more accountable,
-                professional alternative to app-based uncertainty.
+                When a driver cancels at 5am before a key client's airport run,
+                no app will take responsibility. Cloud Cars gives you a named
+                account, a direct number, and a team you can hold to account —
+                consistent drivers, consistent standards, every time.
               </p>
             </div>
 
@@ -453,6 +453,9 @@ export default function Corporate() {
                   {/* Cloudflare Turnstile widget */}
                   <div ref={turnstileRef} className="flex justify-center" />
 
+                  <p className="text-xs text-center text-muted-foreground">
+                    Trusted by businesses across Nottingham since 2012
+                  </p>
                   <Button
                     type="submit"
                     disabled={isSending || !turnstileToken}

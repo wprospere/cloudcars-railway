@@ -17,25 +17,25 @@ const serviceTypes = [
   {
     value: "standard",
     label: "Local Taxi Travel",
-    description: "Comfortable everyday travel",
+    description: "Quick, reliable local journeys",
     icon: Car,
   },
   {
     value: "courier",
     label: "Courier Service",
-    description: "Local deliveries & packages",
+    description: "Same-day local deliveries",
     icon: Package,
   },
   {
     value: "airport",
     label: "Airport Transfer",
-    description: "Fixed price airport runs",
+    description: "Fixed price · no surprises",
     icon: Plane,
   },
   {
     value: "executive",
     label: "Executive Travel",
-    description: "Premium pre-booked vehicles",
+    description: "Pre-booked · chauffeur standard",
     icon: Crown,
   },
 ];
@@ -203,20 +203,20 @@ export default function Booking() {
           <div
             id="quickbooker"
             ref={sentinelRef}
-            className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5"
+            className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5 scroll-mt-28"
           >
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 px-6 py-3 bg-primary/5 border-b border-primary/10 text-sm">
               <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <Users className="w-4 h-4 text-primary" />
+                100K+ journeys completed
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Star className="w-4 h-4 text-primary fill-primary" />
                 4.9/5 rated
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="w-4 h-4 text-primary" />
                 99% on-time arrivals
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Users className="w-4 h-4 text-primary" />
-                100K+ journeys completed
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -229,9 +229,8 @@ export default function Booking() {
                 Instant Quote & Online Booking
               </h3>
               <p className="text-sm sm:text-base text-muted-foreground mt-2 max-w-3xl">
-                Enter your journey details below to get a live quote and book
-                directly online. This QuickBooker is linked to our retail
-                booking system for fast and convenient pre-booked travel.
+                Enter your journey details below to get a live price and book
+                directly online — no account needed, no phone call required.
               </p>
             </div>
 

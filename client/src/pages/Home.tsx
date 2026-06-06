@@ -113,7 +113,7 @@ export default function Home() {
               <div>
                 <p className="font-semibold text-foreground">Travelling for work?</p>
                 <p className="text-sm text-muted-foreground">
-                  Set up a business account for invoiced journeys, staff bookings, and priority service.
+                  Set up a business account for invoiced journeys, staff bookings, and a team who answers the phone.
                 </p>
               </div>
               <a
