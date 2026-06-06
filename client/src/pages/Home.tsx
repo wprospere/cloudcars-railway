@@ -11,6 +11,7 @@ import AppPromo from "@/components/AppPromo";
 import Booking from "@/components/Booking";
 import About from "@/components/About";
 import Sustainability from "@/components/Sustainability";
+import EcoStrip from "@/components/EcoStrip";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
@@ -94,8 +95,13 @@ export default function Home() {
 
       <main className="flex-1">
         <Hero />
+        <EcoStrip />
         <RatingBar />
         <TrustBar />
+
+        <section id="sustainability" className="scroll-mt-28">
+          <Sustainability />
+        </section>
 
         <section id="trust" className="scroll-mt-28">
           <Trust />
@@ -123,10 +129,6 @@ export default function Home() {
 
         <section id="drivers" className="scroll-mt-28">
           <Drivers />
-        </section>
-
-        <section id="sustainability" className="scroll-mt-28">
-          <Sustainability />
         </section>
 
         <section id="about" className="scroll-mt-28">

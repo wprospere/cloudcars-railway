@@ -80,7 +80,7 @@ export default function About() {
   return (
     <section
       id="about"
-      className="py-20 lg:py-32"
+      className="section-light bg-background py-20 lg:py-32"
       ref={(el) => {
         sectionRef.current = el;
       }}

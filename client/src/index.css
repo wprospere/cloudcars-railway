@@ -194,6 +194,21 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+
+  /* Light green section variant — overrides semantic tokens so all
+     text-foreground / bg-card / border-border utilities pick up light values */
+  .section-light {
+    --background: oklch(0.97 0.02 145);
+    --foreground: oklch(0.15 0.03 240);
+    --card: oklch(1 0 0 / 0.85);
+    --card-foreground: oklch(0.15 0.03 240);
+    --secondary: oklch(0.92 0.03 145);
+    --secondary-foreground: oklch(0.18 0.03 240);
+    --muted: oklch(0.94 0.02 145);
+    --muted-foreground: oklch(0.42 0.03 240);
+    --border: oklch(0.87 0.04 145);
+    --input: oklch(0.93 0.03 145);
+  }
 }
 
 html {
