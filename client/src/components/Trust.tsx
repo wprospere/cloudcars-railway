@@ -166,13 +166,13 @@ export default function Trust() {
               <div key={i} className="bg-card rounded-xl p-5 border border-border flex flex-col">
                 <div className="flex items-center gap-1 mb-3">
                   {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-primary fill-primary" />
+                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">"{review.text}"</p>
                 <div>
                   <p className="text-sm font-semibold text-foreground">{review.name}</p>
-                  <p className="text-xs text-muted-foreground">{review.date} · Google</p>
+                  <p className="text-xs text-muted-foreground">Google Review</p>
                 </div>
               </div>
             ))}
