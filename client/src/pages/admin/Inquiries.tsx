@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   UserCheck,
   UserX,
+  Trash2,
 } from "lucide-react";
 
 import { timeAgo, getUrgency, getUrgencyColor } from "@/lib/timeUtils";
@@ -207,6 +208,9 @@ export default function Inquiries() {
   // ✅ One-click assignment loading (so you don't spam-click)
   const [assigningKey, setAssigningKey] = useState<string | null>(null);
 
+  // ✅ Delete-in-progress tracking (so the button disables while working)
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
+
   useEffect(() => {
     if (driverFilter === "unassigned" && assignedQuick !== "all") {
       setAssignedQuick("all");
@@ -322,6 +326,11 @@ export default function Inquiries() {
 
   const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
 
+  // ✅ Hard-delete mutations
+  const deleteDriver = trpc.admin.deleteDriverApplication.useMutation();
+  const deleteCorporate = trpc.admin.deleteCorporateInquiry.useMutation();
+  const deleteContact = trpc.admin.deleteContactMessage.useMutation();
+
   const handleExport = () => {
     if (activeTab === "drivers") exportToCSV(drivers, "driver-applications");
     else if (activeTab === "corporate")
@@ -392,6 +401,64 @@ export default function Inquiries() {
     }
   }
 
+  // ✅ Hard-delete helpers (with confirmation)
+  async function handleDeleteDriver(id: number, name: string) {
+    if (
+      !window.confirm(
+        `Permanently delete the driver application from "${name}"?\n\nThis also removes any uploaded documents and cannot be undone.`
+      )
+    )
+      return;
+    const key = `del-driver:${id}`;
+    try {
+      setDeletingKey(key);
+      await deleteDriver.mutateAsync({ id });
+      await driversQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete");
+    } finally {
+      setDeletingKey(null);
+    }
+  }
+
+  async function handleDeleteCorporate(id: number, name: string) {
+    if (
+      !window.confirm(
+        `Permanently delete the corporate inquiry from "${name}"?\n\nThis cannot be undone.`
+      )
+    )
+      return;
+    const key = `del-corp:${id}`;
+    try {
+      setDeletingKey(key);
+      await deleteCorporate.mutateAsync({ id });
+      await corporateQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete");
+    } finally {
+      setDeletingKey(null);
+    }
+  }
+
+  async function handleDeleteContact(id: number, name: string) {
+    if (
+      !window.confirm(
+        `Permanently delete the message from "${name}"?\n\nThis cannot be undone.`
+      )
+    )
+      return;
+    const key = `del-msg:${id}`;
+    try {
+      setDeletingKey(key);
+      await deleteContact.mutateAsync({ id });
+      await messagesQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete");
+    } finally {
+      setDeletingKey(null);
+    }
+  }
+
   function DriverCard({ driver }: { driver: any }) {
     const urgency = getUrgency(driver.createdAt);
     const urgencyColor = getUrgencyColor(urgency);
@@ -415,6 +482,7 @@ export default function Inquiries() {
 
     const isAssignWayneLoading = assigningKey === `driver:${driverId}:Wayne`;
     const isUnassignLoading = assigningKey === `driver:${driverId}:unassigned`;
+    const isDeletingThis = deletingKey === `del-driver:${driverId}`;
 
     return (
       <Card key={driver.id} className="p-6 space-y-4">
@@ -627,6 +695,18 @@ export default function Inquiries() {
               {isRestoringThis ? "Restoring..." : "Restore to Active"}
             </Button>
           )}
+
+          {/* ✅ Permanent delete */}
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isDeletingThis}
+            onClick={() => handleDeleteDriver(driverId, driver.fullName)}
+            title="Permanently delete this application"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {isDeletingThis ? "Deleting..." : "Delete"}
+          </Button>
         </div>
       </Card>
     );
@@ -834,6 +914,8 @@ export default function Inquiries() {
 
                 const corpKeyAssign = `corp:${Number(inquiry.id)}:Wayne`;
                 const corpKeyUnassign = `corp:${Number(inquiry.id)}:unassigned`;
+                const isDeletingThis =
+                  deletingKey === `del-corp:${Number(inquiry.id)}`;
 
                 return (
                   <Card key={inquiry.id} className="p-6 space-y-4">
@@ -967,6 +1049,24 @@ export default function Inquiries() {
                           ? "Unassigning..."
                           : "Unassign"}
                       </Button>
+
+                      {/* ✅ Permanent delete */}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isDeletingThis}
+                        onClick={() =>
+                          handleDeleteCorporate(
+                            Number(inquiry.id),
+                            inquiry.companyName
+                          )
+                        }
+                        title="Permanently delete this inquiry"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {isDeletingThis ? "Deleting..." : "Delete"}
+                      </Button>
                     </div>
 
                     <Textarea
@@ -1015,6 +1115,8 @@ export default function Inquiries() {
 
                 const msgKeyAssign = `msg:${Number(msg.id)}:Wayne`;
                 const msgKeyUnassign = `msg:${Number(msg.id)}:unassigned`;
+                const isDeletingThis =
+                  deletingKey === `del-msg:${Number(msg.id)}`;
 
                 return (
                   <Card key={msg.id} className="p-6 space-y-4">
@@ -1146,6 +1248,21 @@ export default function Inquiries() {
                         {assigningKey === msgKeyUnassign
                           ? "Unassigning..."
                           : "Unassign"}
+                      </Button>
+
+                      {/* ✅ Permanent delete */}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isDeletingThis}
+                        onClick={() =>
+                          handleDeleteContact(Number(msg.id), msg.name)
+                        }
+                        title="Permanently delete this message"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {isDeletingThis ? "Deleting..." : "Delete"}
                       </Button>
                     </div>
 

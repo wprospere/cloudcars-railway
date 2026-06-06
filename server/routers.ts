@@ -70,6 +70,11 @@ import {
 
   // ✅ reminder event
   logDriverOnboardingReminder,
+
+  // ✅ hard deletes (admin)
+  deleteDriverApplication,
+  deleteCorporateInquiry,
+  deleteContactMessage,
 } from "./db";
 
 // ✅ single source of truth for storage + URL refresh
@@ -1111,6 +1116,30 @@ export const appRouter = router({
           input.assignedTo,
           adminEmail
         );
+        return { success: true };
+      }),
+
+    /* ============================
+       ✅ Hard deletes (permanent)
+    ============================ */
+    deleteDriverApplication: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteDriverApplication(input.id);
+        return { success: true };
+      }),
+
+    deleteCorporateInquiry: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteCorporateInquiry(input.id);
+        return { success: true };
+      }),
+
+    deleteContactMessage: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteContactMessage(input.id);
         return { success: true };
       }),
 
