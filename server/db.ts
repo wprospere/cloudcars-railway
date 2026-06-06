@@ -423,6 +423,37 @@ export async function restoreDriverApplication(
   return { success: true };
 }
 
+/**
+ * ✅ HARD DELETE a driver application and everything attached to it
+ * (documents, vehicle, onboarding tokens, audit-trail rows).
+ * This is permanent and cannot be undone — for a recoverable option,
+ * use archiveDriverApplication instead.
+ */
+export async function deleteDriverApplication(id: number) {
+  await db
+    .delete(schema.driverDocuments)
+    .where(eq(schema.driverDocuments.driverApplicationId, id));
+  await db
+    .delete(schema.driverVehicles)
+    .where(eq(schema.driverVehicles.driverApplicationId, id));
+  await db
+    .delete(schema.driverOnboardingTokens)
+    .where(eq(schema.driverOnboardingTokens.driverApplicationId, id));
+  await db
+    .delete(adminActivityTable)
+    .where(
+      and(
+        eq(adminActivityTable.entityType as any, "driver_application" as any),
+        eq(adminActivityTable.entityId as any, id as any)
+      )
+    );
+  await db
+    .delete(schema.driverApplications)
+    .where(eq(schema.driverApplications.id, id));
+
+  return { success: true };
+}
+
 // -------------------- Corporate Inquiries --------------------
 
 export async function createCorporateInquiry(
@@ -514,6 +545,25 @@ export async function updateCorporateInquiryAssignment(
   });
 }
 
+/**
+ * ✅ HARD DELETE a corporate inquiry + its audit-trail rows. Permanent.
+ */
+export async function deleteCorporateInquiry(id: number) {
+  await db
+    .delete(adminActivityTable)
+    .where(
+      and(
+        eq(adminActivityTable.entityType as any, "corporate_inquiry" as any),
+        eq(adminActivityTable.entityId as any, id as any)
+      )
+    );
+  await db
+    .delete(schema.corporateInquiries)
+    .where(eq(schema.corporateInquiries.id, id));
+
+  return { success: true };
+}
+
 // -------------------- Contact Messages --------------------
 
 export async function createContactMessage(
@@ -598,6 +648,25 @@ export async function updateContactMessageAssignment(
     adminEmail: adminEmail ?? null,
     meta: { from: existing?.assignedTo ?? null, to: assignedTo },
   });
+}
+
+/**
+ * ✅ HARD DELETE a contact message + its audit-trail rows. Permanent.
+ */
+export async function deleteContactMessage(id: number) {
+  await db
+    .delete(adminActivityTable)
+    .where(
+      and(
+        eq(adminActivityTable.entityType as any, "contact_message" as any),
+        eq(adminActivityTable.entityId as any, id as any)
+      )
+    );
+  await db
+    .delete(schema.contactMessages)
+    .where(eq(schema.contactMessages.id, id));
+
+  return { success: true };
 }
 
 // -------------------- Team Members --------------------
