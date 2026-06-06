@@ -1,63 +1,40 @@
-import { initTRPC, TRPCError } from "@trpc/server";
-import type { Request, Response } from "express";
-import superjson from "superjson";
-import { eq } from "drizzle-orm";
+// server/security/turnstile.ts
+import type { Request } from "express";
 
-import { db } from "./db.js";
-import { adminUsers } from "../drizzle/schema.js";
-import { readAdminIdFromCookie } from "./auth/session.js";
-import { UNAUTHED_ERR_MSG } from "@shared/const"; // ✅ add this
-
-export type AuthedUser = { id: number; role: "admin" | "staff" | "user" };
-
-export const createContext = async ({
-  req,
-  res,
-}: {
-  req: Request;
-  res: Response;
-}) => {
-  let user: AuthedUser | null = null;
+export async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.error("TURNSTILE_SECRET_KEY not set — rejecting form submit");
+    return false;
+  }
+  const form = new URLSearchParams();
+  form.append("secret", secret);
+  form.append("response", token);
+  if (ip) form.append("remoteip", ip);
 
   try {
-    const adminId = readAdminIdFromCookie(req);
-
-    if (adminId) {
-      const rows = await db
-        .select({ id: adminUsers.id, role: adminUsers.role })
-        .from(adminUsers)
-        .where(eq(adminUsers.id, adminId))
-        .limit(1);
-
-      const admin = rows[0];
-      if (admin) user = { id: admin.id, role: admin.role as any };
-    }
-  } catch {
-    // don't crash context
-    user = null;
+    const r = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      { method: "POST", body: form }
+    );
+    const data = (await r.json()) as { success?: boolean };
+    return data.success === true;
+  } catch (e) {
+    console.error("Turnstile verify request failed:", e);
+    return false;
   }
+}
 
-  return { req, res, user };
-};
+// Real users never fill this hidden field; bots that fill every field trip it.
+export function honeypotTripped(value: unknown): boolean {
+  return typeof value === "string" && value.trim() !== "";
+}
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
-
-const t = initTRPC.context<Context>().create({
-  transformer: superjson,
-});
-
-export const router = t.router;
-export const publicProcedure = t.procedure;
-
-/**
- * Requires a logged-in admin/staff user (cookie-based)
- */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: UNAUTHED_ERR_MSG, // ✅ match the client
-    });
-  }
-  return next({ ctx });
-});
+// Pull the best client IP out of an Express request (Cloudflare-aware).
+export function clientIpFromReq(req: Request): string | undefined {
+  return (
+    (req.headers["cf-connecting-ip"] as string) ||
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.ip
+  );
+}

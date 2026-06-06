@@ -234,19 +234,19 @@ export default function Services() {
                   variant="outline"
                   className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                 >
-                  <Link href={service.slug}>
-                    <a
-                      onClick={() =>
-                        track("service_page_click", {
-                          location: "services_card",
-                          service_id: service.id,
-                          service_title: service.title,
-                          slug: service.slug,
-                        })
-                      }
-                    >
-                      Learn More
-                    </a>
+                  <Link
+                    href={service.slug}
+                    aria-label={`Learn more about ${service.title} in Nottingham`}
+                    onClick={() =>
+                      track("service_page_click", {
+                        location: "services_card",
+                        service_id: service.id,
+                        service_title: service.title,
+                        slug: service.slug,
+                      })
+                    }
+                  >
+                    Learn More
                   </Link>
                 </Button>
 
@@ -317,18 +317,18 @@ export default function Services() {
                   variant="outline"
                   className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                 >
-                  <Link href={largerVehicles.slug}>
-                    <a
-                      onClick={() =>
-                        track("service_page_click", {
-                          location: "larger_vehicles",
-                          service_title: largerVehicles.title,
-                          slug: largerVehicles.slug,
-                        })
-                      }
-                    >
-                      Learn More
-                    </a>
+                  <Link
+                    href={largerVehicles.slug}
+                    aria-label={`Learn more about ${largerVehicles.title} in Nottingham`}
+                    onClick={() =>
+                      track("service_page_click", {
+                        location: "larger_vehicles",
+                        service_title: largerVehicles.title,
+                        slug: largerVehicles.slug,
+                      })
+                    }
+                  >
+                    Learn More
                   </Link>
                 </Button>
 
