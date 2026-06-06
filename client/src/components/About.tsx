@@ -108,7 +108,7 @@ function Value({
         {icon}
       </div>
       <div>
-        <h4 className="font-semibold text-foreground mb-1">{title}</h4>
+        <h3 className="font-semibold text-foreground mb-1">{title}</h3>
         <p className="text-sm text-muted-foreground">{text}</p>
       </div>
     </div>

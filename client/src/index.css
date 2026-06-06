@@ -53,9 +53,9 @@
 
 :root {
   --primary: oklch(0.65 0.20 145);
-  --primary-foreground: oklch(0.98 0.01 0);
+  --primary-foreground: oklch(0.10 0.02 145);
   --sidebar-primary: oklch(0.65 0.20 145);
-  --sidebar-primary-foreground: oklch(0.98 0.01 0);
+  --sidebar-primary-foreground: oklch(0.10 0.02 145);
   --chart-1: oklch(0.65 0.20 145);
   --chart-2: oklch(0.55 0.22 145);
   --chart-3: oklch(0.75 0.18 145);
@@ -89,9 +89,9 @@
 
 .dark {
   --primary: oklch(0.65 0.20 145);
-  --primary-foreground: oklch(0.98 0.01 0);
+  --primary-foreground: oklch(0.10 0.02 145);
   --sidebar-primary: oklch(0.65 0.20 145);
-  --sidebar-primary-foreground: oklch(0.98 0.01 0);
+  --sidebar-primary-foreground: oklch(0.10 0.02 145);
   --background: oklch(0.12 0.02 240);
   --foreground: oklch(0.95 0.01 0);
   --card: oklch(0.18 0.03 240);

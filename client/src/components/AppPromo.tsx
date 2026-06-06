@@ -41,9 +41,11 @@ export default function AppPromo() {
               <div className="relative w-72 sm:w-80 bg-gradient-to-b from-zinc-800 to-zinc-900 rounded-[3rem] p-2 shadow-2xl">
                 {/* Screen with Real App Screenshot */}
                 <div className="w-full rounded-[2.5rem] overflow-hidden relative">
-                  <img 
-                    src="/app-screenshot.jpg" 
-                    alt="Cloud Cars App - Book your ride in Nottingham" 
+                  <img
+                    src="/app-screenshot.jpg"
+                    alt="Cloud Cars App - Book your ride in Nottingham"
+                    width="320"
+                    height="693"
                     className="w-full h-auto"
                   />
                 </div>
@@ -88,7 +90,7 @@ export default function AppPromo() {
                     <feature.icon className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground text-sm">
+                    <h3 className="font-semibold text-foreground text-sm">
                       {feature.title}
                     </h4>
                     <p className="text-xs text-muted-foreground">

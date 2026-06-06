@@ -30,6 +30,8 @@ export default function Header() {
             <img
               src="/logo.png"
               alt="Cloud Cars"
+              width="56"
+              height="56"
               className="h-12 lg:h-14 w-auto transition-opacity duration-200 group-hover:opacity-90"
             />
           </a>

@@ -73,7 +73,7 @@ export default function Drivers() {
             </p>
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
-              <h4 className="font-semibold text-foreground mb-2">
+              <h3 className="font-semibold text-foreground mb-2">
                 We are selective about who joins our team
               </h4>
               <p className="text-sm text-muted-foreground leading-6">
@@ -90,9 +90,9 @@ export default function Drivers() {
                     <benefit.icon className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">
+                    <h3 className="font-semibold text-foreground mb-1">
                       {benefit.title}
-                    </h4>
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {benefit.description}
                     </p>
@@ -102,9 +102,9 @@ export default function Drivers() {
             </div>
 
             <div className="bg-card rounded-xl p-6 border border-border">
-              <h4 className="font-semibold text-foreground mb-4">
+              <h3 className="font-semibold text-foreground mb-4">
                 What You'll Need
-              </h4>
+              </h3>
 
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">

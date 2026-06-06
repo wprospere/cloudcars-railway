@@ -209,7 +209,7 @@ export default function Contact() {
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <item.icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h4 className="font-semibold text-foreground mb-1">
+                  <h3 className="font-semibold text-foreground mb-1">
                     {item.title}
                   </h4>
                   <p className="text-foreground">{item.primary}</p>

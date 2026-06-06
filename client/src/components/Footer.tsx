@@ -121,7 +121,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="/" className="flex items-center gap-3 mb-4">
-              <img src="/logo.png" alt="Cloud Cars" className="h-12 w-auto" />
+              <img src="/logo.png" alt="Cloud Cars" width="48" height="48" className="h-12 w-auto" />
             </a>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
