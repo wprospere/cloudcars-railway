@@ -1376,6 +1376,10 @@ export async function createCustomer(data: {
  * ✅ Returns customers with their outstanding (unpaid) balance in pence.
  */
 export async function getAllCustomers() {
+  // Invoice totals and last-sent-token time are pre-aggregated in their own
+  // subqueries (one row per customer) before joining onto customers — doing
+  // those LEFT JOINs directly against customers would fan out (N invoices x
+  // M tokens per customer) and silently multiply the SUM()/COUNT() results.
   const rows: any = await db.execute(sql`
     SELECT
       c.id,
@@ -1386,12 +1390,24 @@ export async function getAllCustomers() {
       c.is_active AS isActive,
       c.createdAt,
       c.updatedAt,
-      COALESCE(SUM(CASE WHEN i.status = 'unpaid' THEN i.amountPence ELSE 0 END), 0) AS outstandingPence,
-      COUNT(CASE WHEN i.status = 'unpaid' THEN 1 END) AS unpaidCount
+      COALESCE(inv.outstandingPence, 0) AS outstandingPence,
+      COALESCE(inv.unpaidCount, 0) AS unpaidCount,
+      tok.lastLinkSentAt AS lastLinkSentAt
     FROM customers c
-    LEFT JOIN invoices i ON i.customerId = c.id
-    GROUP BY c.id
-    ORDER BY c.name ASC;
+    LEFT JOIN (
+      SELECT
+        customerId,
+        SUM(CASE WHEN status = 'unpaid' THEN amountPence ELSE 0 END) AS outstandingPence,
+        COUNT(CASE WHEN status = 'unpaid' THEN 1 END) AS unpaidCount
+      FROM invoices
+      GROUP BY customerId
+    ) inv ON inv.customerId = c.id
+    LEFT JOIN (
+      SELECT customerId, MAX(lastSentAt) AS lastLinkSentAt
+      FROM customer_account_tokens
+      GROUP BY customerId
+    ) tok ON tok.customerId = c.id
+    ORDER BY outstandingPence DESC, c.name ASC;
   `);
 
   const list = unwrapExecuteRows(rows);
@@ -1400,6 +1416,7 @@ export async function getAllCustomers() {
     ...r,
     outstandingPence: Number(r.outstandingPence ?? 0),
     unpaidCount: Number(r.unpaidCount ?? 0),
+    lastLinkSentAt: r.lastLinkSentAt ?? null,
   }));
 }
 

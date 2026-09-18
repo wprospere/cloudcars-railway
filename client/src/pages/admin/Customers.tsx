@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { getErrorMessage } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -49,7 +50,12 @@ type Customer = {
   outstandingPence: number;
   formattedOutstanding: string;
   unpaidCount: number;
+  lastLinkSentAt: string | Date | null;
 };
+
+function formatPounds(amountPence: number): string {
+  return `£${(amountPence / 100).toFixed(2)}`;
+}
 
 export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,6 +130,11 @@ export default function Customers() {
     setEditingCustomer(null);
     setFormData({ name: "", phone: "", email: "", notes: "" });
   };
+
+  const totalOutstandingPence = customers.reduce(
+    (sum, c) => sum + c.outstandingPence,
+    0
+  );
 
   return (
     <DashboardLayout>
@@ -206,6 +217,18 @@ export default function Customers() {
           </Dialog>
         </div>
 
+        {customers.length > 0 && (
+          <Card className="p-4 flex items-center justify-between">
+            <span className="text-muted-foreground">
+              Total outstanding across {customers.length}{" "}
+              {customers.length === 1 ? "customer" : "customers"}
+            </span>
+            <span className="text-lg font-semibold">
+              {formatPounds(totalOutstandingPence)}
+            </span>
+          </Card>
+        )}
+
         <div className="space-y-3">
           {customers.map((customer: Customer) => (
             <Card key={customer.id} className="overflow-hidden">
@@ -235,6 +258,11 @@ export default function Customers() {
                     <p className="text-sm text-muted-foreground">
                       {customer.phone}
                       {customer.email ? ` · ${customer.email}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {customer.lastLinkSentAt
+                        ? `Link sent ${formatDistanceToNow(new Date(customer.lastLinkSentAt), { addSuffix: true })}`
+                        : "Link never sent"}
                     </p>
                   </div>
                 </button>

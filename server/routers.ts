@@ -1240,6 +1240,7 @@ export const appRouter = router({
         formattedOutstanding: formatPounds(r.outstandingPence),
         unpaidCount: r.unpaidCount,
         createdAt: r.createdAt,
+        lastLinkSentAt: r.lastLinkSentAt ?? null,
       }));
     }),
 
