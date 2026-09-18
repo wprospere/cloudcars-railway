@@ -478,7 +478,7 @@ export const invoices = mysqlTable(
     customerId: int("customerId").notNull(),
     invoiceNumber: varchar("invoiceNumber", { length: 64 }).notNull(),
     amountPence: int("amountPence").notNull(),
-    issueDate: date("issueDate"),
+    issueDate: date("issueDate", { mode: "string" }),
     status: mysqlEnum("status", ["unpaid", "paid"]).default("unpaid").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
