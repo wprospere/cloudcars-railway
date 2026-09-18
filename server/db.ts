@@ -830,6 +830,19 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
+/**
+ * ✅ mysql2's raw execute() resolves to a [rows, fields] tuple, so
+ * `db.execute(sql\`...\`)` does too — unwrap it instead of treating the
+ * whole tuple as the row list (which silently iterates 2 "rows": the real
+ * array and the field-metadata array).
+ */
+function unwrapExecuteRows(result: any): any[] {
+  if (Array.isArray(result)) {
+    return Array.isArray(result[0]) ? result[0] : result;
+  }
+  return result?.rows ?? [];
+}
+
 export type TokenCheckReason =
   | "TOKEN_INVALID"
   | "TOKEN_EXPIRED"
@@ -1328,9 +1341,7 @@ export async function getOnboardingReminderCandidates(params?: {
     LIMIT ${limit};
   `);
 
-  const rows: any[] = Array.isArray(result)
-    ? result
-    : (result?.rows ?? result?.[0] ?? []);
+  const rows = unwrapExecuteRows(result);
 
   return rows.map((r) => ({
     id: Number(r.id),
@@ -1383,7 +1394,7 @@ export async function getAllCustomers() {
     ORDER BY c.name ASC;
   `);
 
-  const list: any[] = Array.isArray(rows) ? rows : (rows?.rows ?? rows?.[0] ?? []);
+  const list = unwrapExecuteRows(rows);
 
   return list.map((r) => ({
     ...r,
