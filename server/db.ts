@@ -1466,6 +1466,12 @@ export async function getInvoicesByCustomer(customerId: number) {
   });
 }
 
+export async function getInvoiceById(id: number) {
+  return db.query.invoices.findFirst({
+    where: (i, { eq }) => eq(i.id, id),
+  });
+}
+
 export async function updateInvoiceStatus(
   id: number,
   status: "unpaid" | "paid"

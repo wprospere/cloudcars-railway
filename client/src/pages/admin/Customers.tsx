@@ -294,6 +294,7 @@ function CustomerInvoicesPanel({
   const updateInvoiceStatus = trpc.admin.updateInvoiceStatus.useMutation();
   const deleteInvoice = trpc.admin.deleteInvoice.useMutation();
   const sendLink = trpc.admin.sendCustomerAccountLink.useMutation();
+  const sendPaymentReceivedText = trpc.admin.sendPaymentReceivedText.useMutation();
 
   const invoices: Invoice[] = invoicesQuery.data ?? [];
 
@@ -323,15 +324,32 @@ function CustomerInvoicesPanel({
   }
 
   async function handleToggleStatus(invoice: Invoice) {
+    const markingPaid = invoice.status === "unpaid";
+
     try {
       await updateInvoiceStatus.mutateAsync({
         id: invoice.id,
-        status: invoice.status === "unpaid" ? "paid" : "unpaid",
+        status: markingPaid ? "paid" : "unpaid",
       });
       invoicesQuery.refetch();
       onChanged();
     } catch (error: any) {
       alert(getErrorMessage(error, "Failed to update invoice"));
+      return;
+    }
+
+    if (
+      markingPaid &&
+      customer.phone &&
+      window.confirm(
+        `Text ${customer.name} to confirm you've received payment for invoice ${invoice.invoiceNumber}?`
+      )
+    ) {
+      try {
+        await sendPaymentReceivedText.mutateAsync({ invoiceId: invoice.id });
+      } catch (error: any) {
+        alert(getErrorMessage(error, "Failed to send payment confirmation text"));
+      }
     }
   }
 

@@ -84,6 +84,7 @@ import {
   deleteCustomer,
   createInvoice,
   getInvoicesByCustomer,
+  getInvoiceById,
   updateInvoiceStatus,
   deleteInvoice,
   createCustomerAccountToken,
@@ -1390,6 +1391,42 @@ export const appRouter = router({
         }
 
         return { success: true, link };
+      }),
+
+    sendPaymentReceivedText: adminProcedure
+      .input(z.object({ invoiceId: z.number() }))
+      .mutation(async ({ input }) => {
+        const invoice = await getInvoiceById(input.invoiceId);
+        if (!invoice) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+        }
+
+        const customer = await getCustomerById(invoice.customerId);
+        if (!customer) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+        }
+
+        const invoices = await getInvoicesByCustomer(customer.id);
+        const remainingPence = invoices
+          .filter((i: any) => i.status === "unpaid")
+          .reduce((sum: number, i: any) => sum + Number(i.amountPence), 0);
+
+        const paidAmount = formatPounds(Number(invoice.amountPence));
+
+        const body =
+          remainingPence > 0
+            ? `Hi ${customer.name}, we've received your payment for invoice ${invoice.invoiceNumber} (${paidAmount}). Your remaining balance is ${formatPounds(remainingPence)}. Thanks, Cloud Cars`
+            : `Hi ${customer.name}, we've received your payment for invoice ${invoice.invoiceNumber} (${paidAmount}). Your Cloud Cars account is now fully settled - thank you!`;
+
+        const result = await sendSms(customer.phone, body);
+        if (!result.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to send confirmation text: ${result.error.slice(0, 400)}`,
+          });
+        }
+
+        return { success: true };
       }),
 
     getBacsDetails: adminProcedure.query(async () => getBacsDetails()),
