@@ -1354,9 +1354,11 @@ export const appRouter = router({
           });
         }
 
+        // 20 chars (~120 bits of entropy) instead of 32 — still far beyond
+        // brute-forceable, but shorter keeps the SMS to a single part.
         const { rawToken } = await createCustomerAccountToken({
           customerId: customer.id,
-          makeRawToken: () => nanoid(32),
+          makeRawToken: () => nanoid(20),
           expiryDays: 90,
         });
 
@@ -1369,9 +1371,9 @@ export const appRouter = router({
 
         const template =
           input.message ??
-          `Hi ${customer.name}, your Cloud Cars account has an outstanding balance of ${formatPounds(
+          `Hi ${customer.name}, your Cloud Cars balance is ${formatPounds(
             outstandingPence
-          )}. View your invoices and how to pay: {link}`;
+          )}. View invoices & pay: {link}`;
 
         const body = (
           template.includes("{link}")

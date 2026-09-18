@@ -6,6 +6,14 @@
 //   ESENDEX_USERNAME            your Esendex account email
 //   ESENDEX_PASSWORD            your Esendex account/API password
 //
+// Optional env vars:
+//   ESENDEX_SENDER_ID           registered UK sender ID (max 11 alphanumeric
+//                               chars). Since Sept 2023, UK carriers block
+//                               generic/unregistered sender IDs — especially
+//                               messages containing a link — so this must be
+//                               a sender ID already registered on the
+//                               account. Defaults to "CloudCars".
+//
 // Auth: HTTP Basic. Endpoint: POST /v1.0/messagedispatcher.
 
 import axios from "axios";
@@ -43,11 +51,13 @@ export async function sendSms(to: string, body: string): Promise<SendSmsResult> 
     const accountreference = requiredEnv("ESENDEX_ACCOUNT_REFERENCE");
     const username = requiredEnv("ESENDEX_USERNAME");
     const password = requiredEnv("ESENDEX_PASSWORD");
+    const from = process.env.ESENDEX_SENDER_ID || "CloudCars";
 
     await axios.post(
       ESENDEX_URL,
       {
         accountreference,
+        from,
         messages: [{ to: normalizeUkMobile(to), body }],
       },
       {

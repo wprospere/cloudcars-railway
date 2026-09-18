@@ -25,6 +25,20 @@ import {
 } from "@/components/ui/table";
 import { Trash2, Plus, Edit, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 
+// Rough length of the resolved link (domain + /account?token= + 20-char
+// token) once {link} is substituted — used to estimate real SMS length
+// before sending, since the placeholder text itself is much shorter.
+const ESTIMATED_LINK_LENGTH = 63;
+
+function estimateSmsParts(message: string): { length: number; parts: number } {
+  const resolved = message.includes("{link}")
+    ? message.replace(/\{link\}/g, "x".repeat(ESTIMATED_LINK_LENGTH))
+    : `${message} ${"x".repeat(ESTIMATED_LINK_LENGTH)}`;
+  const length = resolved.length;
+  const parts = length <= 160 ? 1 : Math.ceil(length / 153);
+  return { length, parts };
+}
+
 type Customer = {
   id: number;
   name: string;
@@ -335,7 +349,7 @@ function CustomerInvoicesPanel({
   function openSendDialog() {
     setSendResult(null);
     setSendMessage(
-      `Hi ${customer.name}, your Cloud Cars account has an outstanding balance of ${customer.formattedOutstanding}. View your invoices and how to pay: {link}`
+      `Hi ${customer.name}, your Cloud Cars balance is ${customer.formattedOutstanding}. View invoices & pay: {link}`
     );
     setSendOpen(true);
   }
@@ -467,6 +481,21 @@ function CustomerInvoicesPanel({
                 {"{link}"} is replaced with the customer's secure link when sent. If
                 you remove it, the link is added to the end of the message instead.
               </p>
+              {(() => {
+                const { length, parts } = estimateSmsParts(sendMessage);
+                return (
+                  <p
+                    className={`text-xs mt-1 ${
+                      parts > 1 ? "text-destructive" : "text-muted-foreground"
+                    }`}
+                  >
+                    ~{length} characters —{" "}
+                    {parts > 1
+                      ? `will send as ${parts} texts`
+                      : "fits in one text"}
+                  </p>
+                );
+              })()}
             </div>
             {sendResult && (
               <div className="rounded-md border p-3 text-sm space-y-1">
