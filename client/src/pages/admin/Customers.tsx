@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { getErrorMessage } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ export default function Customers() {
       setFormData({ name: "", phone: "", email: "", notes: "" });
       refetch();
     } catch (error: any) {
-      alert(error?.message || "Failed to save customer");
+      alert(getErrorMessage(error, "Failed to save customer"));
     }
   };
 
@@ -100,7 +101,7 @@ export default function Customers() {
       await deleteCustomer.mutateAsync({ id: customer.id });
       refetch();
     } catch (error: any) {
-      alert(error?.message || "Failed to delete customer");
+      alert(getErrorMessage(error, "Failed to delete customer"));
     }
   };
 
@@ -303,7 +304,7 @@ function CustomerInvoicesPanel({
       invoicesQuery.refetch();
       onChanged();
     } catch (error: any) {
-      alert(error?.message || "Failed to add invoice");
+      alert(getErrorMessage(error, "Failed to add invoice"));
     }
   }
 
@@ -316,7 +317,7 @@ function CustomerInvoicesPanel({
       invoicesQuery.refetch();
       onChanged();
     } catch (error: any) {
-      alert(error?.message || "Failed to update invoice");
+      alert(getErrorMessage(error, "Failed to update invoice"));
     }
   }
 
@@ -327,7 +328,7 @@ function CustomerInvoicesPanel({
       invoicesQuery.refetch();
       onChanged();
     } catch (error: any) {
-      alert(error?.message || "Failed to delete invoice");
+      alert(getErrorMessage(error, "Failed to delete invoice"));
     }
   }
 
@@ -348,7 +349,7 @@ function CustomerInvoicesPanel({
       setSendResult(res.link);
       onChanged();
     } catch (error: any) {
-      alert(error?.message || "Failed to send text message");
+      alert(getErrorMessage(error, "Failed to send text message"));
     }
   }
 

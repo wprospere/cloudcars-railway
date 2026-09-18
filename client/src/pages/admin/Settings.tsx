@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -66,12 +67,14 @@ function BacsDetailsCard() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (bacsQuery.isLoading) return; // form hasn't loaded existing values yet
+
     try {
       await updateBacs.mutateAsync(form);
       alert("BACS details saved");
       bacsQuery.refetch();
     } catch (error: any) {
-      alert(error?.message || "Failed to save BACS details");
+      alert(getErrorMessage(error, "Failed to save BACS details"));
     }
   }
 
@@ -112,7 +115,7 @@ function BacsDetailsCard() {
               placeholder="03201090"
             />
           </div>
-          <Button type="submit" disabled={updateBacs.isPending}>
+          <Button type="submit" disabled={updateBacs.isPending || bacsQuery.isLoading}>
             {updateBacs.isPending ? "Saving..." : "Save BACS details"}
           </Button>
         </form>
