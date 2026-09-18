@@ -57,6 +57,16 @@ function formatPounds(amountPence: number): string {
   return `£${(amountPence / 100).toFixed(2)}`;
 }
 
+// issueDate is stored as a plain "YYYY-MM-DD" string — format it directly
+// rather than via `new Date(...)`, which can shift a day depending on the
+// viewer's timezone.
+function formatUkDate(value: string | null): string {
+  if (!value) return "—";
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
 export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -439,7 +449,7 @@ function CustomerInvoicesPanel({
               <TableRow key={invoice.id}>
                 <TableCell>{invoice.invoiceNumber}</TableCell>
                 <TableCell>{invoice.formattedAmount}</TableCell>
-                <TableCell>{invoice.issueDate || "—"}</TableCell>
+                <TableCell>{formatUkDate(invoice.issueDate)}</TableCell>
                 <TableCell>
                   <Badge variant={invoice.status === "paid" ? "secondary" : "destructive"}>
                     {invoice.status}

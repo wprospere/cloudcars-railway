@@ -19,6 +19,16 @@ function getTokenFromWindow(): string {
   return sp.get("token") || "";
 }
 
+// issueDate is stored as a plain "YYYY-MM-DD" string — format it directly
+// rather than via `new Date(...)`, which can shift a day depending on the
+// viewer's timezone.
+function formatUkDate(value: string | null): string {
+  if (!value) return "—";
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
 export default function CustomerAccountPage() {
   const [location] = useLocation();
   const [, params] = useRoute("/account/:token");
@@ -120,7 +130,7 @@ export default function CustomerAccountPage() {
                 {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
-                    <TableCell>{invoice.issueDate || "—"}</TableCell>
+                    <TableCell>{formatUkDate(invoice.issueDate)}</TableCell>
                     <TableCell className="text-right">
                       {invoice.formattedAmount}
                     </TableCell>
