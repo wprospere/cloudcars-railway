@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   FileText,
   Image,
+  Receipt,
   Settings,
   LogOut,
   Menu,
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/admin/policies", label: "Policies", icon: FileText },
   { href: "/admin/content", label: "Edit Content", icon: FileText },
   { href: "/admin/images", label: "Manage Images", icon: Image },
+  { href: "/admin/customers", label: "Customers", icon: Receipt },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

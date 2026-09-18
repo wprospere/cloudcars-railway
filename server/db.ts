@@ -1340,6 +1340,239 @@ export async function getOnboardingReminderCandidates(params?: {
   })) as AutoReminderCandidate[];
 }
 
+// ============================================================================
+// ✅ Customers & Invoices (account statement links)
+// ============================================================================
+
+export async function createCustomer(data: {
+  name: string;
+  phone: string;
+  email?: string | null;
+  notes?: string | null;
+}) {
+  return insertAndReturnId(
+    db.insert(schema.customers).values({
+      name: data.name,
+      phone: data.phone,
+      email: data.email ?? null,
+      notes: data.notes ?? null,
+      isActive: true,
+    } as any)
+  );
+}
+
+/**
+ * ✅ Returns customers with their outstanding (unpaid) balance in pence.
+ */
+export async function getAllCustomers() {
+  const rows: any = await db.execute(sql`
+    SELECT
+      c.id,
+      c.name,
+      c.phone,
+      c.email,
+      c.notes,
+      c.is_active AS isActive,
+      c.createdAt,
+      c.updatedAt,
+      COALESCE(SUM(CASE WHEN i.status = 'unpaid' THEN i.amountPence ELSE 0 END), 0) AS outstandingPence,
+      COUNT(CASE WHEN i.status = 'unpaid' THEN 1 END) AS unpaidCount
+    FROM customers c
+    LEFT JOIN invoices i ON i.customerId = c.id
+    GROUP BY c.id
+    ORDER BY c.name ASC;
+  `);
+
+  const list: any[] = Array.isArray(rows) ? rows : (rows?.rows ?? rows?.[0] ?? []);
+
+  return list.map((r) => ({
+    ...r,
+    outstandingPence: Number(r.outstandingPence ?? 0),
+    unpaidCount: Number(r.unpaidCount ?? 0),
+  }));
+}
+
+export async function getCustomerById(id: number) {
+  return db.query.customers.findFirst({
+    where: (c, { eq }) => eq(c.id, id),
+  });
+}
+
+export async function updateCustomer(
+  id: number,
+  data: Partial<{
+    name: string;
+    phone: string;
+    email: string | null;
+    notes: string | null;
+    isActive: boolean;
+  }>
+) {
+  await db
+    .update(schema.customers)
+    .set(data as any)
+    .where(eq(schema.customers.id, id));
+}
+
+/**
+ * ✅ HARD DELETE a customer and everything attached to it
+ * (invoices, account tokens). Permanent.
+ */
+export async function deleteCustomer(id: number) {
+  await db.delete(schema.invoices).where(eq(schema.invoices.customerId, id));
+  await db
+    .delete(schema.customerAccountTokens)
+    .where(eq(schema.customerAccountTokens.customerId, id));
+  await db.delete(schema.customers).where(eq(schema.customers.id, id));
+
+  return { success: true };
+}
+
+// -------------------- Invoices --------------------
+
+export async function createInvoice(data: {
+  customerId: number;
+  invoiceNumber: string;
+  amountPence: number;
+  issueDate?: string | null;
+  status?: "unpaid" | "paid";
+}) {
+  return insertAndReturnId(
+    db.insert(schema.invoices).values({
+      customerId: data.customerId,
+      invoiceNumber: data.invoiceNumber,
+      amountPence: data.amountPence,
+      issueDate: data.issueDate ?? null,
+      status: data.status ?? "unpaid",
+    } as any)
+  );
+}
+
+export async function getInvoicesByCustomer(customerId: number) {
+  return db.query.invoices.findMany({
+    where: (i, { eq }) => eq(i.customerId, customerId),
+    orderBy: (i, { desc }) => [desc(i.createdAt)],
+  });
+}
+
+export async function updateInvoiceStatus(
+  id: number,
+  status: "unpaid" | "paid"
+) {
+  await db
+    .update(schema.invoices)
+    .set({ status } as any)
+    .where(eq(schema.invoices.id, id));
+}
+
+export async function deleteInvoice(id: number) {
+  await db.delete(schema.invoices).where(eq(schema.invoices.id, id));
+  return { success: true };
+}
+
+// -------------------- Customer account tokens --------------------
+
+/**
+ * Revoke all active (unexpired, unrevoked) tokens for a customer.
+ */
+export async function revokeActiveCustomerAccountTokens(customerId: number) {
+  await db
+    .update(schema.customerAccountTokens)
+    .set({ revokedAt: new Date() } as any)
+    .where(
+      and(
+        eq(schema.customerAccountTokens.customerId, customerId),
+        isNull(schema.customerAccountTokens.revokedAt)
+      )
+    );
+}
+
+/**
+ * ✅ Revokes any previous tokens for the customer and issues a fresh one
+ * (same revoke-then-create shape as the driver onboarding tokens above).
+ * Returns the RAW token — only its hash is ever persisted — so the caller
+ * can build the link immediately after calling this.
+ */
+export async function createCustomerAccountToken(params: {
+  customerId: number;
+  makeRawToken: () => string;
+  expiryDays?: number;
+}) {
+  const now = new Date();
+
+  await revokeActiveCustomerAccountTokens(params.customerId);
+
+  const rawToken = params.makeRawToken();
+  const tokenHash = sha256(rawToken);
+  const expiresAt = addDays(now, params.expiryDays ?? 90);
+
+  await db.insert(schema.customerAccountTokens).values({
+    customerId: params.customerId,
+    tokenHash,
+    expiresAt,
+    revokedAt: null,
+    createdAt: now,
+    lastSentAt: now,
+    sendCount: 1,
+  } as any);
+
+  return { rawToken, expiresAt };
+}
+
+export type CustomerTokenCheckReason =
+  | "TOKEN_INVALID"
+  | "TOKEN_EXPIRED"
+  | "TOKEN_REVOKED";
+
+export async function checkCustomerAccountToken(
+  rawToken: string
+): Promise<
+  | { ok: true; row: typeof schema.customerAccountTokens.$inferSelect }
+  | { ok: false; reason: CustomerTokenCheckReason }
+> {
+  const tokenHash = sha256(rawToken);
+
+  const rows = await db
+    .select()
+    .from(schema.customerAccountTokens)
+    .where(eq(schema.customerAccountTokens.tokenHash, tokenHash))
+    .limit(1);
+
+  const row: any = (rows as any[])[0] ?? null;
+  if (!row) return { ok: false, reason: "TOKEN_INVALID" };
+  if (row.revokedAt) return { ok: false, reason: "TOKEN_REVOKED" };
+
+  const exp = new Date(row.expiresAt);
+  if (exp.getTime() <= Date.now()) return { ok: false, reason: "TOKEN_EXPIRED" };
+
+  return { ok: true, row };
+}
+
+/**
+ * ✅ Public: resolve a raw token into the customer's unpaid invoices +
+ * outstanding total. Returns null if the token is invalid/expired/revoked.
+ */
+export async function getCustomerAccountByToken(rawToken: string) {
+  const check = await checkCustomerAccountToken(rawToken);
+  if (!check.ok) return null;
+
+  const customer = await getCustomerById(Number(check.row.customerId));
+  if (!customer) return null;
+
+  const allInvoices = await getInvoicesByCustomer(customer.id);
+  const unpaidInvoices = allInvoices.filter((i: any) => i.status === "unpaid");
+  const outstandingPence = unpaidInvoices.reduce(
+    (sum: number, i: any) => sum + Number(i.amountPence ?? 0),
+    0
+  );
+
+  return {
+    customer,
+    invoices: unpaidInvoices,
+    outstandingPence,
+  };
+}
+
 export async function logAutoOnboardingReminder(params: {
   driverApplicationId: number;
   adminEmail?: string | null;

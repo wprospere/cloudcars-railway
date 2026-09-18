@@ -75,6 +75,19 @@ import {
   deleteDriverApplication,
   deleteCorporateInquiry,
   deleteContactMessage,
+
+  // ✅ Customers & invoices
+  createCustomer,
+  getAllCustomers,
+  getCustomerById,
+  updateCustomer,
+  deleteCustomer,
+  createInvoice,
+  getInvoicesByCustomer,
+  updateInvoiceStatus,
+  deleteInvoice,
+  createCustomerAccountToken,
+  getCustomerAccountByToken,
 } from "./db";
 
 // ✅ single source of truth for storage + URL refresh
@@ -82,6 +95,7 @@ import { storagePut, storageGet, refreshUrlFromStored } from "./storage";
 
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
+import { sendSms } from "./sms";
 
 /* ----------------------------------------
    ✅ Spam guard for PUBLIC forms
@@ -313,6 +327,38 @@ function policyTitle(slug: PolicySlug) {
     default:
       return "Policy";
   }
+}
+
+/* ----------------------------------------
+   ✅ Customer account links (BACS details + SMS)
+---------------------------------------- */
+const BACS_SECTION_KEY = "payment.bacs";
+
+type BacsDetails = {
+  accountName: string;
+  sortCode: string;
+  accountNumber: string;
+};
+
+const DEFAULT_BACS_DETAILS: BacsDetails = {
+  accountName: "Cloud Cars",
+  sortCode: "",
+  accountNumber: "",
+};
+
+async function getBacsDetails(): Promise<BacsDetails> {
+  const row = await getSiteContent(BACS_SECTION_KEY);
+  if (!row?.extraData) return DEFAULT_BACS_DETAILS;
+  try {
+    const parsed = JSON.parse(String(row.extraData));
+    return { ...DEFAULT_BACS_DETAILS, ...parsed };
+  } catch {
+    return DEFAULT_BACS_DETAILS;
+  }
+}
+
+function formatPounds(amountPence: number): string {
+  return `£${(amountPence / 100).toFixed(2)}`;
 }
 
 /* ----------------------------------------
@@ -894,6 +940,40 @@ export const appRouter = router({
       }),
   }),
 
+  /* =======================================================================
+     ✅ CUSTOMER ACCOUNT (Public token-based invoice/statement view)
+     ======================================================================= */
+  customerAccount: router({
+    getByToken: publicProcedure
+      .input(z.object({ token: z.string().min(10) }))
+      .query(async ({ input }) => {
+        const account = await getCustomerAccountByToken(input.token);
+        if (!account) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "This link has expired or is no longer valid. Please contact Cloud Cars for a new one.",
+          });
+        }
+
+        const bacs = await getBacsDetails();
+
+        return {
+          customerName: account.customer.name,
+          invoices: account.invoices.map((i: any) => ({
+            id: i.id,
+            invoiceNumber: i.invoiceNumber,
+            amountPence: i.amountPence,
+            formattedAmount: formatPounds(Number(i.amountPence)),
+            issueDate: i.issueDate,
+          })),
+          outstandingPence: account.outstandingPence,
+          formattedOutstanding: formatPounds(account.outstandingPence),
+          bacs,
+        };
+      }),
+  }),
+
   /* ---------- ADMIN ---------- */
   admin: router({
     runAutoOnboardingReminders: publicProcedure
@@ -1140,6 +1220,197 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await deleteContactMessage(input.id);
+        return { success: true };
+      }),
+
+    /* ============================
+       ✅ Customers & Invoices
+    ============================ */
+    getCustomers: adminProcedure.query(async () => {
+      const rows = await getAllCustomers();
+      return rows.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        phone: r.phone,
+        email: r.email ?? null,
+        notes: r.notes ?? null,
+        isActive: !!r.isActive,
+        outstandingPence: r.outstandingPence,
+        formattedOutstanding: formatPounds(r.outstandingPence),
+        unpaidCount: r.unpaidCount,
+        createdAt: r.createdAt,
+      }));
+    }),
+
+    createCustomer: adminProcedure
+      .input(
+        z.object({
+          name: z.string().min(1),
+          phone: z.string().min(1),
+          email: z.string().email().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const res = await createCustomer({
+          name: input.name,
+          phone: input.phone,
+          email: input.email ?? null,
+          notes: input.notes ?? null,
+        });
+        return { success: true, id: res.id };
+      }),
+
+    updateCustomer: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().email().nullable().optional(),
+          notes: z.string().nullable().optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateCustomer(id, data);
+        return { success: true };
+      }),
+
+    deleteCustomer: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteCustomer(input.id);
+        return { success: true };
+      }),
+
+    getCustomerInvoices: adminProcedure
+      .input(z.object({ customerId: z.number() }))
+      .query(async ({ input }) => {
+        const rows = await getInvoicesByCustomer(input.customerId);
+        return rows.map((r: any) => ({
+          id: r.id,
+          invoiceNumber: r.invoiceNumber,
+          amountPence: r.amountPence,
+          formattedAmount: formatPounds(Number(r.amountPence)),
+          issueDate: r.issueDate,
+          status: r.status,
+          createdAt: r.createdAt,
+        }));
+      }),
+
+    createInvoice: adminProcedure
+      .input(
+        z.object({
+          customerId: z.number(),
+          invoiceNumber: z.string().min(1),
+          amount: z.number().positive(), // pounds, e.g. 302.17
+          issueDate: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const res = await createInvoice({
+          customerId: input.customerId,
+          invoiceNumber: input.invoiceNumber,
+          amountPence: Math.round(input.amount * 100),
+          issueDate: input.issueDate ?? null,
+        });
+        return { success: true, id: res.id };
+      }),
+
+    updateInvoiceStatus: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["unpaid", "paid"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await updateInvoiceStatus(input.id, input.status);
+        return { success: true };
+      }),
+
+    deleteInvoice: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteInvoice(input.id);
+        return { success: true };
+      }),
+
+    sendCustomerAccountLink: adminProcedure
+      .input(
+        z.object({
+          customerId: z.number(),
+          message: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const customer = await getCustomerById(input.customerId);
+        if (!customer) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Customer not found",
+          });
+        }
+
+        const { rawToken } = await createCustomerAccountToken({
+          customerId: customer.id,
+          makeRawToken: () => nanoid(32),
+          expiryDays: 90,
+        });
+
+        const link = `${getPublicBaseUrl()}/account?token=${rawToken}`;
+
+        const invoices = await getInvoicesByCustomer(customer.id);
+        const outstandingPence = invoices
+          .filter((i: any) => i.status === "unpaid")
+          .reduce((sum: number, i: any) => sum + Number(i.amountPence), 0);
+
+        const template =
+          input.message ??
+          `Hi ${customer.name}, your Cloud Cars account has an outstanding balance of ${formatPounds(
+            outstandingPence
+          )}. View your invoices and how to pay: {link}`;
+
+        const body = (
+          template.includes("{link}")
+            ? template.replace(/\{link\}/g, link)
+            : `${template} ${link}`
+        ).trim();
+
+        const ok = await sendSms(customer.phone, body);
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Failed to send the text message. Check the Esendex account variables on Railway.",
+          });
+        }
+
+        return { success: true, link };
+      }),
+
+    getBacsDetails: adminProcedure.query(async () => getBacsDetails()),
+
+    updateBacsDetails: adminProcedure
+      .input(
+        z.object({
+          accountName: z.string().min(1),
+          sortCode: z.string().min(1),
+          accountNumber: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await upsertSiteContent({
+          sectionKey: BACS_SECTION_KEY,
+          title: "BACS payment details",
+          subtitle: null,
+          description: null,
+          buttonText: null,
+          buttonLink: null,
+          extraData: JSON.stringify(input),
+        } as any);
         return { success: true };
       }),
 

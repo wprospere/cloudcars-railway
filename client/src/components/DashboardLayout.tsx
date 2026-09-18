@@ -27,6 +27,7 @@ import {
   LogOut,
   Mail,
   PanelLeft,
+  Receipt,
   Settings,
   Users,
 } from "lucide-react";
@@ -42,6 +43,7 @@ const menuItems = [
   { icon: FileText, label: "Edit Content", path: "/admin/content" },
   { icon: Image, label: "Manage Images", path: "/admin/images" },
   { icon: Users, label: "Team Members", path: "/admin/team-members" },
+  { icon: Receipt, label: "Customers", path: "/admin/customers" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
 

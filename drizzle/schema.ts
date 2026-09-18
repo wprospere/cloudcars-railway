@@ -445,6 +445,80 @@ export const driverDocuments = mysqlTable(
 );
 
 /* ============================================================================
+ * Customers (invoice/account management)
+ * ========================================================================== */
+export const customers = mysqlTable(
+  "customers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    email: varchar("email", { length: 320 }),
+    notes: text("notes"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    phoneIdx: index("ix_customers_phone").on(t.phone),
+    nameIdx: index("ix_customers_name").on(t.name),
+  })
+);
+
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;
+
+/* ============================================================================
+ * Invoices (belong to a customer)
+ * ========================================================================== */
+export const invoices = mysqlTable(
+  "invoices",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    invoiceNumber: varchar("invoiceNumber", { length: 64 }).notNull(),
+    amountPence: int("amountPence").notNull(),
+    issueDate: date("issueDate"),
+    status: mysqlEnum("status", ["unpaid", "paid"]).default("unpaid").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    customerIdx: index("ix_invoices_customer").on(t.customerId),
+    statusIdx: index("ix_invoices_status").on(t.status),
+  })
+);
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+/* ============================================================================
+ * Customer account tokens (public "view my invoices" link)
+ * ========================================================================== */
+export const customerAccountTokens = mysqlTable(
+  "customer_account_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    tokenHash: varchar("tokenHash", { length: 128 }).notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    revokedAt: timestamp("revokedAt"),
+    lastSentAt: timestamp("lastSentAt"),
+    sendCount: int("sendCount").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    tokenHashUnique: uniqueIndex("ux_customer_account_token_hash").on(
+      t.tokenHash
+    ),
+    customerIdx: index("ix_customer_account_tokens_customer").on(
+      t.customerId
+    ),
+    expiresIdx: index("ix_customer_account_tokens_expires").on(t.expiresAt),
+  })
+);
+
+/* ============================================================================
  * Admin activity timeline (powers drawer timeline)
  * ========================================================================== */
 export const adminActivity = mysqlTable(

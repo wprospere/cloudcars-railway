@@ -41,6 +41,7 @@ const CorporateTransport = lazy(() => import("./pages/CorporateTransport"));
 
 const DriveForCloudCars = lazy(() => import("./pages/DriveForCloudCars"));
 const DriverOnboardingPage = lazy(() => import("@/pages/DriverOnboarding"));
+const CustomerAccountPage = lazy(() => import("@/pages/CustomerAccount"));
 
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminLoginPage = lazy(() => import("./pages/admin/Login"));
@@ -49,6 +50,7 @@ const ImageManager = lazy(() => import("./pages/admin/ImageManager"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 const Inquiries = lazy(() => import("./pages/admin/Inquiries"));
 const TeamMembers = lazy(() => import("./pages/admin/TeamMembers"));
+const Customers = lazy(() => import("./pages/admin/Customers"));
 const PoliciesAdmin = lazy(() => import("./pages/admin/PoliciesAdmin"));
 const DriverOnboardingReview = lazy(
   () => import("@/pages/admin/DriverOnboardingReview")
@@ -102,10 +104,15 @@ function Router() {
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
       <Route path="/driver/onboarding/:token" component={DriverOnboardingPage} />
 
+      {/* Customer account (public, token-based) */}
+      <Route path="/account" component={CustomerAccountPage} />
+      <Route path="/account/:token" component={CustomerAccountPage} />
+
       {/* Admin */}
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin/inquiries" component={Inquiries} />
       <Route path="/admin/team-members" component={TeamMembers} />
+      <Route path="/admin/customers" component={Customers} />
       <Route path="/admin/content" component={ContentEditor} />
       <Route path="/admin/images" component={ImageManager} />
       <Route path="/admin/policies" component={PoliciesAdmin} />
