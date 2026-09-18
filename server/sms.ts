@@ -31,12 +31,14 @@ export function normalizeUkMobile(phone: string): string {
   return trimmed;
 }
 
+export type SendSmsResult = { ok: true } | { ok: false; error: string };
+
 /**
- * Sends a single SMS via Esendex. Returns true on success, false on failure
- * (errors are logged, not thrown, so a failed text doesn't crash the caller —
- * the tRPC mutation decides how to surface that to the admin).
+ * Sends a single SMS via Esendex. Returns { ok: false, error } on failure
+ * instead of throwing, so a failed text doesn't crash the caller — the
+ * tRPC mutation decides how to surface `error` to the admin.
  */
-export async function sendSms(to: string, body: string): Promise<boolean> {
+export async function sendSms(to: string, body: string): Promise<SendSmsResult> {
   try {
     const accountreference = requiredEnv("ESENDEX_ACCOUNT_REFERENCE");
     const username = requiredEnv("ESENDEX_USERNAME");
@@ -55,12 +57,22 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
       }
     );
 
-    return true;
+    return { ok: true };
   } catch (err: any) {
-    console.error(
-      "⚠️ Esendex SMS send failed:",
-      err?.response?.data ?? err?.message ?? err
-    );
-    return false;
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+    const detail =
+      (typeof data === "string" && data) ||
+      (data ? JSON.stringify(data) : null) ||
+      err?.message ||
+      String(err);
+
+    const error = status ? `HTTP ${status}: ${detail}` : detail;
+
+    // Single string argument — Railway's log viewer has been dropping the
+    // second console.error() argument, hiding the actual error payload.
+    console.error(`⚠️ Esendex SMS send failed: ${error}`);
+
+    return { ok: false, error };
   }
 }

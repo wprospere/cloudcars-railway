@@ -1379,12 +1379,11 @@ export const appRouter = router({
             : `${template} ${link}`
         ).trim();
 
-        const ok = await sendSms(customer.phone, body);
-        if (!ok) {
+        const result = await sendSms(customer.phone, body);
+        if (!result.ok) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message:
-              "Failed to send the text message. Check the Esendex account variables on Railway.",
+            message: `Failed to send the text message: ${result.error.slice(0, 400)}`,
           });
         }
 
