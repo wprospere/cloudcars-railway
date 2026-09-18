@@ -97,6 +97,7 @@ import { storagePut, storageGet, refreshUrlFromStored } from "./storage";
 import { sendEmail, notifyOwner } from "./railway-email";
 import { emailTemplates, EmailTemplateType } from "./emailTemplates";
 import { sendSms } from "./sms";
+import { parseInvoiceExportRows } from "./invoiceImport";
 
 /* ----------------------------------------
    ✅ Spam guard for PUBLIC forms
@@ -1338,6 +1339,60 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await deleteInvoice(input.id);
         return { success: true };
+      }),
+
+    importInvoicesFromExcel: adminProcedure
+      .input(
+        z.object({
+          customerId: z.number(),
+          base64Data: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const customer = await getCustomerById(input.customerId);
+        if (!customer) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+        }
+
+        const buffer = Buffer.from(input.base64Data, "base64");
+        const parsedRows = parseInvoiceExportRows(buffer);
+
+        const existing = await getInvoicesByCustomer(customer.id);
+        const existingNumbers = new Set(
+          existing.map((i: any) => String(i.invoiceNumber))
+        );
+
+        let created = 0;
+        const skipped: string[] = [];
+
+        for (const row of parsedRows) {
+          if (!row.ok) {
+            skipped.push(`Row ${row.rowNum}: ${row.error}`);
+            continue;
+          }
+
+          if (existingNumbers.has(row.invoiceNumber)) {
+            skipped.push(`Row ${row.rowNum}: invoice ${row.invoiceNumber} already exists`);
+            continue;
+          }
+
+          await createInvoice({
+            customerId: customer.id,
+            invoiceNumber: row.invoiceNumber,
+            amountPence: row.amountPence,
+            issueDate: row.issueDate,
+          });
+
+          existingNumbers.add(row.invoiceNumber); // guard duplicate rows within the same file
+          created++;
+        }
+
+        return {
+          success: true,
+          created,
+          skippedCount: skipped.length,
+          skippedDetails: skipped.slice(0, 20),
+        };
       }),
 
     sendCustomerAccountLink: adminProcedure

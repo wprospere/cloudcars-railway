@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { trpc } from "@/lib/trpc";
 import { getErrorMessage } from "@/lib/utils";
@@ -24,7 +24,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Plus, Edit, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Edit,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+} from "lucide-react";
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onload = () => {
+      const res = String(reader.result || "");
+      resolve(res.includes(",") ? res.split(",")[1] : res);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // Rough length of the resolved link (domain + /account?token= + 20-char
 // token) once {link} is substituted — used to estimate real SMS length
@@ -333,8 +353,38 @@ function CustomerInvoicesPanel({
   const deleteInvoice = trpc.admin.deleteInvoice.useMutation();
   const sendLink = trpc.admin.sendCustomerAccountLink.useMutation();
   const sendPaymentReceivedText = trpc.admin.sendPaymentReceivedText.useMutation();
+  const importInvoices = trpc.admin.importInvoicesFromExcel.useMutation();
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   const invoices: Invoice[] = invoicesQuery.data ?? [];
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file next time
+    if (!file) return;
+
+    try {
+      const base64Data = await fileToBase64(file);
+      const result = await importInvoices.mutateAsync({
+        customerId: customer.id,
+        base64Data,
+      });
+
+      let message = `Imported ${result.created} invoice${result.created === 1 ? "" : "s"}.`;
+      if (result.skippedCount > 0) {
+        message += ` Skipped ${result.skippedCount}:\n${result.skippedDetails.join("\n")}`;
+        if (result.skippedCount > result.skippedDetails.length) {
+          message += `\n...and ${result.skippedCount - result.skippedDetails.length} more`;
+        }
+      }
+      alert(message);
+
+      invoicesQuery.refetch();
+      onChanged();
+    } catch (error: any) {
+      alert(getErrorMessage(error, "Failed to import invoices"));
+    }
+  }
 
   async function handleAddInvoice(e: React.FormEvent) {
     e.preventDefault();
@@ -427,10 +477,28 @@ function CustomerInvoicesPanel({
     <div className="border-t bg-muted/30 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">Invoices</h4>
-        <Button size="sm" onClick={openSendDialog} disabled={!customer.phone}>
-          <MessageSquare className="h-4 w-4 mr-2" />
-          Send account link via SMS
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={importFileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => importFileInputRef.current?.click()}
+            disabled={importInvoices.isPending}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {importInvoices.isPending ? "Importing..." : "Import from Excel"}
+          </Button>
+          <Button size="sm" onClick={openSendDialog} disabled={!customer.phone}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Send account link via SMS
+          </Button>
+        </div>
       </div>
 
       {invoices.length > 0 && (
