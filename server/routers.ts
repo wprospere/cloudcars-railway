@@ -363,6 +363,38 @@ function formatPounds(amountPence: number): string {
   return `£${(amountPence / 100).toFixed(2)}`;
 }
 
+/**
+ * Shared prep for both SMS and email account-link sends: looks up the
+ * customer, issues a fresh account token, and computes the outstanding
+ * balance. Tokens are never revoked when a new one is issued (unlike the
+ * driver onboarding tokens) — a customer may have a live SMS link and a
+ * live email link at once, both showing the same current data, so sending
+ * a second channel must not invalidate the first.
+ */
+async function prepareCustomerAccountLink(customerId: number) {
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+  }
+
+  // 20 chars (~120 bits of entropy) instead of 32 — still far beyond
+  // brute-forceable, but short enough to keep an SMS to a single part.
+  const { rawToken } = await createCustomerAccountToken({
+    customerId: customer.id,
+    makeRawToken: () => nanoid(20),
+    expiryDays: 90,
+  });
+
+  const link = `${getPublicBaseUrl()}/account?token=${rawToken}`;
+
+  const invoices = await getInvoicesByCustomer(customer.id);
+  const outstandingPence = invoices
+    .filter((i: any) => i.status === "unpaid")
+    .reduce((sum: number, i: any) => sum + Number(i.amountPence), 0);
+
+  return { customer, link, outstandingPence };
+}
+
 /* ----------------------------------------
    App Router
 ---------------------------------------- */
@@ -1403,28 +1435,9 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const customer = await getCustomerById(input.customerId);
-        if (!customer) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Customer not found",
-          });
-        }
-
-        // 20 chars (~120 bits of entropy) instead of 32 — still far beyond
-        // brute-forceable, but shorter keeps the SMS to a single part.
-        const { rawToken } = await createCustomerAccountToken({
-          customerId: customer.id,
-          makeRawToken: () => nanoid(20),
-          expiryDays: 90,
-        });
-
-        const link = `${getPublicBaseUrl()}/account?token=${rawToken}`;
-
-        const invoices = await getInvoicesByCustomer(customer.id);
-        const outstandingPence = invoices
-          .filter((i: any) => i.status === "unpaid")
-          .reduce((sum: number, i: any) => sum + Number(i.amountPence), 0);
+        const { customer, link, outstandingPence } = await prepareCustomerAccountLink(
+          input.customerId
+        );
 
         const template =
           input.message ??
@@ -1443,6 +1456,46 @@ export const appRouter = router({
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to send the text message: ${result.error.slice(0, 400)}`,
+          });
+        }
+
+        return { success: true, link };
+      }),
+
+    sendCustomerAccountLinkEmail: adminProcedure
+      .input(z.object({ customerId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { customer, link, outstandingPence } = await prepareCustomerAccountLink(
+          input.customerId
+        );
+
+        if (!customer.email) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This customer doesn't have an email address on file.",
+          });
+        }
+
+        const html = `
+          <p>Hi ${customer.name},</p>
+          <p>Your Cloud Cars account has an outstanding balance of <strong>${formatPounds(
+            outstandingPence
+          )}</strong>.</p>
+          <p>View your invoices and how to pay: <a href="${link}">${link}</a></p>
+          <p>Cloud Cars</p>
+        `;
+
+        const ok = await sendEmail({
+          to: customer.email,
+          subject: "Your Cloud Cars account",
+          html,
+        });
+
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Failed to send the email. Check the Mailgun variables on Railway.",
           });
         }
 

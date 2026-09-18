@@ -29,6 +29,7 @@ import {
   Plus,
   Edit,
   MessageSquare,
+  Mail,
   ChevronDown,
   ChevronUp,
   Upload,
@@ -352,6 +353,7 @@ function CustomerInvoicesPanel({
   const updateInvoiceStatus = trpc.admin.updateInvoiceStatus.useMutation();
   const deleteInvoice = trpc.admin.deleteInvoice.useMutation();
   const sendLink = trpc.admin.sendCustomerAccountLink.useMutation();
+  const sendLinkEmail = trpc.admin.sendCustomerAccountLinkEmail.useMutation();
   const sendPaymentReceivedText = trpc.admin.sendPaymentReceivedText.useMutation();
   const importInvoices = trpc.admin.importInvoicesFromExcel.useMutation();
   const importFileInputRef = useRef<HTMLInputElement>(null);
@@ -473,6 +475,16 @@ function CustomerInvoicesPanel({
     }
   }
 
+  async function handleSendEmail() {
+    try {
+      await sendLinkEmail.mutateAsync({ customerId: customer.id });
+      alert(`Emailed account link to ${customer.email}`);
+      onChanged();
+    } catch (error: any) {
+      alert(getErrorMessage(error, "Failed to send email"));
+    }
+  }
+
   return (
     <div className="border-t bg-muted/30 p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -497,6 +509,16 @@ function CustomerInvoicesPanel({
           <Button size="sm" onClick={openSendDialog} disabled={!customer.phone}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Send account link via SMS
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSendEmail}
+            disabled={!customer.email || sendLinkEmail.isPending}
+            title={customer.email ? undefined : "No email address on file"}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            {sendLinkEmail.isPending ? "Sending..." : "Email"}
           </Button>
         </div>
       </div>

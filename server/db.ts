@@ -1522,8 +1522,13 @@ export async function revokeActiveCustomerAccountTokens(customerId: number) {
 }
 
 /**
- * ✅ Revokes any previous tokens for the customer and issues a fresh one
- * (same revoke-then-create shape as the driver onboarding tokens above).
+ * ✅ Issues a fresh account token for the customer WITHOUT revoking any
+ * existing ones — a customer can have a live SMS link and a live email
+ * link at the same time, both showing current data, so sending on one
+ * channel must not break a link already delivered on another. (Unlike the
+ * driver onboarding tokens, which represent a single in-progress form and
+ * do revoke-then-create.) Use revokeActiveCustomerAccountTokens directly
+ * if a link ever needs to be explicitly invalidated.
  * Returns the RAW token — only its hash is ever persisted — so the caller
  * can build the link immediately after calling this.
  */
@@ -1533,8 +1538,6 @@ export async function createCustomerAccountToken(params: {
   expiryDays?: number;
 }) {
   const now = new Date();
-
-  await revokeActiveCustomerAccountTokens(params.customerId);
 
   const rawToken = params.makeRawToken();
   const tokenHash = sha256(rawToken);
