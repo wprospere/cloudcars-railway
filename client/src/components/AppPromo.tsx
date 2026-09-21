@@ -25,7 +25,7 @@ const appFeatures = [
 
 export default function AppPromo() {
   return (
-    <section className="py-20 lg:py-32 bg-gradient-to-b from-background to-primary/5 relative overflow-hidden">
+    <section className="section-light bg-background py-20 lg:py-32 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-primary blur-3xl" />

@@ -9,7 +9,7 @@ const areas = [
 
 export default function Areas() {
   return (
-    <div className="py-20 lg:py-28 bg-secondary/30">
+    <div className="section-light bg-background py-20 lg:py-28">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-14">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">

@@ -191,7 +191,10 @@ export default function Contact() {
   };
 
   return (
-    <section id="contact" className="py-20 lg:py-32 bg-secondary/30">
+    <section
+      id="contact"
+      className="section-light bg-background py-20 lg:py-32"
+    >
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Left Column - Contact Info */}

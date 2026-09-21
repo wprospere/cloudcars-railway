@@ -225,7 +225,10 @@ export default function Corporate() {
   };
 
   return (
-    <section id="corporate" className="py-20 lg:py-32">
+    <section
+      id="corporate"
+      className="section-light bg-background py-20 lg:py-32"
+    >
       {/* Structured data for SEO rich results */}
       <script
         type="application/ld+json"

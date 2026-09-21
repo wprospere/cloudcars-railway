@@ -51,7 +51,10 @@ const benefits = [
 
 export default function Drivers() {
   return (
-    <section id="drivers" className="py-20 lg:py-32 bg-secondary/30">
+    <section
+      id="drivers"
+      className="section-light bg-background py-20 lg:py-32"
+    >
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
           <div>

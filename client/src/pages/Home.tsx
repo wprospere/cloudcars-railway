@@ -107,7 +107,7 @@ export default function Home() {
         </section>
 
         {/* Corporate early-entry strip */}
-        <div className="bg-card border-y border-primary/20 py-7">
+        <div className="section-light bg-card border-y border-primary/20 py-7">
           <div className="container">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>

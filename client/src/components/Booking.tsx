@@ -68,7 +68,7 @@ export default function Booking() {
   };
 
   return (
-    <section className="py-20 lg:py-32 bg-secondary/30">
+    <section className="section-light bg-background py-20 lg:py-32">
       <div className="container">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
