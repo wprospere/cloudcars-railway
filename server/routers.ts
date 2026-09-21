@@ -647,7 +647,7 @@ export const appRouter = router({
 
   /* ---------- FLEET PARTNERS ---------- */
   fleetPartner: router({
-    apply: publicProcedure
+    submitApplication: publicProcedure
       .input(
         z.object({
           companyName: z.string().min(1),

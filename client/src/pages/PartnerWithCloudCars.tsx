@@ -112,7 +112,7 @@ export default function PartnerWithCloudCars() {
     defaultValues,
   });
 
-  const submitApplication = trpc.fleetPartner.apply.useMutation({
+  const submitApplication = trpc.fleetPartner.submitApplication.useMutation({
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset(defaultValues);
