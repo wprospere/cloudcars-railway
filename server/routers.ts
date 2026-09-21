@@ -25,6 +25,7 @@ import {
 
   // Admin inbox
   getAllDriverApplications,
+  logAdminActivity,
   updateDriverApplicationStatus,
   updateDriverApplicationNotes,
   updateDriverApplicationAssignment,
@@ -1849,6 +1850,58 @@ export const appRouter = router({
             message: "Failed to send reminder email.",
           });
         }
+
+        return { success: true };
+      }),
+
+    sendDriverAppDownloadEmail: adminProcedure
+      .input(z.object({ driverApplicationId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const apps: any[] = await getAllDriverApplications();
+        const app = apps.find(
+          (a) => Number(a.id) === Number(input.driverApplicationId)
+        );
+
+        if (!app) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Driver application not found",
+          });
+        }
+
+        const appDownloadUrl =
+          process.env.DRIVER_APP_DOWNLOAD_URL ||
+          "https://book.cloudcarsltd.com/driver-ws/v2/apk";
+
+        const html = `
+          <p>Hi ${app.fullName || "Driver"},</p>
+          <p>Welcome to Cloud Cars! You're all set to get started — download the driver app here:</p>
+          <p><a href="${appDownloadUrl}">${appDownloadUrl}</a></p>
+          <p>Cloud Cars</p>
+        `;
+
+        const ok = await sendEmail({
+          to: app.email,
+          subject: "Download the Cloud Cars driver app",
+          html,
+        });
+
+        if (!ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Failed to send the app download email. Check the Mailgun variables on Railway.",
+          });
+        }
+
+        const adminEmail = getAdminEmail(ctx);
+        await logAdminActivity({
+          entityType: "driver_application",
+          entityId: Number(app.id),
+          action: "LINK_SENT",
+          adminEmail,
+          meta: { type: "app_download", url: appDownloadUrl },
+        });
 
         return { success: true };
       }),

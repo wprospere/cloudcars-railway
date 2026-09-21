@@ -88,6 +88,17 @@ function openAdminReview(driverApplicationId: number) {
   window.location.href = `/admin/driver-onboarding/${driverApplicationId}`;
 }
 
+function formatUkDateTime(value: any): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 /* ---------------- SLA / Priority ---------------- */
 type SLALevel = "OVERDUE" | "CRITICAL" | "HIGH" | "NORMAL";
 
@@ -203,6 +214,7 @@ export default function Inquiries() {
   const [assignedPerson, setAssignedPerson] = useState<string>("");
 
   const [sendingForId, setSendingForId] = useState<number | null>(null);
+  const [sendingAppLinkForId, setSendingAppLinkForId] = useState<number | null>(null);
   const [restoringForId, setRestoringForId] = useState<number | null>(null);
 
   // ✅ One-click assignment loading (so you don't spam-click)
@@ -325,6 +337,7 @@ export default function Inquiries() {
     trpc.admin.updateContactAssignment.useMutation();
 
   const sendOnboardingLink = trpc.admin.sendDriverOnboardingLink.useMutation();
+  const sendAppDownloadLink = trpc.admin.sendDriverAppDownloadEmail.useMutation();
 
   // ✅ Hard-delete mutations
   const deleteDriver = trpc.admin.deleteDriverApplication.useMutation();
@@ -465,6 +478,7 @@ export default function Inquiries() {
 
     const driverId = Number(driver.id);
     const isSendingThis = sendingForId === driverId;
+    const isSendingAppLinkThis = sendingAppLinkForId === driverId;
     const isRestoringThis = restoringForId === driverId;
 
     const docs = (driver?.documents ?? driver?.driverDocuments ?? []) as any[];
@@ -532,6 +546,8 @@ export default function Inquiries() {
 
             <div className="text-sm text-muted-foreground">
               {driver.email} · {driver.phone}
+              {formatUkDateTime(driver.createdAt) &&
+                ` · Applied ${formatUkDateTime(driver.createdAt)}`}
             </div>
           </div>
 
@@ -674,6 +690,31 @@ export default function Inquiries() {
             <LinkIcon className="h-4 w-4 mr-2" />
             {isSendingThis ? "Sending..." : "Send Onboarding Link"}
           </Button>
+
+          {driver.status === "approved" && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-green-600 hover:bg-green-600/90"
+              disabled={sendAppDownloadLink.isPending && isSendingAppLinkThis}
+              onClick={() => {
+                setSendingAppLinkForId(driverId);
+
+                sendAppDownloadLink.mutate(
+                  { driverApplicationId: driverId },
+                  {
+                    onSuccess: () => alert("Driver app download link emailed ✅"),
+                    onError: (err: any) =>
+                      alert(err?.message || "Failed to send app download link"),
+                    onSettled: () => setSendingAppLinkForId(null),
+                  }
+                );
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isSendingAppLinkThis ? "Sending..." : "Email App Download Link"}
+            </Button>
+          )}
 
           <Button
             variant="outline"
