@@ -153,7 +153,10 @@ export default function Services() {
   };
 
   return (
-    <section id="services" className="py-20 lg:py-32 bg-secondary/30">
+    <section
+      id="services"
+      className="section-light bg-background py-20 lg:py-32"
+    >
       <div className="container">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
