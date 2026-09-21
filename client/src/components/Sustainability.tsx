@@ -25,7 +25,10 @@ const sustainabilityFeatures = [
 
 export default function Sustainability() {
   return (
-    <section id="sustainability" className="py-20 lg:py-28 bg-secondary/30">
+    <section
+      id="sustainability"
+      className="section-light bg-background py-20 lg:py-28"
+    >
       <div className="container">
         {/* Header */}
         <div className="text-center mb-16">

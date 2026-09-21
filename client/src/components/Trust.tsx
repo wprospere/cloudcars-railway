@@ -88,7 +88,7 @@ export default function Trust() {
   }, [imageMap, failed]);
 
   return (
-    <section className="py-20 lg:py-32">
+    <section className="section-light bg-background py-20 lg:py-32">
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">
