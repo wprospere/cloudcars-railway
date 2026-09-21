@@ -71,6 +71,8 @@ import {
 
   // ✅ reminder event
   logDriverOnboardingReminder,
+  getOnboardingReminderCandidates,
+  logAutoOnboardingReminder,
 
   // ✅ hard deletes (admin)
   deleteDriverApplication,
@@ -159,15 +161,76 @@ function requireCronKey(providedKey: string) {
 }
 
 /**
- * ✅ Safe stub to unblock deploy.
- * Replace later with real reminder logic.
+ * ✅ Finds driver applications that were sent an onboarding link 7+ days
+ * ago with zero documents uploaded and no auto-reminder sent yet, issues
+ * each a fresh onboarding link (the original is likely expired by now —
+ * links last 7 days, same as this threshold), and emails it to them.
+ * Triggered by admin.runAutoOnboardingReminders, which is meant to be
+ * hit on a schedule by an external cron (see CRON_KEY).
  */
 async function runAutoOnboardingReminders(): Promise<{
   checked: number;
   sent: number;
   skipped: number;
 }> {
-  return { checked: 0, sent: 0, skipped: 0 };
+  const REMINDER_AFTER_DAYS = 7;
+  const candidates = await getOnboardingReminderCandidates({
+    days: REMINDER_AFTER_DAYS,
+    limit: 50,
+  });
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const candidate of candidates) {
+    try {
+      const rawToken = nanoid(32);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await resendDriverOnboardingToken({
+        driverApplicationId: candidate.id,
+        rawToken,
+        expiresAt,
+        adminEmail: "system",
+      });
+
+      const link = `${getPublicBaseUrl()}/driver/onboarding?token=${rawToken}`;
+
+      const html = `
+        <p>Hi ${candidate.fullName || "there"},</p>
+        <p>This is a quick reminder to complete your Cloud Cars driver onboarding — upload your documents to finish your application:</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>This link expires in 7 days.</p>
+        <p>Cloud Cars</p>
+      `;
+
+      const ok = await sendEmail({
+        to: candidate.email,
+        subject: "Reminder: complete your Cloud Cars driver onboarding",
+        html,
+      });
+
+      if (!ok) {
+        skipped++;
+        continue;
+      }
+
+      await logAutoOnboardingReminder({
+        driverApplicationId: candidate.id,
+        adminEmail: "system",
+        days: REMINDER_AFTER_DAYS,
+      });
+      sent++;
+    } catch (err) {
+      console.error(
+        `⚠️ Auto onboarding reminder failed for driver ${candidate.id}:`,
+        err
+      );
+      skipped++;
+    }
+  }
+
+  return { checked: candidates.length, sent, skipped };
 }
 
 /* ----------------------------------------
