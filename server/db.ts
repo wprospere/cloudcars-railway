@@ -88,7 +88,8 @@ async function insertAndReturnId<T>(q: Promise<T>): Promise<{ id: number }> {
 export type AdminEntityType =
   | "driver_application"
   | "corporate_inquiry"
-  | "contact_message";
+  | "contact_message"
+  | "fleet_partner";
 
 export type AdminActivityAction =
   | "CREATED"
@@ -560,6 +561,116 @@ export async function deleteCorporateInquiry(id: number) {
   await db
     .delete(schema.corporateInquiries)
     .where(eq(schema.corporateInquiries.id, id));
+
+  return { success: true };
+}
+
+// -------------------- Fleet Partners --------------------
+
+export async function createFleetPartner(
+  data: typeof schema.fleetPartners.$inferInsert
+) {
+  const res = await insertAndReturnId(
+    db.insert(schema.fleetPartners).values(data)
+  );
+
+  await logAdminActivity({
+    entityType: "fleet_partner",
+    entityId: res.id,
+    action: "CREATED",
+    adminEmail: null,
+    meta: { source: "public_form" },
+  });
+
+  return res;
+}
+
+export async function getAllFleetPartners() {
+  return db.query.fleetPartners.findMany({
+    orderBy: (partners, { desc }) => [desc(partners.createdAt)],
+  });
+}
+
+export async function updateFleetPartnerStatus(
+  id: number,
+  status: "pending" | "contacted" | "approved" | "declined",
+  adminEmail?: string | null
+) {
+  const existing = await db.query.fleetPartners.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
+  await db
+    .update(schema.fleetPartners)
+    .set({ status } as any)
+    .where(eq(schema.fleetPartners.id, id));
+
+  await logAdminActivity({
+    entityType: "fleet_partner",
+    entityId: id,
+    action: "STATUS_CHANGED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.status ?? null, to: status },
+  });
+}
+
+export async function updateFleetPartnerNotes(
+  id: number,
+  notes: string,
+  adminEmail?: string | null
+) {
+  await db
+    .update(schema.fleetPartners)
+    .set({ internalNotes: notes } as any)
+    .where(eq(schema.fleetPartners.id, id));
+
+  await logAdminActivity({
+    entityType: "fleet_partner",
+    entityId: id,
+    action: "NOTE_ADDED",
+    adminEmail: adminEmail ?? null,
+    meta: { length: Number(notes?.length ?? 0) },
+  });
+}
+
+export async function updateFleetPartnerAssignment(
+  id: number,
+  assignedTo: string | null,
+  adminEmail?: string | null
+) {
+  const existing = await db.query.fleetPartners.findFirst({
+    where: (a, { eq }) => eq(a.id, id),
+  });
+
+  await db
+    .update(schema.fleetPartners)
+    .set({ assignedTo } as any)
+    .where(eq(schema.fleetPartners.id, id));
+
+  await logAdminActivity({
+    entityType: "fleet_partner",
+    entityId: id,
+    action: "ASSIGNED",
+    adminEmail: adminEmail ?? null,
+    meta: { from: existing?.assignedTo ?? null, to: assignedTo },
+  });
+}
+
+/**
+ * ✅ HARD DELETE a fleet partner application + its audit-trail rows. Permanent.
+ */
+export async function deleteFleetPartner(id: number) {
+  await db
+    .delete(adminActivityTable)
+    .where(
+      and(
+        eq(adminActivityTable.entityType as any, "fleet_partner" as any),
+        eq(adminActivityTable.entityId as any, id as any)
+      )
+    );
+  await db
+    .delete(schema.fleetPartners)
+    .where(eq(schema.fleetPartners.id, id));
 
   return { success: true };
 }

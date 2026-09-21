@@ -22,6 +22,7 @@ import {
   createDriverApplication,
   createCorporateInquiry,
   createContactMessage,
+  createFleetPartner,
 
   // Admin inbox
   getAllDriverApplications,
@@ -34,6 +35,12 @@ import {
   updateCorporateInquiryStatus,
   updateCorporateInquiryNotes,
   updateCorporateInquiryAssignment,
+
+  getAllFleetPartners,
+  updateFleetPartnerStatus,
+  updateFleetPartnerNotes,
+  updateFleetPartnerAssignment,
+  deleteFleetPartner,
 
   getAllContactMessages,
   markContactMessageAsRead,
@@ -638,6 +645,58 @@ export const appRouter = router({
       }),
   }),
 
+  /* ---------- FLEET PARTNERS ---------- */
+  fleetPartner: router({
+    apply: publicProcedure
+      .input(
+        z.object({
+          companyName: z.string().min(1),
+          contactName: z.string().min(1),
+          email: z.string().email(),
+          phone: z.string().min(1),
+          fleetSize: z.string().optional(),
+          operatorLicenceNumber: z.string().optional(),
+          operatorLicenceAuthority: z.string().optional(),
+          message: z.string().optional(),
+          // ✅ spam protection
+          turnstileToken: z.string().optional(),
+          company_website: z.string().optional(), // honeypot
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { turnstileToken, company_website, ...payload } = input;
+
+        const guard = await assertHumanOrThrow({
+          ctx,
+          turnstileToken,
+          honeypot: company_website,
+        });
+        if (guard.honeypot) {
+          return { success: true, partnerId: null };
+        }
+
+        const result = await createFleetPartner({
+          ...payload,
+          fleetSize: payload.fleetSize ?? null,
+          operatorLicenceNumber: payload.operatorLicenceNumber ?? null,
+          operatorLicenceAuthority: payload.operatorLicenceAuthority ?? null,
+          message: payload.message ?? null,
+          internalNotes: null,
+          assignedTo: null,
+        } as any);
+
+        await notifyOwner({
+          title: "New Fleet Partner Application",
+          content: `${payload.companyName} (${payload.contactName}) - ${payload.fleetSize ?? "fleet size not given"}`,
+        });
+
+        return {
+          success: true,
+          partnerId: (result as any).id ?? (result as any).insertId,
+        };
+      }),
+  }),
+
   /* ---------- CONTACT ---------- */
   contact: router({
     send: publicProcedure
@@ -1235,6 +1294,80 @@ export const appRouter = router({
           input.assignedTo,
           adminEmail
         );
+        return { success: true };
+      }),
+
+    /* ============================
+       Fleet partner applications
+    ============================ */
+    getFleetPartners: adminProcedure
+      .input(
+        z.object({ limit: z.number().min(1).max(500).optional() }).optional()
+      )
+      .query(async ({ input }) => {
+        const rows: any[] = await getAllFleetPartners();
+        const limit = input?.limit ?? 200;
+
+        return rows.slice(0, limit).map((r: any) => ({
+          id: r.id,
+          companyName: r.companyName,
+          contactName: r.contactName,
+          email: r.email,
+          phone: r.phone,
+          fleetSize: r.fleetSize,
+          operatorLicenceNumber: r.operatorLicenceNumber,
+          operatorLicenceAuthority: r.operatorLicenceAuthority,
+          message:
+            typeof r.message === "string"
+              ? r.message.slice(0, 5000)
+              : r.message,
+          status: r.status,
+          assignedTo: r.assignedTo,
+          internalNotes:
+            typeof r.internalNotes === "string"
+              ? r.internalNotes.slice(0, 5000)
+              : r.internalNotes,
+          createdAt: r.createdAt,
+        }));
+      }),
+
+    updatePartnerStatus: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "contacted", "approved", "declined"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateFleetPartnerStatus(input.id, input.status, adminEmail);
+        return { success: true };
+      }),
+
+    updatePartnerNotes: adminProcedure
+      .input(z.object({ id: z.number(), notes: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateFleetPartnerNotes(input.id, input.notes, adminEmail);
+        return { success: true };
+      }),
+
+    updatePartnerAssignment: adminProcedure
+      .input(z.object({ id: z.number(), assignedTo: z.string().nullable() }))
+      .mutation(async ({ input, ctx }) => {
+        const adminEmail = getAdminEmail(ctx);
+        await updateFleetPartnerAssignment(
+          input.id,
+          input.assignedTo,
+          adminEmail
+        );
+        return { success: true };
+      }),
+
+    deletePartner: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFleetPartner(input.id);
         return { success: true };
       }),
 

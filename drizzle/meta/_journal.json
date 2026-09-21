@@ -70,6 +70,13 @@
       "when": 1789720921559,
       "tag": "0009_unknown_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1790015588776,
+      "tag": "0010_illegal_the_phantom",
+      "breakpoints": true
     }
   ]
 }

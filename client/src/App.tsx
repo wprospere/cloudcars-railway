@@ -40,6 +40,7 @@ const CourierServices = lazy(() => import("./pages/CourierServices"));
 const CorporateTransport = lazy(() => import("./pages/CorporateTransport"));
 
 const DriveForCloudCars = lazy(() => import("./pages/DriveForCloudCars"));
+const PartnerWithCloudCars = lazy(() => import("./pages/PartnerWithCloudCars"));
 const DriverOnboardingPage = lazy(() => import("@/pages/DriverOnboarding"));
 const CustomerAccountPage = lazy(() => import("@/pages/CustomerAccount"));
 
@@ -101,6 +102,7 @@ function Router() {
 
       {/* Driver pages */}
       <Route path="/drive-for-cloud-cars" component={DriveForCloudCars} />
+      <Route path="/partner-with-cloud-cars" component={PartnerWithCloudCars} />
       <Route path="/driver/onboarding" component={DriverOnboardingPage} />
       <Route path="/driver/onboarding/:token" component={DriverOnboardingPage} />
 

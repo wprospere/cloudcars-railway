@@ -202,9 +202,9 @@ export default function Inquiries() {
   // ✅ Force your name for one-click assignment + "Assigned to me"
   const myName = "Wayne";
 
-  const [activeTab, setActiveTab] = useState<"drivers" | "corporate" | "messages">(
-    "drivers"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "drivers" | "corporate" | "partners" | "messages"
+  >("drivers");
 
   const [driverView, setDriverView] = useState<"active" | "archived">("active");
   const [driverFilter, setDriverFilter] = useState<"all" | "unassigned">("all");
@@ -238,11 +238,13 @@ export default function Inquiries() {
   const corporateQuery = trpc.admin.getCorporateInquiries.useQuery({
     limit: 200,
   });
+  const partnersQuery = trpc.admin.getFleetPartners.useQuery({ limit: 200 });
   const messagesQuery = trpc.admin.getContactMessages.useQuery({ limit: 200 });
   const teamMembersQuery = trpc.admin.getTeamMembers.useQuery();
 
   const rawDrivers = normalizeArray<any>(driversQuery.data);
   const corporate = normalizeArray<any>(corporateQuery.data);
+  const partners = normalizeArray<any>(partnersQuery.data);
   const messages = normalizeArray<any>(messagesQuery.data);
   const teamMembersData = normalizeArray<any>(teamMembersQuery.data);
 
@@ -331,6 +333,11 @@ export default function Inquiries() {
   const updateCorporateAssignment =
     trpc.admin.updateCorporateAssignment.useMutation();
 
+  const updatePartnerStatus = trpc.admin.updatePartnerStatus.useMutation();
+  const updatePartnerNotes = trpc.admin.updatePartnerNotes.useMutation();
+  const updatePartnerAssignment =
+    trpc.admin.updatePartnerAssignment.useMutation();
+
   const markContactRead = trpc.admin.markContactRead.useMutation();
   const updateContactNotes = trpc.admin.updateContactNotes.useMutation();
   const updateContactAssignment =
@@ -342,12 +349,15 @@ export default function Inquiries() {
   // ✅ Hard-delete mutations
   const deleteDriver = trpc.admin.deleteDriverApplication.useMutation();
   const deleteCorporate = trpc.admin.deleteCorporateInquiry.useMutation();
+  const deletePartner = trpc.admin.deletePartner.useMutation();
   const deleteContact = trpc.admin.deleteContactMessage.useMutation();
 
   const handleExport = () => {
     if (activeTab === "drivers") exportToCSV(drivers, "driver-applications");
     else if (activeTab === "corporate")
       exportToCSV(corporate, "corporate-inquiries");
+    else if (activeTab === "partners")
+      exportToCSV(partners, "fleet-partners");
     else exportToCSV(messages, "contact-messages");
   };
 
@@ -401,6 +411,19 @@ export default function Inquiries() {
     }
   }
 
+  async function assignPartner(id: number, assignedTo: string | null) {
+    const key = `partner:${id}:${assignedTo ?? "unassigned"}`;
+    try {
+      setAssigningKey(key);
+      await updatePartnerAssignment.mutateAsync({ id, assignedTo });
+      await partnersQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to assign");
+    } finally {
+      setAssigningKey(null);
+    }
+  }
+
   async function assignMessage(id: number, assignedTo: string | null) {
     const key = `msg:${id}:${assignedTo ?? "unassigned"}`;
     try {
@@ -446,6 +469,25 @@ export default function Inquiries() {
       setDeletingKey(key);
       await deleteCorporate.mutateAsync({ id });
       await corporateQuery.refetch();
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete");
+    } finally {
+      setDeletingKey(null);
+    }
+  }
+
+  async function handleDeletePartner(id: number, name: string) {
+    if (
+      !window.confirm(
+        `Permanently delete the fleet partner application from "${name}"?\n\nThis cannot be undone.`
+      )
+    )
+      return;
+    const key = `del-partner:${id}`;
+    try {
+      setDeletingKey(key);
+      await deletePartner.mutateAsync({ id });
+      await partnersQuery.refetch();
     } catch (e: any) {
       alert(e?.message || "Failed to delete");
     } finally {
@@ -840,6 +882,10 @@ export default function Inquiries() {
             message={(corporateQuery.error as any)?.message}
           />
           <ErrorCard
+            title="Fleet partners error"
+            message={(partnersQuery.error as any)?.message}
+          />
+          <ErrorCard
             title="Messages error"
             message={(messagesQuery.error as any)?.message}
           />
@@ -850,6 +896,9 @@ export default function Inquiries() {
             <TabsTrigger value="drivers">Drivers ({drivers.length})</TabsTrigger>
             <TabsTrigger value="corporate">
               Corporate ({corporate.length})
+            </TabsTrigger>
+            <TabsTrigger value="partners">
+              Partners ({partners.length})
             </TabsTrigger>
             <TabsTrigger value="messages">
               Messages ({messages.length})
@@ -1130,6 +1179,234 @@ export default function Inquiries() {
 
             {!corporateQuery.isLoading && corporate.length === 0 && (
               <LoadingCard text="No corporate inquiries yet." />
+            )}
+          </TabsContent>
+
+          {/* ---------------- FLEET PARTNERS ---------------- */}
+          <TabsContent value="partners" className="space-y-4">
+            {partnersQuery.isLoading && (
+              <LoadingCard text="Loading fleet partner applications..." />
+            )}
+
+            {!partnersQuery.isLoading &&
+              partners.map((partner: any) => {
+                const urgency = getUrgency(partner.createdAt);
+                const urgencyColor = getUrgencyColor(urgency);
+
+                const assignedName =
+                  partner?.assignedTo && String(partner.assignedTo).trim()
+                    ? String(partner.assignedTo).trim()
+                    : null;
+
+                const isMine = !!assignedName && assignedName === myName;
+
+                const sla = getSlaLevel(partner?.createdAt);
+
+                const partnerKeyAssign = `partner:${Number(partner.id)}:Wayne`;
+                const partnerKeyUnassign = `partner:${Number(
+                  partner.id
+                )}:unassigned`;
+                const isDeletingThis =
+                  deletingKey === `del-partner:${Number(partner.id)}`;
+
+                return (
+                  <Card key={partner.id} className="p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-lg font-semibold">
+                            {partner.companyName}
+                          </h3>
+
+                          {partner.fleetSize && (
+                            <Badge variant="outline">
+                              {partner.fleetSize === "1"
+                                ? "1 vehicle"
+                                : `${partner.fleetSize} vehicles`}
+                            </Badge>
+                          )}
+
+                          <Badge
+                            className={slaBadgeClass(sla.level)}
+                            title="SLA by age"
+                          >
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {sla.label}
+                          </Badge>
+
+                          {assignedName ? (
+                            <Badge
+                              className={
+                                isMine
+                                  ? "bg-green-600/20 text-green-300 border border-green-500/40"
+                                  : "bg-blue-600/20 text-blue-300 border border-blue-500/40"
+                              }
+                              title={
+                                isMine
+                                  ? "Assigned to Wayne"
+                                  : `Assigned to ${assignedName}`
+                              }
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              {assignedName}
+                              {isMine && " (Wayne)"}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground"
+                              title="Not assigned yet"
+                            >
+                              <User className="h-3 w-3 mr-1" />
+                              Unassigned
+                            </Badge>
+                          )}
+
+                          <Badge className={urgencyColor}>
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timeAgo(partner.createdAt)}
+                          </Badge>
+                        </div>
+
+                        <div className="text-sm text-muted-foreground">
+                          {partner.contactName} · {partner.email} ·{" "}
+                          {partner.phone}
+                        </div>
+
+                        {(partner.operatorLicenceNumber ||
+                          partner.operatorLicenceAuthority) && (
+                          <div className="text-sm text-muted-foreground">
+                            Licence: {partner.operatorLicenceNumber || "—"}
+                            {partner.operatorLicenceAuthority
+                              ? ` (${partner.operatorLicenceAuthority})`
+                              : ""}
+                          </div>
+                        )}
+
+                        {partner.message && (
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {partner.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <Select
+                        value={partner.status}
+                        onValueChange={(status) =>
+                          updatePartnerStatus.mutate(
+                            { id: partner.id, status: status as any },
+                            { onSuccess: () => partnersQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="contacted">Contacted</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <Select
+                        value={partner.assignedTo || "unassigned"}
+                        onValueChange={(value) =>
+                          updatePartnerAssignment.mutate(
+                            {
+                              id: partner.id,
+                              assignedTo: value === "unassigned" ? null : value,
+                            },
+                            { onSuccess: () => partnersQuery.refetch() }
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-[260px]">
+                          <SelectValue placeholder="Assign to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teamMembers.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        type="button"
+                        variant={isMine ? "outline" : "secondary"}
+                        size="sm"
+                        disabled={assigningKey === partnerKeyAssign}
+                        onClick={() =>
+                          assignPartner(Number(partner.id), "Wayne")
+                        }
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        {assigningKey === partnerKeyAssign
+                          ? "Assigning..."
+                          : "Assign to Wayne"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          !assignedName || assigningKey === partnerKeyUnassign
+                        }
+                        onClick={() => assignPartner(Number(partner.id), null)}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        {assigningKey === partnerKeyUnassign
+                          ? "Unassigning..."
+                          : "Unassign"}
+                      </Button>
+
+                      {/* ✅ Permanent delete */}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isDeletingThis}
+                        onClick={() =>
+                          handleDeletePartner(
+                            Number(partner.id),
+                            partner.companyName
+                          )
+                        }
+                        title="Permanently delete this application"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {isDeletingThis ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
+
+                    <Textarea
+                      defaultValue={partner.internalNotes || ""}
+                      placeholder="Internal notes..."
+                      onBlur={(e) => {
+                        const next = e.target.value ?? "";
+                        const prev = partner.internalNotes ?? "";
+                        if (next === prev) return;
+
+                        updatePartnerNotes.mutate(
+                          { id: partner.id, notes: next },
+                          { onSuccess: () => partnersQuery.refetch() }
+                        );
+                      }}
+                    />
+                  </Card>
+                );
+              })}
+
+            {!partnersQuery.isLoading && partners.length === 0 && (
+              <LoadingCard text="No fleet partner applications yet." />
             )}
           </TabsContent>
 

@@ -261,6 +261,48 @@ export type CorporateInquiry = typeof corporateInquiries.$inferSelect;
 export type InsertCorporateInquiry = typeof corporateInquiries.$inferInsert;
 
 /* ============================================================================
+ * Fleet partner applications (Phase 1: lead capture + review)
+ * ========================================================================== */
+export const fleetPartners = mysqlTable(
+  "fleet_partners",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    companyName: varchar("companyName", { length: 255 }).notNull(),
+    contactName: varchar("contactName", { length: 255 }).notNull(),
+    email: varchar("email", { length: 320 }).notNull(),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    fleetSize: varchar("fleetSize", { length: 64 }),
+    operatorLicenceNumber: varchar("operatorLicenceNumber", { length: 128 }),
+    operatorLicenceAuthority: varchar("operatorLicenceAuthority", {
+      length: 255,
+    }),
+    message: text("message"),
+    internalNotes: text("internalNotes"),
+    assignedTo: varchar("assignedTo", { length: 255 }),
+    status: mysqlEnum("status", [
+      "pending",
+      "contacted",
+      "approved",
+      "declined",
+    ])
+      .default("pending")
+      .notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("ix_fleet_partners_status").on(t.status),
+    createdIdx: index("ix_fleet_partners_created").on(t.createdAt),
+    assignedIdx: index("ix_fleet_partners_assigned").on(t.assignedTo),
+    emailIdx: index("ix_fleet_partners_email").on(t.email),
+    phoneIdx: index("ix_fleet_partners_phone").on(t.phone),
+  })
+);
+
+export type FleetPartner = typeof fleetPartners.$inferSelect;
+export type InsertFleetPartner = typeof fleetPartners.$inferInsert;
+
+/* ============================================================================
  * Contact messages
  * ========================================================================== */
 export const contactMessages = mysqlTable(
@@ -530,6 +572,7 @@ export const adminActivity = mysqlTable(
       "driver_application",
       "corporate_inquiry",
       "contact_message",
+      "fleet_partner",
     ]).notNull(),
 
     entityId: int("entityId").notNull(),
