@@ -12,9 +12,9 @@ export default function Hero() {
   const content = useCmsContent("hero");
   const heroImage = useCmsImage(
     "hero-background",
-    // Smaller default (1600px wide, quality 70) instead of the 2070px original.
-    // Cloud Cars should set a real optimised image in the CMS to replace this.
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=70&w=1600&auto=format&fit=crop"
+    // The Major Oak, Sherwood Forest — swap via Admin > Image Manager > Hero Background
+    // if a higher-resolution or moodier shot is sourced later.
+    "/sherwood-major-oak.jpg"
   );
 
   return (
@@ -33,12 +33,13 @@ export default function Hero() {
           width={1600}
           height={900}
           aria-hidden="true"
+          style={{ objectPosition: "35% 35%" }}
           className="absolute inset-0 h-full w-full scale-105 object-cover blur-[1px]"
         />
 
         {/* Premium overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/92 to-background/65" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/15 to-transparent" />
         <div className="absolute inset-0 bg-black/10" />
       </div>
 
