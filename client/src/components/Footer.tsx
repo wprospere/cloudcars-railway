@@ -119,7 +119,7 @@ export default function Footer() {
   return (
     <footer className="bg-card border-t border-border">
       <div className="container py-12 lg:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-12">
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="/" className="flex items-center gap-3 mb-4">
               <img src="/logo.webp" alt="Cloud Cars" width="48" height="48" className="h-12 w-auto" />
