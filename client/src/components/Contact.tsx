@@ -193,7 +193,7 @@ export default function Contact() {
   return (
     <section
       id="contact"
-      className="section-light bg-background py-20 lg:py-32"
+      className="section-light bg-background pt-20 lg:pt-32 pb-12 lg:pb-16"
     >
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
