@@ -571,7 +571,7 @@ export default function PartnerWithCloudCars() {
           </div>
         </section>
 
-        <section className="border-t border-border/50 bg-background py-16 lg:py-20">
+        <section className="section-light border-t border-border/50 bg-background py-16 lg:py-20">
           <div className="container">
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               {benefits.map((benefit, index) => (
