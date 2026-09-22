@@ -21,6 +21,7 @@ const Faqs = lazy(() => import("./pages/Faqs"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
+const TrainAirportTransferPolicy = lazy(() => import("./pages/TrainAirportTransferPolicy"));
 
 const TaxiBeeston = lazy(() => import("./pages/TaxiBeeston"));
 const TaxiWestBridgford = lazy(() => import("./pages/TaxiWestBridgford"));
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/cookies" component={Cookies} />
+      <Route path="/train-airport-transfer-policy" component={TrainAirportTransferPolicy} />
 
       {/* Area pages */}
       <Route path="/taxi-beeston" component={TaxiBeeston} />

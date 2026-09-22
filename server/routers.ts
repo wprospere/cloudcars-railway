@@ -353,7 +353,7 @@ function normalizeTeamMembers(rows: any[]): TeamMemberOut[] {
    ✅ Policy CMS helpers (markdown + lastUpdated stored in extraData JSON)
    NOTE: This avoids needing new DB tables and works with your current CMS.
 ---------------------------------------- */
-const POLICY_SLUGS = ["privacy", "terms", "cookies", "faqs"] as const;
+const POLICY_SLUGS = ["privacy", "terms", "cookies", "faqs", "train-airport-transfer"] as const;
 type PolicySlug = (typeof POLICY_SLUGS)[number];
 
 function policySectionKey(slug: PolicySlug) {

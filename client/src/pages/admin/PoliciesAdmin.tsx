@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-type Slug = "terms" | "privacy" | "cookies" | "faqs";
+type Slug = "terms" | "privacy" | "cookies" | "faqs" | "train-airport-transfer";
 
 function defaultTitle(slug: Slug) {
   if (slug === "terms") return "Terms & Conditions";
   if (slug === "privacy") return "Privacy Notice";
   if (slug === "cookies") return "Cookie Policy";
+  if (slug === "train-airport-transfer") return "Train & Airport Transfer Policy";
   return "Frequently Asked Questions";
 }
 
@@ -27,6 +28,7 @@ function publicPath(slug: Slug) {
   if (slug === "terms") return "/terms";
   if (slug === "privacy") return "/privacy";
   if (slug === "cookies") return "/cookies";
+  if (slug === "train-airport-transfer") return "/train-airport-transfer-policy";
   return "/faqs";
 }
 
@@ -96,6 +98,7 @@ export default function PoliciesAdmin() {
                     <SelectItem value="privacy">Privacy</SelectItem>
                     <SelectItem value="cookies">Cookies</SelectItem>
                     <SelectItem value="faqs">FAQs</SelectItem>
+                    <SelectItem value="train-airport-transfer">Train & Airport Transfer Policy</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

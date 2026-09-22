@@ -39,6 +39,7 @@ const footerLinks = {
   ],
   support: [
     { label: "FAQs", href: "/faqs" },
+    { label: "Train & Airport Transfer Policy", href: "/train-airport-transfer-policy" },
     { label: "Terms", href: "/terms" },
     { label: "Privacy", href: "/privacy" },
     { label: "Cookies", href: "/cookies" },
