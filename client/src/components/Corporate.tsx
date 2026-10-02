@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useCmsContent } from "@/hooks/useCmsContent";
+import { FESTIVE_RATE_DETAIL } from "@/lib/pricingPolicy";
 
 // Cloudflare Turnstile site key (public — safe to expose in the client).
 // The matching SECRET key lives only on the server in /api/corporate-inquiry.
@@ -92,6 +93,10 @@ const faqs = [
   {
     q: "How does billing work?",
     a: "Account clients receive one consolidated invoice covering all journeys, with a full breakdown. You choose the cycle that suits your finance team — weekly, fortnightly, or monthly.",
+  },
+  {
+    q: "Do your prices change?",
+    a: `Prices are agreed before each journey and don't change with demand, weather, or events. ${FESTIVE_RATE_DETAIL}`,
   },
   {
     q: "Which airports do you cover?",
@@ -262,7 +267,9 @@ export default function Corporate() {
                 When a driver cancels at 5am before a key client's airport run,
                 no app will take responsibility. Cloud Cars gives you a named
                 account, a direct number, and a team you can hold to account —
-                consistent drivers, consistent standards, every time.
+                consistent drivers, consistent standards, every time. Pricing is
+                just as predictable: you know the cost before every journey,
+                with no surge pricing and no surprises on your invoice.
               </p>
             </div>
 

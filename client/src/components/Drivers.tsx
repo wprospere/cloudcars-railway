@@ -15,7 +15,7 @@ const benefits = [
     icon: PoundSterling,
     title: "Weekly Pay",
     description:
-      "Get paid every week directly to your bank account for completed work.",
+      "Get paid every week directly to your bank account, and know exactly what you earn on every job.",
   },
   {
     icon: Calendar,
@@ -82,7 +82,8 @@ export default function Drivers() {
               <p className="text-sm text-muted-foreground leading-6">
                 We are not looking for just anyone. We want drivers who are
                 friendly, knowledgeable, presentable, and genuinely committed to
-                delivering a high standard of service.
+                delivering a high standard of service. Great transport will
+                always need a human touch, and we back professional drivers.
               </p>
             </div>
 

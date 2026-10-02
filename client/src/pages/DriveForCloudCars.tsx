@@ -52,7 +52,7 @@ const benefits = [
     icon: PoundSterling,
     title: "Weekly Pay",
     description:
-      "Get paid every week directly to your bank account for completed work.",
+      "Get paid every week directly to your bank account, and know exactly what you earn on every job.",
   },
   {
     icon: Calendar,

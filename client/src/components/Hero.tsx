@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Clock, Phone } from "lucide-react";
+import { ArrowRight, CheckCircle2, Shield, Clock, Phone } from "lucide-react";
 import { useCmsContent, useCmsImage } from "@/hooks/useCmsContent";
 
 function track(eventName: string, props: Record<string, string | number | boolean | null | undefined> = {}) {
@@ -66,8 +66,13 @@ export default function Hero() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mb-8 leading-relaxed">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mb-4 leading-relaxed">
             {content.description}
+          </p>
+
+          <p className="flex items-center gap-2 text-base sm:text-lg font-medium text-foreground max-w-2xl">
+            <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+            Fixed prices, agreed before you travel. No surge pricing, ever.
           </p>
 
           {/* CTA Buttons */}

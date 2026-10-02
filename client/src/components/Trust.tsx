@@ -1,6 +1,17 @@
 import { useMemo, useState } from "react";
-import { Shield, Award, MapPin, Users, Clock, Leaf, Star } from "lucide-react";
+import {
+  Shield,
+  Award,
+  MapPin,
+  Users,
+  Clock,
+  Leaf,
+  Star,
+  PoundSterling,
+  Heart,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { FESTIVE_RATE_SHORT } from "@/lib/pricingPolicy";
 
 const trustItems = [
   {
@@ -120,6 +131,35 @@ export default function Trust() {
               <div className="text-sm text-muted-foreground">{stat.label}</div>
             </div>
           ))}
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 mb-16">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 lg:p-8">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+              <PoundSterling className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">
+              Your price is fixed before you travel
+            </h3>
+            <p className="text-muted-foreground leading-relaxed">
+              No surge pricing. No algorithm charging you more because it&apos;s
+              raining or an event has just finished. {FESTIVE_RATE_SHORT}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 lg:p-8">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+              <Heart className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">
+              Technology can book a journey. People make the difference.
+            </h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Our drivers help with your luggage, meet you in airport arrivals,
+              wait when you&apos;re delayed and make sure you reach where
+              you&apos;re going safely and comfortably.
+            </p>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">

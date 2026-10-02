@@ -3,6 +3,7 @@ import { ArrowLeft, Phone } from "lucide-react";
 import { Link } from "wouter";
 
 import PageLayout from "@/layouts/PageLayout";
+import { FESTIVE_RATE_DETAIL } from "@/lib/pricingPolicy";
 import { trpc } from "@/lib/trpc";
 
 import ReactMarkdown from "react-markdown";
@@ -151,10 +152,19 @@ export default function Faqs() {
   const lastUpdated = formatDate(data?.lastUpdated) || "2024";
   const markdown = data?.markdown ?? "";
 
-  const { introMarkdown, items } = useMemo(
-    () => parseFaqMarkdown(markdown),
-    [markdown]
-  );
+  const { introMarkdown, items } = useMemo(() => {
+    const parsed = parseFaqMarkdown(markdown);
+    const hasPricingFaq = parsed.items.some((it) =>
+      /festive|christmas|surge/i.test(it.q)
+    );
+    if (!hasPricingFaq) {
+      parsed.items.push({
+        q: "Do your prices change? (festive rates)",
+        aMarkdown: `Your price is fixed before you travel, with no surge pricing. ${FESTIVE_RATE_DETAIL}`,
+      });
+    }
+    return parsed;
+  }, [markdown]);
 
   const [query, setQuery] = useState("");
 
