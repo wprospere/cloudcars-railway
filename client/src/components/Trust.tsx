@@ -11,7 +11,6 @@ import {
   Heart,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { FESTIVE_RATE_SHORT } from "@/lib/pricingPolicy";
 
 const trustItems = [
   {
@@ -114,8 +113,9 @@ export default function Trust() {
           </h2>
 
           <p className="text-muted-foreground text-lg">
-            Nottingham has trusted Cloud Cars for years because we focus on
-            safety, professionalism, reliability, and drivers chosen with care.
+            We set out to be the best private hire firm in Nottingham, not the
+            biggest. That means drivers who know the city, turn up early and
+            treat every passenger as a person, not a pickup.
           </p>
         </div>
 
@@ -139,11 +139,16 @@ export default function Trust() {
               <PoundSterling className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-bold text-foreground mb-2">
-              Your price is fixed before you travel
+              Know your fare before you travel
             </h3>
+            <p className="text-muted-foreground leading-relaxed mb-3">
+              The price you see when you book is the price you pay. Your fare is
+              fixed at booking. It only changes if you change the journey, for
+              example by adding a stop or keeping the driver waiting.
+            </p>
             <p className="text-muted-foreground leading-relaxed">
-              No surge pricing. No algorithm charging you more because it&apos;s
-              raining or an event has just finished. {FESTIVE_RATE_SHORT}
+              No surprise surge. Busy-time pricing is already in the fare
+              you&apos;re shown before you book.
             </p>
           </div>
 
@@ -154,13 +159,25 @@ export default function Trust() {
             <h3 className="text-xl font-bold text-foreground mb-2">
               Technology can book a journey. People make the difference.
             </h3>
+            <p className="text-muted-foreground leading-relaxed mb-3">
+              Our drivers don&apos;t simply move a vehicle from A to B.
+              They&apos;ll help with your luggage, meet you in airport arrivals,
+              wait when you&apos;re delayed and, where appropriate, make sure you
+              reach the place you&apos;re going safely and comfortably.
+            </p>
             <p className="text-muted-foreground leading-relaxed">
-              Our drivers help with your luggage, meet you in airport arrivals,
-              wait when you&apos;re delayed and make sure you reach where
-              you&apos;re going safely and comfortably.
+              Cloud Cars believes professional drivers have a future because
+              great transport will always need a human touch.
             </p>
           </div>
         </div>
+
+        <p className="text-center text-muted-foreground max-w-3xl mx-auto mb-16 leading-relaxed">
+          Apps are good at matching a car to a booking. They can&apos;t carry a
+          suitcase, wait for a delayed flight or notice that a passenger needs a
+          hand. We use technology to make booking easy. We rely on people to make
+          the journey good.
+        </p>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
           {trustItems.map((item, index) => (

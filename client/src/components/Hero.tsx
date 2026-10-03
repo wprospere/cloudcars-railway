@@ -72,7 +72,7 @@ export default function Hero() {
 
           <p className="flex items-center gap-2 text-base sm:text-lg font-medium text-foreground max-w-2xl">
             <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-            Fixed prices, agreed before you travel. No surge pricing, ever.
+            Know your fare before you travel. Know your driver when you arrive.
           </p>
 
           {/* CTA Buttons */}

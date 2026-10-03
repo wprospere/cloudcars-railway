@@ -95,8 +95,8 @@ const faqs = [
     a: "Account clients receive one consolidated invoice covering all journeys, with a full breakdown. You choose the cycle that suits your finance team — weekly, fortnightly, or monthly.",
   },
   {
-    q: "Do your prices change?",
-    a: `Prices are agreed before each journey and don't change with demand, weather, or events. ${FESTIVE_RATE_DETAIL}`,
+    q: "Is my fare fixed?",
+    a: `Yes. Your fare is fixed at booking and only changes if you change the journey, for example by adding a stop or keeping the driver waiting. Busy-time pricing is already in the fare you're shown before you book. ${FESTIVE_RATE_DETAIL}`,
   },
   {
     q: "Which airports do you cover?",
@@ -267,9 +267,18 @@ export default function Corporate() {
                 When a driver cancels at 5am before a key client's airport run,
                 no app will take responsibility. Cloud Cars gives you a named
                 account, a direct number, and a team you can hold to account —
-                consistent drivers, consistent standards, every time. Pricing is
-                just as predictable: you know the cost before every journey,
-                with no surge pricing and no surprises on your invoice.
+                consistent drivers, consistent standards, every time.
+              </p>
+              <p className="text-sm text-muted-foreground leading-6 mt-3">
+                Businesses stay with us because the same trusted drivers turn
+                up, week after week. They learn your sites, your regular
+                travellers and how you like things done.
+              </p>
+              <p className="text-sm text-muted-foreground leading-6 mt-3">
+                One account, one invoice, and a regular report of your journeys
+                and spend. Book direct with the people who actually drive you.
+                Our longest-standing corporate client has been with us for five
+                years.
               </p>
             </div>
 

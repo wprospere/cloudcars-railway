@@ -159,8 +159,8 @@ export default function Faqs() {
     );
     if (!hasPricingFaq) {
       parsed.items.push({
-        q: "Do your prices change? (festive rates)",
-        aMarkdown: `Your price is fixed before you travel, with no surge pricing. ${FESTIVE_RATE_DETAIL}`,
+        q: "Is my fare fixed? (including festive rates)",
+        aMarkdown: `Yes. Know your fare before you travel: the price you see when you book is the price you pay. It only changes if you change the journey, for example by adding a stop or keeping the driver waiting. Busy-time pricing is already in the fare you're shown before you book. ${FESTIVE_RATE_DETAIL}`,
       });
     }
     return parsed;

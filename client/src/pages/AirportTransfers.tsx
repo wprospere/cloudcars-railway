@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
-import { FESTIVE_RATE_SHORT } from "@/lib/pricingPolicy";
 
 const airportRoutes = [
   {
@@ -195,7 +194,7 @@ export default function AirportTransfers() {
 
             <p className="text-sm text-muted-foreground mt-4">
               Prices shown are guide prices. Your fixed price is confirmed at
-              the time of booking, before you travel. {FESTIVE_RATE_SHORT}
+              the time of booking, before you travel.
             </p>
           </section>
 
@@ -219,8 +218,8 @@ export default function AirportTransfers() {
 
               <ul className="space-y-3 text-muted-foreground">
                 <li>Pre-booked airport journeys from Nottingham</li>
-                <li>A fixed price agreed before you travel, with no surge pricing</li>
-                <li>Your driver meets you in arrivals and helps with your luggage</li>
+                <li>Your fare is fixed at booking, so you know the price before you travel</li>
+                <li>We meet you in arrivals, help with your bags and wait if your flight is late</li>
                 <li>Professional drivers and reliable collection times</li>
                 <li>Standard, executive and larger vehicle options</li>
                 <li>Competitive pricing for major UK airport routes</li>
