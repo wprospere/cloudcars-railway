@@ -241,8 +241,8 @@ export default function SevenSeater() {
             </div>
 
             <p className="text-sm text-muted-foreground mt-4">
-              Prices shown are guide prices only and may be subject to change.
-              Please confirm your quote at the time of booking.
+              Prices shown are guide prices. Your fixed price is confirmed at
+              the time of booking, before you travel.
             </p>
           </section>
 
