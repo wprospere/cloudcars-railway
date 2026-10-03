@@ -282,6 +282,17 @@ export default function Corporate() {
               </p>
             </div>
 
+            <div className="rounded-xl border border-border bg-card p-5 mb-8">
+              <h3 className="text-base font-semibold text-foreground mb-2">
+                Assisted and care journeys
+              </h3>
+              <p className="text-sm text-muted-foreground leading-6">
+                Some journeys need more than a lift. Our drivers will see you to
+                the door, help you in and out of the car and make sure you get
+                where you&apos;re going safely.
+              </p>
+            </div>
+
             {/* Benefits Grid */}
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
               {benefits.map((benefit, index) => (
