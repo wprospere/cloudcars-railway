@@ -30,6 +30,20 @@ function formatDate(iso: string | null | undefined) {
   });
 }
 
+// The CMS markdown carries its own title, "Last updated" line and "Questions?"
+// block, which this page already renders itself — drop them to avoid duplicates.
+function cleanTermsMarkdown(md: string) {
+  let out = md.trim();
+
+  out = out.replace(/^#\s*Terms\s*(&|and)\s*Conditions\s*\n+/i, "");
+  out = out.replace(/^[_*]*Last updated:[^\n]*\n+/i, "");
+
+  const m = out.match(/\n(?:-{3,}\s*\n+)?#{1,6}\s*Questions\?\s*\n[\s\S]*$/i);
+  if (m && m[0].length < 700) out = out.slice(0, m.index).trimEnd();
+
+  return out;
+}
+
 function TermsLoading() {
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +99,8 @@ export default function Terms() {
 
   const title = data?.title?.trim() || "Terms & Conditions";
   const lastUpdated = formatDate(data?.lastUpdated) || "2024"; // fallback until set in CMS
-  const markdown = data?.markdown ?? "";
+  const markdown = cleanTermsMarkdown(data?.markdown ?? "");
+  const markdownHasIntro = /apply to the contract between you/i.test(markdown);
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,13 +137,14 @@ export default function Terms() {
         {/* Content */}
         <div className="container py-12">
           <div className="max-w-4xl mx-auto prose prose-invert prose-green">
-            {/* Optional intro card (keeps your current look even if markdown starts with a heading) */}
-            <div className="bg-card/50 border border-border rounded-lg p-6 mb-8">
-              <p className="text-muted-foreground leading-relaxed m-0">
-                These terms and conditions apply to the contract between you (the Customer)
-                and CLOUD CARS when it provides car services to you.
-              </p>
-            </div>
+            {!markdownHasIntro && (
+              <div className="bg-card/50 border border-border rounded-lg p-6 mb-8">
+                <p className="text-muted-foreground leading-relaxed m-0">
+                  These terms and conditions apply to the contract between you (the Customer)
+                  and Cloud Cars Ltd when we provide private hire and transport services to you.
+                </p>
+              </div>
+            )}
 
             {markdown?.trim() ? (
               <ReactMarkdown
