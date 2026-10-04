@@ -8,6 +8,7 @@ import { Route, Switch } from "wouter";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToHash from "./components/ScrollToHash";
+import CookieBanner from "./components/CookieBanner";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 // ✅ Home is eagerly loaded so the landing page paints instantly (no flash).
@@ -143,6 +144,7 @@ export default function App() {
             <Toaster />
           </Suspense>
           <ScrollToHash />
+          <CookieBanner />
           {/* Suspense fallback shows briefly while a lazy route's chunk loads. */}
           <Suspense
             fallback={

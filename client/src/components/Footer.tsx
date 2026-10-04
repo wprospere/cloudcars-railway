@@ -266,6 +266,17 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("cloudcars:open-cookie-settings"))
+                  }
+                >
+                  Cookie settings
+                </button>
+              </li>
             </ul>
           </div>
         </div>
