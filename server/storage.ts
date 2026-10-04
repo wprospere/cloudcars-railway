@@ -23,6 +23,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -208,6 +209,27 @@ export function extractKeyFromStoredUrlOrKey(stored: string): string | null {
     return parts.join("/");
   } catch {
     return null;
+  }
+}
+
+/**
+ * Permanently deletes the stored object behind a DB key or URL.
+ * Returns false (never throws) if the key can't be parsed or the delete fails.
+ */
+export async function storageDelete(stored: string | null): Promise<boolean> {
+  if (!stored) return false;
+
+  const key = extractKeyFromStoredUrlOrKey(stored);
+  if (!key) return false;
+
+  try {
+    await makeS3Client().send(
+      new DeleteObjectCommand({ Bucket: getS3Config().bucket, Key: key })
+    );
+    return true;
+  } catch (err) {
+    console.error(`⚠️ Failed to delete stored object ${key}:`, err);
+    return false;
   }
 }
 

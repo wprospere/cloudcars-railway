@@ -79,6 +79,7 @@ import {
   // ✅ reminder event
   logDriverOnboardingReminder,
   getOnboardingReminderCandidates,
+  getExpiredRejectedApplicationIds,
   logAutoOnboardingReminder,
 
   // ✅ hard deletes (admin)
@@ -238,6 +239,34 @@ async function runAutoOnboardingReminders(): Promise<{
   }
 
   return { checked: candidates.length, sent, skipped };
+}
+
+/**
+ * ✅ Privacy promise: unsuccessful driver applications (and their uploaded
+ * documents) are deleted one month after rejection. Runs on the same daily
+ * cron as the onboarding reminders.
+ */
+async function runDriverRetentionCleanup(): Promise<{
+  checked: number;
+  deleted: number;
+  failed: number;
+}> {
+  const ids = await getExpiredRejectedApplicationIds({ days: 30, limit: 50 });
+
+  let deleted = 0;
+  let failed = 0;
+
+  for (const id of ids) {
+    try {
+      await deleteDriverApplication(id);
+      deleted++;
+    } catch (err) {
+      console.error(`⚠️ Retention cleanup failed for driver application ${id}:`, err);
+      failed++;
+    }
+  }
+
+  return { checked: ids.length, deleted, failed };
 }
 
 /* ----------------------------------------
@@ -1138,7 +1167,15 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         requireCronKey(input.key);
         const result = await runAutoOnboardingReminders();
-        return { success: true, ...result };
+
+        let cleanup = { checked: 0, deleted: 0, failed: 0 };
+        try {
+          cleanup = await runDriverRetentionCleanup();
+        } catch (err) {
+          console.error("⚠️ Driver retention cleanup failed:", err);
+        }
+
+        return { success: true, ...result, cleanup };
       }),
 
     /* ============================

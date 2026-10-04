@@ -9,9 +9,10 @@ import "dotenv/config";
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, asc, desc, and, isNull, isNotNull, inArray, sql } from "drizzle-orm"; // ✅ added isNotNull
+import { eq, asc, desc, and, isNull, isNotNull, inArray, lt, sql } from "drizzle-orm"; // ✅ added isNotNull
 import * as schema from "../drizzle/schema";
 import { createHash } from "crypto";
+import { storageDelete } from "./storage";
 
 import path from "path";
 import { migrate } from "drizzle-orm/mysql2/migrator";
@@ -431,6 +432,11 @@ export async function restoreDriverApplication(
  * use archiveDriverApplication instead.
  */
 export async function deleteDriverApplication(id: number) {
+  const docs = await db
+    .select({ fileUrl: schema.driverDocuments.fileUrl })
+    .from(schema.driverDocuments)
+    .where(eq(schema.driverDocuments.driverApplicationId, id));
+
   await db
     .delete(schema.driverDocuments)
     .where(eq(schema.driverDocuments.driverApplicationId, id));
@@ -452,7 +458,37 @@ export async function deleteDriverApplication(id: number) {
     .delete(schema.driverApplications)
     .where(eq(schema.driverApplications.id, id));
 
+  for (const doc of docs) {
+    await storageDelete(doc.fileUrl);
+  }
+
   return { success: true };
+}
+
+/**
+ * Unsuccessful (rejected) applications that have sat untouched for `days`
+ * days — due for deletion under the one-month retention promise.
+ */
+export async function getExpiredRejectedApplicationIds(params?: {
+  days?: number;
+  limit?: number;
+}) {
+  const days = Math.max(1, Number(params?.days ?? 30));
+  const limit = Math.max(1, Math.min(Number(params?.limit ?? 50), 200));
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select({ id: schema.driverApplications.id })
+    .from(schema.driverApplications)
+    .where(
+      and(
+        eq(schema.driverApplications.status, "rejected"),
+        lt(schema.driverApplications.updatedAt, cutoff)
+      )
+    )
+    .limit(limit);
+
+  return rows.map((r) => Number(r.id));
 }
 
 // -------------------- Corporate Inquiries --------------------
