@@ -103,7 +103,12 @@ export default function Privacy() {
   const intro =
     "Cloud Cars Ltd is committed to protecting and respecting your privacy. This notice explains how we collect, use, and protect your personal data.";
 
-  const markdown = (data?.markdown ?? "").trim();
+  // The CMS text opens with its own title, date and intro, which the page
+  // header above already shows — drop everything before the first divider.
+  const rawMarkdown = (data?.markdown ?? "").trim();
+  const markdown = /^#\s/.test(rawMarkdown)
+    ? rawMarkdown.replace(/^[\s\S]*?\n-{3,}\s*\n+/, "").trim() || rawMarkdown
+    : rawMarkdown;
 
   return (
     <div className="min-h-screen bg-background">
