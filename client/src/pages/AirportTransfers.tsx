@@ -225,8 +225,9 @@ export default function AirportTransfers() {
                   airport pickup
                 </li>
                 <li>
-                  Airport fees are built into your price, so there is nothing
-                  extra to pay on the day
+                  Airport fees are built into your price. If your pickup runs
+                  beyond the 30 minutes included, extra waiting and parking are
+                  added at the rates shown when you book
                 </li>
                 <li>Professional drivers and reliable collection times</li>
                 <li>Standard, executive and larger vehicle options</li>
