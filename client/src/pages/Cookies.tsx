@@ -42,7 +42,17 @@ export default function Cookies() {
   );
 
   const title = data?.title ?? "Cookie Policy";
-  const markdown = (data?.markdown ?? "").trim();
+  // The CMS text carries its own title, date, intro and "Questions?" block, which
+  // this page already renders itself — drop them to avoid duplicates.
+  const rawMarkdown = (data?.markdown ?? "").trim();
+  let markdown = rawMarkdown;
+  if (/^#\s/.test(markdown)) {
+    markdown = markdown.replace(/^[\s\S]*?\n-{3,}\s*\n+/, "").trim() || markdown;
+  }
+  const questionsBlock = markdown.match(/\n(?:-{3,}\s*\n+)?#{1,6}\s*Questions\?\s*\n[\s\S]*$/i);
+  if (questionsBlock && questionsBlock[0].length < 700) {
+    markdown = markdown.slice(0, questionsBlock.index).trimEnd();
+  }
 
   return (
     <div className="min-h-screen bg-background">
