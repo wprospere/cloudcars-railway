@@ -4,8 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import PolicyDocument from "@/components/PolicyDocument";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -100,7 +99,6 @@ export default function Terms() {
   const title = data?.title?.trim() || "Terms & Conditions";
   const lastUpdated = formatDate(data?.lastUpdated) || "2024"; // fallback until set in CMS
   const markdown = cleanTermsMarkdown(data?.markdown ?? "");
-  const markdownHasIntro = /apply to the contract between you/i.test(markdown);
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,109 +133,17 @@ export default function Terms() {
         </div>
 
         {/* Content */}
-        <div className="container py-12">
-          <div className="max-w-4xl mx-auto prose prose-invert prose-green">
-            {!markdownHasIntro && (
-              <div className="bg-card/50 border border-border rounded-lg p-6 mb-8">
-                <p className="text-muted-foreground leading-relaxed m-0">
-                  These terms and conditions apply to the contract between you (the Customer)
-                  and Cloud Cars Ltd when we provide private hire and transport services to you.
-                </p>
-              </div>
-            )}
-
-            {markdown?.trim() ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h2: ({ children }) => (
-                    <h2 className="text-primary border-b border-border pb-2 mt-12">
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="text-primary mt-8 mb-3">{children}</h3>
-                  ),
-                  h4: ({ children }) => (
-                    <h4 className="text-foreground mt-6 mb-2">{children}</h4>
-                  ),
-                  p: ({ children }) => (
-                    <p className="text-muted-foreground leading-relaxed">
-                      {children}
-                    </p>
-                  ),
-                  ul: ({ children }) => <ul>{children}</ul>,
-                  li: ({ children }) => <li>{children}</li>,
-                  a: ({ href, children }) => {
-                    const isMail = (href ?? "").startsWith("mailto:");
-                    const isTel = (href ?? "").startsWith("tel:");
-                    const isExternal =
-                      !!href &&
-                      (href.startsWith("http://") || href.startsWith("https://"));
-
-                    return (
-                      <a
-                        href={href}
-                        target={isExternal ? "_blank" : undefined}
-                        rel={isExternal ? "noopener noreferrer" : undefined}
-                        className="text-primary hover:underline"
-                        onClick={() => {
-                          if (isMail) {
-                            track("contact_click", {
-                              type: "email",
-                              location: "terms_markdown",
-                            });
-                            return;
-                          }
-                          if (isTel) {
-                            track("contact_click", {
-                              type: "phone",
-                              location: "terms_markdown",
-                            });
-                            return;
-                          }
-                          if (isExternal) {
-                            track("external_link_click", {
-                              location: "terms_markdown",
-                              label: String(children ?? "link"),
-                              href: href ?? "",
-                            });
-                          }
-                        }}
-                      >
-                        {children}
-                      </a>
-                    );
-                  },
-
-                  // ✅ Simple "callout card" pattern: blockquotes become cards
-                  blockquote: ({ children }) => (
-                    <div className="bg-card border border-border rounded-lg p-6 my-6">
-                      <div className="[&>p]:m-0">{children}</div>
-                    </div>
-                  ),
-                }}
-              >
-                {markdown}
-              </ReactMarkdown>
-            ) : (
-              <div className="bg-card/50 border border-border rounded-lg p-6 mb-8">
-                <p className="text-muted-foreground leading-relaxed m-0">
-                  Terms content is not yet set in the CMS.
-                </p>
-              </div>
-            )}
-
-            {/* Contact Section (keep your existing CTA block) */}
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 mt-12">
-              <h3 className="text-primary mt-0">Questions?</h3>
-              <p className="text-foreground mb-4">
+        {markdown.trim() ? (
+          <PolicyDocument markdown={markdown} location="terms_markdown">
+            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-6 md:p-8">
+              <h2 className="mb-2 text-xl font-bold text-foreground md:text-2xl">Questions?</h2>
+              <p className="mb-4 text-muted-foreground">
                 If you have any questions about these terms and conditions, please contact us:
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
                 <a
                   href="tel:+441158244244"
-                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+                  className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
                   onClick={() =>
                     track("contact_click", { type: "phone", location: "terms_questions" })
                   }
@@ -248,7 +154,7 @@ export default function Terms() {
 
                 <a
                   href="mailto:info@cloudcarsltd.com"
-                  className="text-primary hover:text-primary/80 transition-colors"
+                  className="font-medium text-primary hover:underline"
                   onClick={() =>
                     track("contact_click", { type: "email", location: "terms_questions" })
                   }
@@ -257,8 +163,16 @@ export default function Terms() {
                 </a>
               </div>
             </div>
+          </PolicyDocument>
+        ) : (
+          <div className="container py-12">
+            <div className="mx-auto max-w-4xl rounded-lg border border-border bg-card/50 p-6">
+              <p className="m-0 leading-relaxed text-muted-foreground">
+                Terms content is not yet set in the CMS.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       <Footer />

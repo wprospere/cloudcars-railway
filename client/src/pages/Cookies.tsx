@@ -5,8 +5,7 @@ import { ArrowLeft, Cookie, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import PolicyDocument from "@/components/PolicyDocument";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -117,35 +116,17 @@ export default function Cookies() {
       </section>
 
       {/* Content */}
-      <section className="py-12">
-        <div className="container max-w-4xl">
-          <div className="rounded-2xl bg-card border border-border p-6 md:p-8">
-            {isLoading ? (
-              <div className="text-muted-foreground">Loading policyâ€¦</div>
-            ) : markdown ? (
-              <article className="prose prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {markdown}
-                </ReactMarkdown>
-              </article>
-            ) : (
-              <div className="space-y-3 text-muted-foreground">
-                <p>
-                  This Cookie Policy has not been published yet.
-                </p>
-                <p className="text-sm">
-                  Admins can publish it in the CMS by updating the{" "}
-                  <code>policy.cookies</code> section.
-                </p>
-              </div>
-            )}
-          </div>
-
+      {isLoading ? (
+        <section className="py-12">
+          <div className="container max-w-4xl text-muted-foreground">Loading policy…</div>
+        </section>
+      ) : markdown ? (
+        <PolicyDocument markdown={markdown} location="cookies_markdown">
           {/* Contact */}
-          <div className="mt-10 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+          <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 p-6 md:p-8">
             <div className="flex items-center gap-3 mb-2">
               <Shield className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-bold text-foreground">Questions?</h2>
+              <h2 className="text-xl font-bold text-foreground md:text-2xl">Questions?</h2>
             </div>
 
             <p className="text-muted-foreground mb-4">
@@ -160,10 +141,7 @@ export default function Cookies() {
                   href="mailto:info@cloudcarsltd.com"
                   className="text-primary hover:underline"
                   onClick={() =>
-                    track("contact_click", {
-                      type: "email",
-                      location: "cookies_page",
-                    })
+                    track("contact_click", { type: "email", location: "cookies_page" })
                   }
                 >
                   info@cloudcarsltd.com
@@ -175,10 +153,7 @@ export default function Cookies() {
                   href="tel:+441158244244"
                   className="text-primary hover:underline"
                   onClick={() =>
-                    track("contact_click", {
-                      type: "phone",
-                      location: "cookies_page",
-                    })
+                    track("contact_click", { type: "phone", location: "cookies_page" })
                   }
                 >
                   0115 8 244 244
@@ -191,8 +166,7 @@ export default function Cookies() {
             </div>
           </div>
 
-          {/* Back to Home */}
-          <div className="mt-12 text-center">
+          <div className="pt-4 text-center">
             <Link
               href="/"
               onClick={() =>
@@ -205,8 +179,20 @@ export default function Cookies() {
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
+        </PolicyDocument>
+      ) : (
+        <section className="py-12">
+          <div className="container max-w-4xl">
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-6 text-muted-foreground">
+              <p>This Cookie Policy has not been published yet.</p>
+              <p className="text-sm">
+                Admins can publish it in the CMS by updating the{" "}
+                <code>policy.cookies</code> section.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -4,8 +4,7 @@ import { ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import PolicyDocument from "@/components/PolicyDocument";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -167,76 +166,9 @@ export default function Privacy() {
       </section>
 
       {/* Content */}
-      <section className="py-12">
-        <div className="container max-w-4xl">
-          <div className="bg-card border border-border rounded-lg p-6 md:p-8">
-            {markdown ? (
-              <article className="prose prose-invert max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h2: ({ children }) => (
-                      <h2 className="text-2xl font-bold text-foreground mt-10 first:mt-0 mb-4">
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-lg font-semibold text-foreground mt-6 mb-3">
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children }) => (
-                      <p className="text-muted-foreground leading-relaxed mb-4">
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4 mb-4">
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="list-decimal list-inside text-muted-foreground space-y-2 ml-4 mb-4">
-                        {children}
-                      </ol>
-                    ),
-                    a: ({ href, children }) => (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                        onClick={() =>
-                          track("external_link_click", {
-                            location: "privacy_policy_markdown",
-                            label: String(children ?? "link"),
-                            href: href ?? "",
-                          })
-                        }
-                      >
-                        {children}
-                      </a>
-                    ),
-                    strong: ({ children }) => (
-                      <strong className="text-foreground">{children}</strong>
-                    ),
-                  }}
-                >
-                  {markdown}
-                </ReactMarkdown>
-              </article>
-            ) : (
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-foreground">Privacy Notice</h2>
-                <p className="text-muted-foreground">
-                  Policy content is not yet set in the CMS.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Back to Home */}
-          <div className="mt-12 text-center">
+      {markdown ? (
+        <PolicyDocument markdown={markdown} location="privacy_policy_markdown">
+          <div className="pt-4 text-center">
             <Link
               href="/"
               onClick={() =>
@@ -249,8 +181,19 @@ export default function Privacy() {
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
+        </PolicyDocument>
+      ) : (
+        <section className="py-12">
+          <div className="container max-w-4xl">
+            <div className="space-y-2 rounded-lg border border-border bg-card p-6">
+              <h2 className="text-2xl font-bold text-foreground">Privacy Notice</h2>
+              <p className="text-muted-foreground">
+                Policy content is not yet set in the CMS.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
