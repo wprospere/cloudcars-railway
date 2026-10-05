@@ -12,7 +12,7 @@ export default function TaxiArea({ area }: TaxiAreaProps) {
   return (
     <PageLayout>
       <Helmet>
-        <title>Taxi {area} | Cloud Cars</title>
+        <title>{`Taxi ${area} | Cloud Cars`}</title>
 
         <meta
           name="description"

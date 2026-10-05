@@ -426,6 +426,8 @@ function policyTitle(slug: PolicySlug) {
       return "Cookie Policy";
     case "faqs":
       return "Frequently Asked Questions";
+    case "train-airport-transfer":
+      return "Train & Airport Transfer Policy";
     default:
       return "Policy";
   }
