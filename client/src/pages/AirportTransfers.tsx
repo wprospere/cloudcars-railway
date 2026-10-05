@@ -219,7 +219,15 @@ export default function AirportTransfers() {
               <ul className="space-y-3 text-muted-foreground">
                 <li>Pre-booked airport journeys from Nottingham</li>
                 <li>Your fare is fixed at booking, so you know the price before you travel</li>
-                <li>We meet you in arrivals, help with your bags and wait if your flight is late</li>
+                <li>
+                  We meet you in arrivals, help with your bags and wait if your
+                  flight is late. Thirty minutes&apos; waiting is included on every
+                  airport pickup
+                </li>
+                <li>
+                  Airport fees are built into your price, so there is nothing
+                  extra to pay on the day
+                </li>
                 <li>Professional drivers and reliable collection times</li>
                 <li>Standard, executive and larger vehicle options</li>
                 <li>Competitive pricing for major UK airport routes</li>
