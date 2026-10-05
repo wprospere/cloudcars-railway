@@ -650,6 +650,19 @@ export default function DriveForCloudCars() {
                           </div>
                         )}
 
+                        <p className="text-xs leading-6 text-muted-foreground">
+                          We use your details only to assess your application. If
+                          it is unsuccessful, we delete your details within one
+                          month. See our{" "}
+                          <a
+                            href="/privacy"
+                            className="text-primary hover:underline"
+                          >
+                            Privacy Policy
+                          </a>
+                          .
+                        </p>
+
                         <div className="space-y-4 pt-2">
                           <Button
                             type="submit"
@@ -688,6 +701,11 @@ export default function DriveForCloudCars() {
                             We review applications within 24–48 hours. If your
                             application looks suitable, we will contact you to
                             discuss onboarding and next steps.
+                          </p>
+                          <p className="mt-2">
+                            Your DBS check is completed as part of your licensing
+                            with your council, and you pay for it as part of that
+                            process.
                           </p>
                         </div>
 
@@ -743,6 +761,26 @@ export default function DriveForCloudCars() {
                     </span>
                     <span className="ml-6 text-xs text-muted-foreground">
                       Don't have your badge yet? We can point you in the right direction.
+                    </span>
+                  </li>
+                  <li className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      Licensed with one of the councils we work with
+                    </span>
+                    <span className="ml-6 text-xs text-muted-foreground">
+                      We are currently onboarding drivers licensed with
+                      Nottingham City Council, Rushcliffe Borough Council and
+                      City of Wolverhampton Council.
+                    </span>
+                  </li>
+                  <li className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      A DBS check, completed through your council licence
+                    </span>
+                    <span className="ml-6 text-xs text-muted-foreground">
+                      You pay for your DBS check as part of the licensing process.
                     </span>
                   </li>
                   <li className="flex items-center gap-2">

@@ -163,6 +163,10 @@ export default function Drivers() {
                   <CheckCircle2 className="w-4 h-4 text-primary" />
                   Rushcliffe Borough Council
                 </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  City of Wolverhampton Council
+                </li>
               </ul>
             </div>
 
