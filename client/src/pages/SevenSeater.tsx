@@ -73,7 +73,7 @@ export default function SevenSeater() {
         icon={Users}
         tagline="Room for everyone, and all the luggage."
         highlight="Nottingham"
-        image="/service-7-seater.webp"
+        image="/service-people-carrier.webp"
         imageClassName="translate-x-[28%] object-[50%_66%] lg:translate-x-[28%]"
         reassurances={["Spacious 7 seater vehicles","Space for your luggage","Fixed price agreed at booking","Great for families and groups"]}
       />

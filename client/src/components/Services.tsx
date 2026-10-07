@@ -171,10 +171,11 @@ export default function Services() {
           </h2>
 
           <p className="text-muted-foreground text-lg">
-            Nottingham's local private hire firm since 2012, with a 100% hybrid
-            fleet, drivers who know the city, and a fare you know before you
-            travel. Local taxis, airport transfers, executive travel, courier
-            services and corporate transport, all done properly.
+            Nottingham's local private hire firm since 2012. We run a 100% hybrid
+            fleet, our drivers know the city inside out, and you'll know your
+            fare before you set off. Whatever the journey, from a quick local
+            taxi to an airport run, an executive car, a courier delivery or a
+            company account, we do it properly.
           </p>
         </div>
 
