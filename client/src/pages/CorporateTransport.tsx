@@ -37,7 +37,7 @@ export default function CorporateTransport() {
         </title>
         <meta
           name="description"
-          content="Dependable corporate transport in Nottingham for staff travel, airport runs, hotel transport, shuttle services and business account journeys. Book professional business travel with Cloud Cars."
+          content="Dependable corporate transport in Nottingham for staff travel, airport runs and business accounts. Professional drivers and one clear invoice from Cloud Cars."
         />
         <link
           rel="canonical"

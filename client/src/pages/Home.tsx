@@ -29,7 +29,7 @@ export default function Home() {
 
         <meta
           name="description"
-          content="Cloud Cars provides reliable taxi services in Nottingham including airport transfers, executive cars, corporate travel, courier services and pre-booked transport."
+          content="Reliable taxi services in Nottingham from Cloud Cars: airport transfers, executive cars, corporate travel, courier services and pre-booked journeys."
         />
 
         <meta name="viewport" content="width=device-width, initial-scale=1" />

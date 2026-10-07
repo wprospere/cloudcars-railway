@@ -56,7 +56,7 @@ export default function CourierServices() {
         </title>
         <meta
           name="description"
-          content="Book reliable courier services in Nottingham with Cloud Cars. Same-day parcel delivery, business documents, hospital runs and urgent local deliveries for businesses and individuals."
+          content="Reliable same-day courier and parcel delivery in Nottingham with Cloud Cars. Business documents, hospital runs and urgent local deliveries."
         />
         <link
           rel="canonical"

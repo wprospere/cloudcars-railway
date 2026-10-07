@@ -64,7 +64,7 @@ export default function AirportTransfers() {
         </title>
         <meta
           name="description"
-          content="Book reliable airport transfers in Nottingham with Cloud Cars. Fixed quotes for East Midlands, Birmingham, Manchester and Heathrow Airport. Professional drivers, 24/7 pre-booked airport taxi service."
+          content="Book reliable airport transfers from Nottingham with Cloud Cars. Fixed quotes to East Midlands, Birmingham, Manchester and Heathrow. 24/7 pre-booked service."
         />
         <link
           rel="canonical"

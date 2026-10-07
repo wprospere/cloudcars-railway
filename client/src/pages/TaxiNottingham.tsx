@@ -35,7 +35,7 @@ export default function TaxiNottingham() {
         <title>Taxi Nottingham | 24/7 Local Taxi Service | Cloud Cars</title>
         <meta
           name="description"
-          content="Book a reliable taxi in Nottingham with Cloud Cars. Local journeys, business travel, airport transfers, station runs and pre-booked transport with professional drivers and clean vehicles."
+          content="Book a reliable taxi in Nottingham with Cloud Cars. Local journeys, airport transfers and pre-booked travel with professional drivers and clean vehicles."
         />
         <link rel="canonical" href="https://cloudcarsltd.com/taxi-nottingham" />
       </Helmet>

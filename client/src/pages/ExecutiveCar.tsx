@@ -56,7 +56,7 @@ export default function ExecutiveCar() {
         </title>
         <meta
           name="description"
-          content="Book executive car service in Nottingham with Cloud Cars. Premium vehicles for business travel, airport transfers, client collections and professional pre-booked transport."
+          content="Book an executive car in Nottingham with Cloud Cars. Premium vehicles for business travel, airport transfers and client collections with professional drivers."
         />
         <link
           rel="canonical"

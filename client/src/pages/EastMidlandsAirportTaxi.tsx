@@ -14,7 +14,7 @@ export default function EastMidlandsAirportTaxi() {
 
         <meta
           name="description"
-          content="Taxi to East Midlands Airport from Nottingham with Cloud Cars. Reliable airport transfers, fixed prices and professional drivers for early morning and late night flights."
+          content="Taxi to East Midlands Airport from Nottingham with Cloud Cars. Reliable transfers, fixed prices and professional drivers for early and late flights."
         />
 
         <link

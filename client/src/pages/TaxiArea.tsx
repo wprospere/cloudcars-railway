@@ -16,7 +16,7 @@ export default function TaxiArea({ area }: TaxiAreaProps) {
 
         <meta
           name="description"
-          content={`Reliable taxi service in ${area} with Cloud Cars. Local journeys, airport transfers, executive travel and corporate transport from ${area} to Nottingham and surrounding areas.`}
+          content={`Reliable taxi service in ${area} with Cloud Cars. Local journeys, airport transfers and business travel from ${area} to Nottingham and beyond.`}
         />
 
         <link
