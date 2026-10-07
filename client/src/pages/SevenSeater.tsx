@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { Car, Luggage, Users } from "lucide-react";
 
 const sevenSeaterRoutes = [
   {
@@ -69,20 +70,29 @@ export default function SevenSeater() {
         title="7 Seater Taxi Nottingham"
         description="Cloud Cars provides spacious 7 seater transport in Nottingham for airport transfers, family travel, group bookings and corporate journeys. Ideal when you need extra passenger space or more room for luggage."
         ctaLabel="Book a 7 Seater"
+        icon={Users}
+        tagline="Room for everyone, and all the luggage."
+        highlight="Nottingham"
+        image="/service-7-seater.webp"
+        imageClassName="object-[60%_50%]"
+        reassurances={["Spacious 7 seater vehicles","Space for your luggage","Fixed price agreed at booking","Great for families and groups"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
           <div className="grid md:grid-cols-3 gap-6 mb-14">
             <FeatureCard
+              icon={Users}
               title="Ideal for Families"
               text="Perfect for family airport runs, day trips and journeys where you need more passenger space."
             />
             <FeatureCard
+              icon={Luggage}
               title="Extra Luggage Space"
               text="A practical option for airport transfers, shopping trips and bookings with extra bags or equipment."
             />
             <FeatureCard
+              icon={Car}
               title="Group Travel"
               text="Ideal for business teams, event travel and group bookings across Nottingham and beyond."
             />

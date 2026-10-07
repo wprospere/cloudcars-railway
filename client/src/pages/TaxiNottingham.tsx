@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { CalendarCheck, Car, MapPin, Sparkles } from "lucide-react";
 
 const faqs = [
   {
@@ -45,20 +46,29 @@ export default function TaxiNottingham() {
         title="Taxi Service in Nottingham"
         description="Cloud Cars provides dependable taxi services across Nottingham for local journeys, business travel, appointments, station runs, airport transfers and pre-booked transport you can rely on."
         ctaLabel="Book a Taxi"
+        icon={Car}
+        tagline="Your local taxi, done properly."
+        highlight="Nottingham"
+        image="/nottingham-council-house.jpg"
+        imageClassName="origin-left scale-[1.3] object-[50%_40%]"
+        reassurances={["Fixed price agreed at booking","Friendly local drivers","Available round the clock","Comfortable saloon cars"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             <FeatureCard
+              icon={MapPin}
               title="Local Journeys"
               text="Reliable transport around Nottingham and surrounding areas for everyday travel, shopping, appointments and general local journeys."
             />
             <FeatureCard
+              icon={CalendarCheck}
               title="Pre-Booked Travel"
               text="Book ahead for peace of mind with dependable pickup times for business travel, airport transfers, station runs and important journeys."
             />
             <FeatureCard
+              icon={Sparkles}
               title="Professional Service"
               text="Clean vehicles, experienced drivers and dependable customer support for a smooth and comfortable taxi service."
             />

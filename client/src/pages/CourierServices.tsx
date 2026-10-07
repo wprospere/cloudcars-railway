@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { Briefcase, Clock, MapPin, Package } from "lucide-react";
 
 const courierPricing = [
   {
@@ -69,20 +70,29 @@ export default function CourierServices() {
         title="Courier Services Nottingham"
         description="Cloud Cars provides reliable same-day courier and parcel delivery services across Nottingham and surrounding areas for businesses, urgent deliveries and scheduled transport requirements."
         ctaLabel="Book a Courier"
+        icon={Package}
+        tagline="Same-day delivery, handled with care."
+        highlight="Nottingham"
+        image="/service-courier.webp"
+        imageClassName="-scale-x-100 object-[50%_50%]"
+        reassurances={["Same-day delivery","Secure handling","Proof of delivery","Business accounts available"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
           <div className="grid md:grid-cols-3 gap-6 mb-14">
             <FeatureCard
+              icon={Clock}
               title="Same-Day Delivery"
               text="Fast local delivery support for urgent parcels, business items and scheduled courier jobs."
             />
             <FeatureCard
+              icon={Briefcase}
               title="Business Friendly"
               text="A dependable option for documents, regular account work and professional delivery requirements."
             />
             <FeatureCard
+              icon={MapPin}
               title="Local & Regional Runs"
               text="Courier coverage across Nottingham and surrounding areas with practical delivery solutions."
             />

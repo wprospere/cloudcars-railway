@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { CalendarCheck, Clock, PlaneLanding, PlaneTakeoff } from "lucide-react";
 
 export default function EastMidlandsAirportTaxi() {
   return (
@@ -28,24 +29,33 @@ export default function EastMidlandsAirportTaxi() {
         title="Taxi to East Midlands Airport"
         description="Cloud Cars provides reliable taxi transfers from Nottingham to East Midlands Airport with professional drivers, comfortable vehicles and dependable pickup times."
         ctaLabel="Book Airport Taxi"
+        icon={PlaneTakeoff}
+        tagline="Early flight? Late landing? We've got you covered."
+        highlight="East Midlands Airport"
+        image="/airport-clouds.webp"
+        imageClassName="-scale-x-100 object-[50%_70%]"
+        reassurances={["Fixed price agreed at booking","30 minutes' waiting included","We meet you in arrivals","Available 24/7"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
 
           <div className="grid md:grid-cols-3 gap-6 mb-14">
 
             <FeatureCard
+              icon={CalendarCheck}
               title="Reliable Airport Transfers"
               text="Pre-booked airport transport from Nottingham to East Midlands Airport with dependable collection times."
             />
 
             <FeatureCard
+              icon={Clock}
               title="Early Morning Flights"
               text="Perfect for early departures and late night arrivals with drivers available 24/7."
             />
 
             <FeatureCard
+              icon={PlaneLanding}
               title="Flight Tracking"
               text="We monitor flight arrivals so pickups are timed correctly when collecting passengers."
             />

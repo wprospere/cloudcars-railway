@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { Briefcase, CalendarCheck, Sparkles } from "lucide-react";
 
 const executiveRoutes = [
   {
@@ -69,20 +70,29 @@ export default function ExecutiveCar() {
         title="Executive Car Service Nottingham"
         description="Cloud Cars offers executive travel in Nottingham for business appointments, airport transfers, client collections and professional transport requirements. Travel in comfort with premium vehicles and experienced drivers."
         ctaLabel="Book Executive Travel"
+        icon={Briefcase}
+        tagline="Arrive looking and feeling your best."
+        highlight="Nottingham"
+        image="/service-executive.webp"
+        imageClassName="-scale-x-100 object-[50%_60%]"
+        reassurances={["Premium vehicles","Professional, presentable drivers","Fixed price agreed at booking","Easy pre-booking"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
           <div className="grid md:grid-cols-3 gap-6 mb-14">
             <FeatureCard
+              icon={Briefcase}
               title="Professional Image"
               text="A polished and dependable transport option for meetings, client collections, airport travel and business appointments."
             />
             <FeatureCard
+              icon={Sparkles}
               title="Premium Comfort"
               text="Executive vehicles for a quieter, more refined journey on both short and longer distance travel."
             />
             <FeatureCard
+              icon={CalendarCheck}
               title="Reliable Pre-Booking"
               text="Ideal for planned journeys where timing, presentation and service quality matter."
             />

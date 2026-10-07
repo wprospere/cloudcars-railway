@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
+import { Briefcase, CalendarCheck, FileText, Users } from "lucide-react";
 
 const faqs = [
   {
@@ -50,20 +51,29 @@ export default function CorporateTransport() {
         title="Corporate Transport Nottingham"
         description="Cloud Cars provides dependable corporate transport services in Nottingham for staff travel, business accounts, airport runs, hotel transport and scheduled journeys."
         ctaLabel="Book Corporate Travel"
+        icon={Briefcase}
+        tagline="Business travel, sorted."
+        highlight="Nottingham"
+        image="/service-corporate.webp"
+        imageClassName="-scale-x-100 object-[50%_40%]"
+        reassurances={["One account, one invoice","The same trusted drivers","Regular reports of journeys and spend","Fixed price agreed at booking"]}
       />
 
-      <section className="pb-16 lg:pb-24">
+      <section className="section-light bg-background py-16 lg:py-24">
         <div className="container max-w-6xl">
           <div className="grid md:grid-cols-3 gap-6 mb-14">
             <FeatureCard
+              icon={Users}
               title="Staff Transport"
               text="Reliable transport support for employees, teams, shift coverage and regular business travel."
             />
             <FeatureCard
+              icon={FileText}
               title="Account Support"
               text="Practical account-based transport solutions for businesses that need invoicing and regular booking support."
             />
             <FeatureCard
+              icon={CalendarCheck}
               title="Flexible Scheduling"
               text="Ideal for airport runs, hotel transport, scheduled shuttles and ongoing operational transport needs."
             />
