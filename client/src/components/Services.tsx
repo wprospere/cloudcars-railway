@@ -6,8 +6,11 @@ import {
   Users,
   Briefcase,
   Check,
+  CheckCircle2,
   Mail,
   Clock,
+  ArrowRight,
+  Phone,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -153,31 +156,98 @@ export default function Services() {
   };
 
   return (
-    <section
-      id="services"
-      className="section-light bg-background py-20 lg:py-32"
-    >
-      <div className="container">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">
-            Our Services
-          </span>
-
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">
-            Not the biggest.{" "}
-            <span className="text-gradient-green font-['Playfair_Display',serif] italic">
-              Aiming to be the best.
-            </span>
-          </h2>
-
-          <p className="text-muted-foreground text-lg">
-            Nottingham's local private hire firm since 2012. We run a 100% hybrid
-            fleet, our drivers know the city inside out, and you'll know your
-            fare before you set off. Whatever the journey, from a quick local
-            taxi to an airport run, an executive car, a courier delivery or a
-            company account, we do it properly.
-          </p>
+    <>
+      <section
+        id="services"
+        className="relative overflow-hidden bg-background pt-20 pb-24 lg:pt-28 lg:pb-32"
+      >
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/nottingham-council-house.jpg"
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full origin-left scale-[1.3] object-cover object-[50%_40%]"
+          />
+          <div className="absolute inset-0 bg-background/80 lg:hidden" />
+          <div className="absolute inset-0 hidden bg-gradient-to-r from-background from-30% via-background/60 via-50% to-transparent lg:block" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
         </div>
+
+        <div className="container relative z-10">
+          <div className="max-w-2xl">
+            <span className="text-sm font-semibold text-primary uppercase tracking-wider">
+              Our Services
+            </span>
+
+            <h2 className="mt-3 text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              Local drivers. Fixed fares.{" "}
+              <span className="text-gradient-green font-['Playfair_Display',serif] italic">
+                Every journey.
+              </span>
+            </h2>
+
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
+              Nottingham's local private hire firm since 2012. We run a 100%
+              hybrid fleet, our drivers know the city inside out, and you'll
+              know your fare before you set off. Whatever the journey, from a
+              quick local taxi to an airport run, an executive car, a courier
+              delivery or a company account, we do it properly.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <Button
+                asChild
+                size="lg"
+                className="group bg-primary px-8 py-6 text-lg font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <a
+                  href="https://book.cloudcarsltd.com/portal/#/booking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => track("services_book_now_click")}
+                >
+                  Book Now
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </a>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="border-border/70 bg-background/30 px-8 py-6 text-lg font-semibold text-foreground backdrop-blur-sm hover:bg-secondary/60"
+              >
+                <a
+                  href="tel:01158244244"
+                  onClick={() => track("services_call_click")}
+                >
+                  <Phone className="mr-2 h-5 w-5" />
+                  0115 8 244 244
+                </a>
+              </Button>
+            </div>
+
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-foreground/90">
+              {[
+                "Serving Nottingham since 2012",
+                "100% hybrid fleet",
+                "Fixed fare before you travel",
+                "Available 24/7",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    <section className="section-light bg-background py-16 lg:py-24">
+      <div className="container">
 
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {services.filter((s) => s.bookingType === "instant").map((service) => (
@@ -470,5 +540,6 @@ export default function Services() {
         </div>
       </div>
     </section>
+    </>
   );
 }
