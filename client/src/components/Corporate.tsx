@@ -30,6 +30,8 @@ import {
   BarChart3,
   CheckCircle2,
   Loader2,
+  ArrowRight,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -230,35 +232,95 @@ export default function Corporate() {
   };
 
   return (
-    <section
-      id="corporate"
-      className="section-light bg-background py-20 lg:py-32"
-    >
-      {/* Structured data for SEO rich results */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+    <>
+      <section
+        id="corporate"
+        className="relative overflow-hidden bg-background pt-20 pb-24 lg:pt-28 lg:pb-32"
+      >
+        {/* Structured data for SEO rich results */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
 
-      <div className="container">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
-          {/* Left Column - Content */}
-          <div>
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/corporate-back-seat.webp"
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full -scale-x-100 object-cover object-[50%_50%]"
+          />
+          <div className="absolute inset-0 bg-background/45 lg:hidden" />
+          <div className="absolute inset-0 hidden bg-gradient-to-r from-background from-30% via-background/60 via-50% to-transparent lg:block" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        </div>
+
+        <div className="container relative z-10">
+          <div className="max-w-2xl">
             <span className="text-sm font-semibold text-primary uppercase tracking-wider">
               Business Accounts
             </span>
 
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-6">
+            <h2 className="mt-3 text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               {content.title}{" "}
               <span className="text-gradient-green font-['Playfair_Display',serif] italic">
                 {content.subtitle}
               </span>
             </h2>
 
-            <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
               {content.description}
             </p>
 
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <Button
+                asChild
+                size="lg"
+                className="group bg-primary px-8 py-6 text-lg font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <a href="#corporate-enquiry">
+                  Open a Business Account
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </a>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="border-border/70 bg-background/30 px-8 py-6 text-lg font-semibold text-foreground backdrop-blur-sm hover:bg-secondary/60"
+              >
+                <a href="tel:01158244244">
+                  <Phone className="mr-2 h-5 w-5" />
+                  0115 8 244 244
+                </a>
+              </Button>
+            </div>
+
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-foreground/90">
+              {[
+                "One account, one invoice",
+                "The same trusted drivers",
+                "DBS-checked, licensed drivers",
+                "Regular reports of journeys and spend",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    <section className="section-light bg-background py-16 lg:py-24">
+      <div className="container">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
+          {/* Left Column - Content */}
+          <div>
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 mb-8">
               <h3 className="text-base font-semibold text-foreground mb-2">
                 The accountable alternative to app-based transport
@@ -338,7 +400,10 @@ export default function Corporate() {
           </div>
 
           {/* Right Column - Form */}
-          <div className="bg-card rounded-2xl p-6 lg:p-8 border border-border">
+          <div
+            id="corporate-enquiry"
+            className="bg-card rounded-2xl p-6 lg:p-8 border border-border scroll-mt-24"
+          >
             {submitted ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-12">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
@@ -536,5 +601,6 @@ export default function Corporate() {
         </div>
       </div>
     </section>
+    </>
   );
 }
