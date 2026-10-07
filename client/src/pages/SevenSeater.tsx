@@ -74,7 +74,7 @@ export default function SevenSeater() {
         tagline="Room for everyone, and all the luggage."
         highlight="Nottingham"
         image="/service-7-seater.webp"
-        imageClassName="object-[60%_50%]"
+        imageClassName="translate-x-[28%] object-[50%_66%] lg:translate-x-[28%]"
         reassurances={["Spacious 7 seater vehicles","Space for your luggage","Fixed price agreed at booking","Great for families and groups"]}
       />
 

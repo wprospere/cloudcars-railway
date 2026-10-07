@@ -164,17 +164,17 @@ export default function Services() {
           </span>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">
-            Taxi, Airport, Courier and Business Travel in{" "}
+            Not the biggest.{" "}
             <span className="text-gradient-green font-['Playfair_Display',serif] italic">
-              Nottingham
+              Aiming to be the best.
             </span>
           </h2>
 
           <p className="text-muted-foreground text-lg">
-            From local taxi journeys and airport transfers to executive travel,
-            courier services and corporate transport, Cloud Cars provides
-            dependable travel solutions across Nottingham and surrounding areas
-            with friendly, knowledgeable drivers and professional service.
+            Nottingham's local private hire firm since 2012, with a 100% hybrid
+            fleet, drivers who know the city, and a fare you know before you
+            travel. Local taxis, airport transfers, executive travel, courier
+            services and corporate transport, all done properly.
           </p>
         </div>
 
