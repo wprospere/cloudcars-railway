@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 
 import PolicyDocument from "@/components/PolicyDocument";
+import PageMeta from "@/components/PageMeta";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -102,6 +103,11 @@ export default function Terms() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Terms & Conditions | Cloud Cars"
+        description="Read the Cloud Cars terms and conditions covering account and non-account bookings, waiting time, cancellations, pricing and liability."
+        path="/terms"
+      />
       <Header />
 
       <main className="pt-20">

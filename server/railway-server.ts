@@ -16,6 +16,12 @@ import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
 import { adminRoutes } from "./auth/adminRoutes.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
+import {
+  INDEXABLE_PATHS,
+  SITE_URL,
+  isKnownPage,
+  isPrivatePath,
+} from "./publicRoutes.js";
 
 // ✅ DB helpers (same ones admin/tRPC uses)
 import {
@@ -35,6 +41,19 @@ const PORT = Number(process.env.PORT) || 8080;
 
 // Railway / reverse proxy
 app.set("trust proxy", 1);
+
+// Don't advertise the framework, and add standard protective headers.
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  if (isPrivatePath(req.path)) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+  next();
+});
 
 // --------------------
 // Middleware
@@ -98,8 +117,12 @@ app.get("/healthz", (_req, res) =>
   res.json({ ok: true, ts: new Date().toISOString() })
 );
 
-// ✅ Debug route – inspects the actual served clientDist
+// ✅ Debug route – inspects the actual served clientDist.
+// Off unless ENABLE_DEBUG_ROUTE=true, because it reveals server paths and files.
 app.get("/__debug", (_req, res) => {
+  if (String(process.env.ENABLE_DEBUG_ROUTE || "").toLowerCase() !== "true") {
+    return res.status(404).json({ ok: false, error: "Not found" });
+  }
   const servedClientDist = clientDist;
   const servedIndexPath = path.join(servedClientDist, "index.html");
 
@@ -365,6 +388,36 @@ app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
 // Static / SPA
 // --------------------
 
+// ✅ Sitemap and robots.txt, generated from the one list of public pages
+app.get("/sitemap.xml", (_req, res) => {
+  const urls = INDEXABLE_PATHS.map(
+    (p) => `  <url>\n    <loc>${SITE_URL}${p === "/" ? "/" : p}</loc>\n  </url>`
+  ).join("\n");
+  res
+    .type("application/xml")
+    .send(
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+    );
+});
+
+app.get("/robots.txt", (_req, res) => {
+  res
+    .type("text/plain")
+    .send(
+      [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin",
+        "Disallow: /account",
+        "Disallow: /driver/onboarding",
+        "Disallow: /api/",
+        "",
+        `Sitemap: ${SITE_URL}/sitemap.xml`,
+        "",
+      ].join("\n")
+    );
+});
+
 // ✅ Serve uploads FIRST so SPA fallback never intercepts image URLs
 app.use("/uploads", express.static(uploadsDir));
 
@@ -400,7 +453,16 @@ app.get("*", (req, res) => {
   ) {
     return res.status(404).json({ ok: false, error: "Not found" });
   }
-  return res.sendFile(path.join(clientDist, "index.html"));
+
+  // Missing files (e.g. /favicon.ico, /assets/old.js) get a plain 404, not the app.
+  if (/\.[a-z0-9]{1,8}$/i.test(req.path)) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
+
+  // Real pages get 200; unknown addresses still show the app's "not found"
+  // screen but with a proper 404 status so search engines don't index them.
+  const status = isKnownPage(req.path) ? 200 : 404;
+  return res.status(status).sendFile(path.join(clientDist, "index.html"));
 });
 
 // --------------------

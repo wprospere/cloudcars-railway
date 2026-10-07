@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
+import PageMeta from "@/components/PageMeta";
 import {
   Select,
   SelectContent,
@@ -208,6 +209,11 @@ export default function PartnerWithCloudCars() {
 
   return (
     <>
+      <PageMeta
+        title="Partner with Cloud Cars | Owner Drivers & Small Fleets"
+        description="Run your own car or a small fleet? Partner with Cloud Cars for regular airport, corporate and local work through our booking platform. Apply today."
+        path="/partner-with-cloud-cars"
+      />
       <Header />
 
       <main className="pt-16 lg:pt-20">

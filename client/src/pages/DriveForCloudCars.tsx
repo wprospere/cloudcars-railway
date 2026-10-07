@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Header from "@/components/Header";
+import PageMeta from "@/components/PageMeta";
 import {
   Select,
   SelectContent,
@@ -230,6 +231,11 @@ export default function DriveForCloudCars() {
 
   return (
     <>
+      <PageMeta
+        title="Drive for Cloud Cars | Private Hire Jobs in Nottingham"
+        description="Join Nottingham's local private hire company. Weekly pay, flexible hours and regular airport, corporate and school work. Apply to drive with Cloud Cars today."
+        path="/drive-for-cloud-cars"
+      />
       <Header />
 
       <main className="pt-16 lg:pt-20">

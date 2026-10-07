@@ -3,6 +3,7 @@ import { ArrowLeft, Phone } from "lucide-react";
 import { Link } from "wouter";
 
 import PageLayout from "@/layouts/PageLayout";
+import PageMeta from "@/components/PageMeta";
 import { FESTIVE_RATE_DETAIL } from "@/lib/pricingPolicy";
 import { trpc } from "@/lib/trpc";
 
@@ -208,6 +209,11 @@ export default function Faqs() {
 
   return (
     <PageLayout>
+      <PageMeta
+        title="Taxi FAQs | Cloud Cars Nottingham"
+        description="Answers to common questions about booking a Cloud Cars taxi in Nottingham, including airport transfers, waiting time, cancellations, payment and business accounts."
+        path="/faqs"
+      />
       {schemaJsonLd ? (
         <script
           type="application/ld+json"

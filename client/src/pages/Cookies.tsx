@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 
 import PolicyDocument from "@/components/PolicyDocument";
+import PageMeta from "@/components/PageMeta";
 
 type TrackProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -55,6 +56,11 @@ export default function Cookies() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Cookie Policy | Cloud Cars"
+        description="How cloudcarsltd.com uses cookies, which ones are optional, and how to change your cookie choices at any time."
+        path="/cookies"
+      />
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container py-4 flex items-center justify-between">
