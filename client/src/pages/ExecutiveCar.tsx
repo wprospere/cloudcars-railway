@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -51,19 +51,7 @@ const faqs = [
 export default function ExecutiveCar() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>
-          Executive Car Service Nottingham | Executive Travel | Cloud Cars
-        </title>
-        <meta
-          name="description"
-          content="Book an executive car in Nottingham with Cloud Cars. Premium vehicles for business travel, airport transfers and client collections with professional drivers."
-        />
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/executive-car-nottingham"
-        />
-      </Helmet>
+      <PageMeta path="/executive-car-nottingham" />
 
       <ServiceHero
         eyebrow="Cloud Cars Executive Travel"

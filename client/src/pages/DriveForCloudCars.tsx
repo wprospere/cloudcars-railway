@@ -231,11 +231,7 @@ export default function DriveForCloudCars() {
 
   return (
     <>
-      <PageMeta
-        title="Drive for Cloud Cars | Private Hire Jobs in Nottingham"
-        description="Join Nottingham's local private hire company. Weekly pay, flexible hours and regular airport, corporate and school work. Apply to drive with Cloud Cars today."
-        path="/drive-for-cloud-cars"
-      />
+      <PageMeta path="/drive-for-cloud-cars" />
       <Header />
 
       <main className="pt-16 lg:pt-20">

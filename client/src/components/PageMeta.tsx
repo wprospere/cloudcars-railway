@@ -1,22 +1,21 @@
 import { Helmet } from "react-helmet-async";
+import { SITE_URL, getPageMeta } from "@shared/pageMeta";
 
-const SITE_URL = "https://cloudcarsltd.com";
-
+// Titles and descriptions live in shared/pageMeta.ts, so the server and the
+// browser always show the same ones.
 export default function PageMeta({
-  title,
-  description,
   path,
   noindex = false,
 }: {
-  title: string;
-  description: string;
   path: string;
   noindex?: boolean;
 }) {
+  const meta = getPageMeta(path);
+
   return (
     <Helmet>
-      <title>{title}</title>
-      <meta name="description" content={description} />
+      {meta ? <title>{meta.title}</title> : null}
+      {meta ? <meta name="description" content={meta.description} /> : null}
       <link rel="canonical" href={`${SITE_URL}${path}`} />
       {noindex ? <meta name="robots" content="noindex, nofollow" /> : null}
     </Helmet>

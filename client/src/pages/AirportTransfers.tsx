@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import {
   ArrowRight,
@@ -144,18 +145,8 @@ const faqJsonLd = {
 export default function AirportTransfers() {
   return (
     <PageLayout>
+      <PageMeta path="/airport-transfers-nottingham" />
       <Helmet>
-        <title>
-          Airport Transfers Nottingham | Nottingham Airport Taxi | Cloud Cars
-        </title>
-        <meta
-          name="description"
-          content="Book reliable airport transfers from Nottingham with Cloud Cars. Fixed quotes to East Midlands, Birmingham, Manchester and Heathrow. 24/7 pre-booked service."
-        />
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/airport-transfers-nottingham"
-        />
         <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
       </Helmet>
 

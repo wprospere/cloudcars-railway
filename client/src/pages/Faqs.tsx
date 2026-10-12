@@ -209,11 +209,7 @@ export default function Faqs() {
 
   return (
     <PageLayout>
-      <PageMeta
-        title="Taxi FAQs | Cloud Cars Nottingham"
-        description="Answers to common questions about booking a Cloud Cars taxi in Nottingham: airport transfers, waiting time, cancellations, payment and business accounts."
-        path="/faqs"
-      />
+      <PageMeta path="/faqs" />
       {schemaJsonLd ? (
         <script
           type="application/ld+json"

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -22,43 +23,8 @@ const Footer = lazy(() => import("@/components/Footer"));
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <PageMeta path="/" />
       <Helmet>
-        <title>
-          Taxi Nottingham | Airport Transfers & Corporate Travel | Cloud Cars
-        </title>
-
-        <meta
-          name="description"
-          content="Reliable taxi services in Nottingham from Cloud Cars: airport transfers, executive cars, corporate travel, courier services and pre-booked journeys."
-        />
-
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-        <link rel="canonical" href="https://cloudcarsltd.com/" />
-
-        <meta
-          property="og:title"
-          content="Taxi Nottingham | Airport Transfers & Corporate Travel | Cloud Cars"
-        />
-        <meta
-          property="og:description"
-          content="Reliable taxi services in Nottingham including airport transfers, corporate travel, executive cars and courier services."
-        />
-        <meta property="og:url" content="https://cloudcarsltd.com/" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://cloudcarsltd.com/logo.png" />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:title"
-          content="Taxi Nottingham | Airport Transfers | Cloud Cars"
-        />
-        <meta
-          name="twitter:description"
-          content="Reliable taxi service in Nottingham including airport transfers, corporate travel and executive cars."
-        />
-        <meta name="twitter:image" content="https://cloudcarsltd.com/logo.png" />
-
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",

@@ -35,6 +35,7 @@ import {
 
 // ✅ Shared spam protection (Turnstile + honeypot) — same helpers tRPC uses
 import { verifyTurnstile } from "./security/turnstile.js";
+import { renderIndexHtml } from "./pageHtml.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -431,6 +432,8 @@ app.use("/uploads", express.static(uploadsDir));
 //    served with no-cache so users always get the latest asset references.
 app.use(
   express.static(clientDist, {
+    // index.html is sent by the routes below, with that page's own title filled in
+    index: false,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith("index.html")) {
         res.setHeader("Cache-Control", "no-cache");
@@ -441,10 +444,24 @@ app.use(
   })
 );
 
+// ✅ The React app's HTML, with the requested page's title, description and
+//    address written in (see pageHtml.ts)
+function sendApp(req: express.Request, res: express.Response, status = 200) {
+  try {
+    const html = renderIndexHtml(path.join(clientDist, "index.html"), req.path);
+    return res
+      .status(status)
+      .set("Cache-Control", "no-cache")
+      .type("html")
+      .send(html);
+  } catch (e: any) {
+    console.error("sendApp failed:", e?.message || e);
+    return res.status(500).type("text/plain").send("Server error");
+  }
+}
+
 // ✅ Force homepage to always be the React app
-app.get("/", (_req, res) => {
-  return res.sendFile(path.join(clientDist, "index.html"));
-});
+app.get("/", (req, res) => sendApp(req, res));
 
 // ✅ SPA fallback (keep LAST) — but don't break API/tRPC routes
 app.get("*", (req, res) => {
@@ -466,7 +483,7 @@ app.get("*", (req, res) => {
   // Real pages get 200; unknown addresses still show the app's "not found"
   // screen but with a proper 404 status so search engines don't index them.
   const status = isKnownPage(req.path) ? 200 : 404;
-  return res.status(status).sendFile(path.join(clientDist, "index.html"));
+  return sendApp(req, res, status);
 });
 
 // --------------------

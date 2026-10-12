@@ -136,11 +136,7 @@ export default function TrainAirportTransferPolicy() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageMeta
-        title="Train & Airport Transfer Policy | Cloud Cars"
-        description="How early to book your Cloud Cars pickup for train and flight departures, and our policy on missed connections."
-        path="/train-airport-transfer-policy"
-      />
+      <PageMeta path="/train-airport-transfer-policy" />
       <Header />
 
       <main className="pt-20">

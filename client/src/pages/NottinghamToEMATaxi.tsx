@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import {
@@ -36,21 +37,8 @@ const related = [
 export default function NottinghamToEMATaxi() {
   return (
     <PageLayout>
+      <PageMeta path="/nottingham-to-east-midlands-airport" />
       <Helmet>
-        <title>
-          Taxi Nottingham to East Midlands Airport | £40 Airport Transfer | Cloud Cars
-        </title>
-
-        <meta
-          name="description"
-          content="Taxi from Nottingham to East Midlands Airport from £40. Reliable 24/7 airport transfers covering Beeston, West Bridgford, Wollaton and Edwalton with Cloud Cars."
-        />
-
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/nottingham-to-east-midlands-airport"
-        />
-
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",

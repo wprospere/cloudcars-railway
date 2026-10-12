@@ -209,11 +209,7 @@ export default function PartnerWithCloudCars() {
 
   return (
     <>
-      <PageMeta
-        title="Partner with Cloud Cars | Owner Drivers & Small Fleets"
-        description="Run your own car or a small fleet? Partner with Cloud Cars for regular airport, corporate and local work through our booking platform. Apply today."
-        path="/partner-with-cloud-cars"
-      />
+      <PageMeta path="/partner-with-cloud-cars" />
       <Header />
 
       <main className="pt-16 lg:pt-20">

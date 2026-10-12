@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -51,19 +51,7 @@ const faqs = [
 export default function SevenSeater() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>
-          7 Seater Taxi Nottingham | Group & Family Travel | Cloud Cars
-        </title>
-        <meta
-          name="description"
-          content="Book a 7 seater taxi in Nottingham with Cloud Cars. Ideal for airport transfers, family travel, group bookings, business teams and journeys with extra luggage."
-        />
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/7-seater-taxi-nottingham"
-        />
-      </Helmet>
+      <PageMeta path="/7-seater-taxi-nottingham" />
 
       <ServiceHero
         eyebrow="Cloud Cars Group Travel"

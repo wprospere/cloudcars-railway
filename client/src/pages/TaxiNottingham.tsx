@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -32,14 +32,7 @@ const faqs = [
 export default function TaxiNottingham() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>Taxi Nottingham | 24/7 Local Taxi Service | Cloud Cars</title>
-        <meta
-          name="description"
-          content="Book a reliable taxi in Nottingham with Cloud Cars. Local journeys, airport transfers and pre-booked travel with professional drivers and clean vehicles."
-        />
-        <link rel="canonical" href="https://cloudcarsltd.com/taxi-nottingham" />
-      </Helmet>
+      <PageMeta path="/taxi-nottingham" />
 
       <ServiceHero
         eyebrow="Cloud Cars Nottingham"

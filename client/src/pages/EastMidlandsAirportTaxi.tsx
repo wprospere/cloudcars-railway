@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
@@ -8,21 +8,7 @@ import { CalendarCheck, Clock, PlaneLanding, PlaneTakeoff } from "lucide-react";
 export default function EastMidlandsAirportTaxi() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>
-          Taxi to East Midlands Airport | Nottingham Airport Transfers | Cloud Cars
-        </title>
-
-        <meta
-          name="description"
-          content="Taxi to East Midlands Airport from Nottingham with Cloud Cars. Reliable transfers, fixed prices and professional drivers for early and late flights."
-        />
-
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/east-midlands-airport-taxi"
-        />
-      </Helmet>
+      <PageMeta path="/east-midlands-airport-taxi" />
 
       <ServiceHero
         eyebrow="Cloud Cars Airport Transfers"

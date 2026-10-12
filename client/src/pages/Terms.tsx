@@ -103,11 +103,7 @@ export default function Terms() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageMeta
-        title="Terms & Conditions | Cloud Cars"
-        description="Read the Cloud Cars terms and conditions covering account and non-account bookings, waiting time, cancellations, pricing and liability."
-        path="/terms"
-      />
+      <PageMeta path="/terms" />
       <Header />
 
       <main className="pt-20">

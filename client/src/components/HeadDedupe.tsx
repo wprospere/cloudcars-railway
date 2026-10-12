@@ -7,7 +7,9 @@ export default function HeadDedupe() {
   useEffect(() => {
     const saved = Array.from(
       document.head.querySelectorAll("[data-static-meta]")
-    ).map((el) => el.cloneNode(true) as HTMLElement);
+    )
+      .filter((el) => el.tagName !== "LINK")
+      .map((el) => el.cloneNode(true) as HTMLElement);
 
     const settle = (selector: string, tagName: string) => {
       const nodes = Array.from(document.head.querySelectorAll(selector));
@@ -22,9 +24,23 @@ export default function HeadDedupe() {
       }
     };
 
+    // The server's canonical link is for the address the visit started on, so
+    // unlike the title it is never put back once a page has supplied its own.
+    const dropStaticCanonical = () => {
+      const nodes = Array.from(
+        document.head.querySelectorAll('link[rel="canonical"]')
+      );
+      if (nodes.some((n) => !n.hasAttribute("data-static-meta"))) {
+        nodes
+          .filter((n) => n.hasAttribute("data-static-meta"))
+          .forEach((n) => n.remove());
+      }
+    };
+
     const sync = () => {
       settle("title", "title");
       settle('meta[name="description"]', "meta");
+      dropStaticCanonical();
     };
 
     sync();

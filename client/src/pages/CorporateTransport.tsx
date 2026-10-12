@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -32,19 +32,7 @@ const faqs = [
 export default function CorporateTransport() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>
-          Corporate Transport Nottingham | Business Travel Services | Cloud Cars
-        </title>
-        <meta
-          name="description"
-          content="Dependable corporate transport in Nottingham for staff travel, airport runs and business accounts. Professional drivers and one clear invoice from Cloud Cars."
-        />
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/corporate-transport-nottingham"
-        />
-      </Helmet>
+      <PageMeta path="/corporate-transport-nottingham" />
 
       <ServiceHero
         eyebrow="Cloud Cars Business Travel"

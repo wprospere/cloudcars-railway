@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
@@ -12,21 +12,7 @@ interface TaxiAreaProps {
 export default function TaxiArea({ area }: TaxiAreaProps) {
   return (
     <PageLayout>
-      <Helmet>
-        <title>{`Taxi ${area} | Cloud Cars`}</title>
-
-        <meta
-          name="description"
-          content={`Reliable taxi service in ${area} with Cloud Cars. Local journeys, airport transfers and business travel from ${area} to Nottingham and beyond.`}
-        />
-
-        <link
-          rel="canonical"
-          href={`https://cloudcarsltd.com/taxi-${area
-            .toLowerCase()
-            .replace(/\s/g, "-")}`}
-        />
-      </Helmet>
+      <PageMeta path={`/taxi-${area.toLowerCase().replace(/\s/g, "-")}`} />
 
       <ServiceHero
         eyebrow="Cloud Cars Local Taxi"

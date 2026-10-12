@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import PageMeta from "@/components/PageMeta";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -51,19 +51,7 @@ const faqs = [
 export default function CourierServices() {
   return (
     <PageLayout>
-      <Helmet>
-        <title>
-          Courier Services Nottingham | Same Day Delivery | Cloud Cars
-        </title>
-        <meta
-          name="description"
-          content="Reliable same-day courier and parcel delivery in Nottingham with Cloud Cars. Business documents, hospital runs and urgent local deliveries."
-        />
-        <link
-          rel="canonical"
-          href="https://cloudcarsltd.com/courier-services-nottingham"
-        />
-      </Helmet>
+      <PageMeta path="/courier-services-nottingham" />
 
       <ServiceHero
         eyebrow="Cloud Cars Courier Services"

@@ -112,11 +112,7 @@ export default function Privacy() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageMeta
-        title="Privacy Policy | Cloud Cars"
-        description="How Cloud Cars collects, uses, stores and protects your personal data, where it is held, how long we keep it and your rights."
-        path="/privacy"
-      />
+      <PageMeta path="/privacy" />
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container py-4">
