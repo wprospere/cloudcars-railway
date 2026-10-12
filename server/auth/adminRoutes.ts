@@ -65,3 +65,36 @@ adminRoutes.get("/me", async (req, res) => {
 
   return res.json({ ok: true, admin });
 });
+
+/**
+ * Guard for every other /api/admin/* route. Mount AFTER adminRoutes so
+ * login/logout/me stay reachable; anything else needs a signed-in admin or staff.
+ */
+export async function requireAdmin(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  try {
+    const adminId = readAdminIdFromCookie(req);
+    if (!adminId) {
+      return res.status(401).json({ ok: false, error: "Not authenticated" });
+    }
+
+    const rows = await db
+      .select({ role: adminUsers.role })
+      .from(adminUsers)
+      .where(eq(adminUsers.id, adminId))
+      .limit(1);
+
+    const role = rows[0]?.role;
+    if (role !== "admin" && role !== "staff") {
+      return res.status(401).json({ ok: false, error: "Not authenticated" });
+    }
+
+    return next();
+  } catch (e: any) {
+    console.error("requireAdmin failed:", e?.message || e);
+    return res.status(401).json({ ok: false, error: "Not authenticated" });
+  }
+}

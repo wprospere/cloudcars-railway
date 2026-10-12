@@ -14,7 +14,7 @@ import mysql from "mysql2/promise";
 
 import { appRouter } from "./routers.js";
 import { createContext } from "./railway-trpc.js";
-import { adminRoutes } from "./auth/adminRoutes.js";
+import { adminRoutes, requireAdmin } from "./auth/adminRoutes.js";
 import { ensureDefaultAdmin } from "./auth/ensureAdmin.js";
 import {
   INDEXABLE_PATHS,
@@ -163,6 +163,10 @@ app.get("/__debug", (_req, res) => {
 
 // ✅ IMPORTANT: Your frontend calls /api/admin/login
 app.use("/api/admin", adminRoutes);
+
+// ✅ Everything else under /api/admin (exports, CMS upload) needs a signed-in admin.
+//    Must stay AFTER adminRoutes so login/logout/me are still reachable.
+app.use("/api/admin", requireAdmin);
 
 // ✅ Keep /admin working too, but only for non-GET/HEAD actions
 app.use("/admin", (req, res, next) => {
@@ -348,7 +352,7 @@ const S3_PUBLIC_BASE = isS3Configured()
     `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`
   : "";
 
-// Upload endpoint (you can wrap with your admin auth later)
+// Upload endpoint (admin-only via the /api/admin guard above)
 app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
   try {
     if (!isS3Configured() || !s3) {
