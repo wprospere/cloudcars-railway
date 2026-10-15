@@ -9,19 +9,19 @@ import { Briefcase, Clock, MapPin, Package } from "lucide-react";
 const courierPricing = [
   {
     element: "Base Fare",
-    rate: "£10",
+    rate: "From £10",
   },
   {
     element: "Per Mile",
-    rate: "£2.20",
+    rate: "From £2.20",
   },
   {
     element: "Per Minute",
-    rate: "£0.20",
+    rate: "From £0.20",
   },
   {
     element: "Minimum Fare",
-    rate: "£15",
+    rate: "From £15",
   },
 ];
 

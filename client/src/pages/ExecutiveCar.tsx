@@ -1,4 +1,5 @@
 import PageMeta from "@/components/PageMeta";
+import { AIRPORT_FARES, fromPrice } from "@shared/airportFares";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -6,24 +7,10 @@ import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
 import { Briefcase, CalendarCheck, Sparkles } from "lucide-react";
 
-const executiveRoutes = [
-  {
-    journey: "East Midlands Airport",
-    from: "£70",
-  },
-  {
-    journey: "Birmingham Airport",
-    from: "£160",
-  },
-  {
-    journey: "Manchester Airport",
-    from: "£210",
-  },
-  {
-    journey: "Heathrow Airport",
-    from: "£330",
-  },
-];
+const executiveRoutes = AIRPORT_FARES.map((fare) => ({
+  journey: fare.airport,
+  from: fromPrice(fare.executive),
+}));
 
 const faqs = [
   {
@@ -218,7 +205,7 @@ export default function ExecutiveCar() {
                 <thead>
                   <tr className="border-b bg-secondary/50">
                     <th className="p-4 text-left font-semibold">Journey</th>
-                    <th className="p-4 text-left font-semibold">From</th>
+                    <th className="p-4 text-left font-semibold">Price</th>
                   </tr>
                 </thead>
 
@@ -241,8 +228,8 @@ export default function ExecutiveCar() {
             </div>
 
             <p className="text-sm text-muted-foreground mt-4">
-              Prices shown are guide prices. Your fixed price is confirmed at
-              the time of booking, before you travel.
+Prices shown are guide prices and include VAT. Your fixed price is
+              confirmed at the time of booking, before you travel.
             </p>
           </section>
 

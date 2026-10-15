@@ -3,6 +3,8 @@
 // that don't run scripts see the right page), and <PageMeta> uses the same
 // entries in the browser.
 
+import { EMA_FROM } from "./airportFares";
+
 export const SITE_URL = "https://cloudcarsltd.com";
 
 export type PageMetaEntry = { title: string; description: string };
@@ -36,9 +38,9 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
   },
   "/nottingham-to-east-midlands-airport": {
     title:
-      "Taxi Nottingham to East Midlands Airport | £40 Airport Transfer | Cloud Cars",
+      `Taxi Nottingham to East Midlands Airport | ${EMA_FROM} | Cloud Cars`,
     description:
-      "Taxi from Nottingham to East Midlands Airport from £40. Reliable 24/7 airport transfers covering Beeston, West Bridgford, Wollaton and Edwalton with Cloud Cars.",
+      `Taxi from Nottingham to East Midlands Airport ${EMA_FROM.toLowerCase()}. Reliable 24/7 airport transfers covering Beeston, West Bridgford, Wollaton and Edwalton with Cloud Cars.`,
   },
   "/executive-car-nottingham": {
     title: "Executive Car Service Nottingham | Executive Travel | Cloud Cars",

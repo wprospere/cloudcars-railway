@@ -1,4 +1,5 @@
 import PageMeta from "@/components/PageMeta";
+import { AIRPORT_FARES, fromPrice } from "@shared/airportFares";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
@@ -6,24 +7,10 @@ import ServiceHero from "@/components/ServiceHero";
 import FeatureCard from "@/components/FeatureCard";
 import { Car, Luggage, Users } from "lucide-react";
 
-const sevenSeaterRoutes = [
-  {
-    journey: "East Midlands Airport",
-    from: "£75",
-  },
-  {
-    journey: "Birmingham Airport",
-    from: "£170",
-  },
-  {
-    journey: "Manchester Airport",
-    from: "£220",
-  },
-  {
-    journey: "Heathrow Airport",
-    from: "£360",
-  },
-];
+const sevenSeaterRoutes = AIRPORT_FARES.map((fare) => ({
+  journey: fare.airport,
+  from: fromPrice(fare.xl),
+}));
 
 const faqs = [
   {
@@ -216,7 +203,7 @@ export default function SevenSeater() {
                 <thead>
                   <tr className="border-b bg-secondary/50">
                     <th className="p-4 text-left font-semibold">Journey</th>
-                    <th className="p-4 text-left font-semibold">From</th>
+                    <th className="p-4 text-left font-semibold">Price</th>
                   </tr>
                 </thead>
 
@@ -239,8 +226,8 @@ export default function SevenSeater() {
             </div>
 
             <p className="text-sm text-muted-foreground mt-4">
-              Prices shown are guide prices. Your fixed price is confirmed at
-              the time of booking, before you travel.
+Prices shown are guide prices and include VAT. Your fixed price is
+              confirmed at the time of booking, before you travel.
             </p>
           </section>
 

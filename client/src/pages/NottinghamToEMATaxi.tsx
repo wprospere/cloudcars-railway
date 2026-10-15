@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { EMA_FROM } from "@shared/airportFares";
 import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -14,7 +15,7 @@ import PageLayout from "@/layouts/PageLayout";
 import ServiceHero from "@/components/ServiceHero";
 
 const journeyFacts = [
-  { icon: PoundSterling, text: "Guide price from £40" },
+  { icon: PoundSterling, text: `Guide price ${EMA_FROM.toLowerCase()}` },
   { icon: Clock, text: "Approx journey time: 30 minutes" },
   { icon: ShieldCheck, text: "Professional licensed drivers" },
   { icon: PlaneTakeoff, text: "24/7 pre-booked airport transfers" },
@@ -71,7 +72,7 @@ export default function NottinghamToEMATaxi() {
         image="/airport-plane.webp"
         imageClassName="origin-left scale-[1.3] object-[50%_35%]"
         reassurances={[
-          "Guide price from £40",
+          `Guide price ${EMA_FROM.toLowerCase()}`,
           "About 30 minutes",
           "Available 24/7",
           "Flight tracking available",

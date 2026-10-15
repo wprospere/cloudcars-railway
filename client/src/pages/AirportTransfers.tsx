@@ -18,40 +18,22 @@ import {
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/layouts/PageLayout";
 
+import { AIRPORT_FARES, EMA_FROM, fromPrice } from "@shared/airportFares";
+
 const BOOKING_URL = "https://book.cloudcarsltd.com/portal/#/booking";
 
-const airportRoutes = [
-  {
-    airport: "East Midlands Airport",
-    standard: "£40",
-    executive: "£70",
-    xl: "£75",
-  },
-  {
-    airport: "Birmingham Airport",
-    standard: "£110",
-    executive: "£160",
-    xl: "£170",
-  },
-  {
-    airport: "Manchester Airport",
-    standard: "£150",
-    executive: "£210",
-    xl: "£220",
-  },
-  {
-    airport: "Heathrow Airport",
-    standard: "£260",
-    executive: "£330",
-    xl: "£360",
-  },
-];
+const airportRoutes = AIRPORT_FARES.map((fare) => ({
+  airport: fare.airport,
+  standard: fromPrice(fare.standard),
+  executive: fromPrice(fare.executive),
+  xl: fromPrice(fare.xl),
+}));
 
 const faqs = [
   {
     question: "How much is a taxi from Nottingham to East Midlands Airport?",
     answer:
-      "Guide prices for airport transfers from Nottingham to East Midlands Airport start from £40 for a standard vehicle. Final prices may vary depending on pickup location, time of travel and vehicle type.",
+      `Guide prices for airport transfers from Nottingham to East Midlands Airport start ${EMA_FROM.toLowerCase()} for a standard vehicle, including VAT. Final prices may vary depending on pickup location, time of travel and vehicle type.`,
   },
   {
     question: "Do you offer Heathrow airport transfers from Nottingham?",
@@ -365,7 +347,7 @@ export default function AirportTransfers() {
                     {route.airport}
                   </h3>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Standard from
+                    Standard
                   </p>
                   <p className="text-3xl font-bold text-primary">
                     {route.standard}
@@ -389,8 +371,8 @@ export default function AirportTransfers() {
             </div>
 
             <p className="mt-5 text-sm text-muted-foreground">
-              Prices shown are guide prices. Your fixed price is confirmed at
-              the time of booking, before you travel.
+Prices shown are guide prices and include VAT. Your fixed price is
+              confirmed at the time of booking, before you travel.
             </p>
           </section>
         </div>
