@@ -28,3 +28,6 @@ export const getLoginUrl = () => {
 
   return url.toString();
 };
+
+// Our Google Business listing (Cloud Cars, Medway St, NG8 1PN).
+export const GOOGLE_REVIEWS_URL = "https://www.google.com/maps?cid=3242014430937098625";

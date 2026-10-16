@@ -11,6 +11,7 @@ import {
   Heart,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { GOOGLE_REVIEWS_URL } from "@/const";
 
 const trustItems = [
   {
@@ -55,7 +56,7 @@ const stats = [
   { value: "14+", label: "Years in Nottingham" },
   { value: "100K+", label: "Journeys Completed" },
   { value: "24/7", label: "Always Available" },
-  { value: "99%", label: "On-Time Arrivals" },
+  { value: "97%", label: "On-Time Arrivals" },
 ];
 
 export default function Trust() {
@@ -200,40 +201,26 @@ export default function Trust() {
           ))}
         </div>
 
-        {/* Customer Reviews — replace with real Google reviews */}
-        <div className="mb-16">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-foreground">What our customers say</h3>
-            <a
-              href="https://www.google.com/search?q=cloud+cars+nottingham+reviews"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline"
-            >
-              See all Google reviews →
-            </a>
+        {/* Review prompt. Only quote real reviews here, word for word, with permission. */}
+        <div className="mb-16 flex flex-col items-center gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-8 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Star className="h-6 w-6 text-primary" />
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { name: "Sarah M.", date: "November 2024", text: "Driver arrived early for our 4am airport run. Professional, friendly, and knew exactly where to go. Will definitely use Cloud Cars again." },
-              { name: "James H.", date: "October 2024", text: "We use Cloud Cars for all our staff travel. The invoicing makes it easy for our finance team and the drivers are always presentable and on time." },
-              { name: "Rachel T.", date: "December 2024", text: "Been using them for school runs and local trips for years. Never had a single problem — always reliable and friendly." },
-              { name: "David K.", date: "September 2024", text: "Best taxi company in Nottingham. Last-minute airport transfer, driver was excellent throughout. Highly recommend." },
-            ].map((review, i) => (
-              <div key={i} className="bg-card rounded-xl p-5 border border-border flex flex-col">
-                <div className="flex items-center gap-1 mb-3">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">"{review.text}"</p>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{review.name}</p>
-                  <p className="text-xs text-muted-foreground">Google Review</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-xl font-semibold text-foreground">
+            Travelled with us recently?
+          </h3>
+          <p className="max-w-xl text-muted-foreground">
+            Tell other people in Nottingham how it went. A quick Google review
+            helps us and helps them choose.
+          </p>
+          <a
+            href={GOOGLE_REVIEWS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Leave a Google review
+          </a>
         </div>
 
         {partnerLogos.length > 0 && (

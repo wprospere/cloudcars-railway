@@ -1,30 +1,26 @@
-import { Star } from "lucide-react";
+import { ShieldCheck, Star } from "lucide-react";
+import { GOOGLE_REVIEWS_URL } from "@/const";
 
 export default function RatingBar() {
   return (
     <section className="bg-secondary/30 border-y border-border">
       <div className="container mx-auto max-w-7xl py-4">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
-          <div className="flex items-center gap-1 text-primary">
-            <Star className="w-5 h-5 fill-current" />
-            <Star className="w-5 h-5 fill-current" />
-            <Star className="w-5 h-5 fill-current" />
-            <Star className="w-5 h-5 fill-current" />
-            <Star className="w-5 h-5 fill-current" />
-          </div>
+          <ShieldCheck className="w-5 h-5 text-primary" />
 
           <p className="text-sm font-medium text-foreground">
-            Rated <span className="font-semibold">4.9/5</span> by hundreds of
-            customers across Nottingham
+            Licensed by Nottingham City and Rushcliffe councils, with
+            DBS-checked drivers, serving Nottingham since 2012
           </p>
 
           <a
-            href="https://www.google.com/search?q=cloud+cars+nottingham"
+            href={GOOGLE_REVIEWS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline"
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
-            View reviews →
+            <Star className="w-4 h-4" />
+            Review us on Google →
           </a>
         </div>
       </div>

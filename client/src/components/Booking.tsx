@@ -204,11 +204,11 @@ export default function Booking() {
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Star className="w-4 h-4 text-primary fill-primary" />
-                4.9/5 rated
+                Serving Nottingham since 2012
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="w-4 h-4 text-primary" />
-                99% on-time arrivals
+                97% on-time arrivals
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -267,7 +267,7 @@ export default function Booking() {
               serving Nottingham •
               <span className="text-primary font-semibold ml-1">100K+</span>{" "}
               journeys completed •
-              <span className="text-primary font-semibold ml-1">99%</span>{" "}
+              <span className="text-primary font-semibold ml-1">97%</span>{" "}
               on-time arrivals
             </p>
           </div>
