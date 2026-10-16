@@ -208,6 +208,8 @@
     --muted-foreground: oklch(0.42 0.03 240);
     --border: oklch(0.87 0.04 145);
     --input: oklch(0.93 0.03 145);
+    /* Text with no colour class inherits from here, not from the dark body */
+    color: var(--foreground);
   }
 }
 
