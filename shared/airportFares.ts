@@ -1,8 +1,7 @@
-// Fixed airport fares, one way from central Nottingham, in pounds EXCLUDING VAT.
-// These are the same fares as the business account rate card; the website
-// shows them with VAT added, because prices shown to the public must include it.
-
-export const VAT_RATE = 0.2;
+// Fixed airport fares, one way from inside the Nottingham ring road, in pounds.
+// These match the Cloud Cars tariff card. Everyday bookings carry no VAT on the
+// fare (Cloud Cars books as the driver's agent); business accounts pay the same
+// fare with VAT added on the invoice. Airport parking is added at cost.
 
 export type AirportFare = {
   airport: string;
@@ -13,19 +12,14 @@ export type AirportFare = {
 
 export const AIRPORT_FARES: AirportFare[] = [
   { airport: "East Midlands Airport", standard: 45, xl: 55, executive: 80 },
-  { airport: "Birmingham Airport", standard: 125, xl: 150, executive: 195 },
-  { airport: "Manchester Airport", standard: 185, xl: 215, executive: 260 },
-  { airport: "Heathrow Airport", standard: 245, xl: 285, executive: 320 },
+  { airport: "Birmingham Airport", standard: 100, xl: 120, executive: 135 },
+  { airport: "Manchester Airport", standard: 160, xl: 190, executive: 235 },
+  { airport: "Heathrow Airport", standard: 215, xl: 255, executive: 290 },
 ];
 
-export function withVat(exVat: number) {
-  return Math.round(exVat * (1 + VAT_RATE) * 100) / 100;
-}
-
-/** "From £54" — the public, VAT-inclusive price. */
-export function fromPrice(exVat: number) {
-  const inc = withVat(exVat);
-  return `From £${Number.isInteger(inc) ? inc : inc.toFixed(2)}`;
+/** "From £45" */
+export function fromPrice(pounds: number) {
+  return `From £${Number.isInteger(pounds) ? pounds : pounds.toFixed(2)}`;
 }
 
 export const EMA_FROM = fromPrice(AIRPORT_FARES[0].standard);

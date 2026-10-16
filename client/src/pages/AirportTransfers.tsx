@@ -33,7 +33,7 @@ const faqs = [
   {
     question: "How much is a taxi from Nottingham to East Midlands Airport?",
     answer:
-      `Guide prices for airport transfers from Nottingham to East Midlands Airport start ${EMA_FROM.toLowerCase()} for a standard vehicle, including VAT. Final prices may vary depending on pickup location, time of travel and vehicle type.`,
+      `Guide prices for airport transfers from Nottingham to East Midlands Airport start ${EMA_FROM.toLowerCase()} for a standard vehicle, plus the airport drop-off charge. Final prices may vary depending on pickup location, time of travel and vehicle type.`,
   },
   {
     question: "Do you offer Heathrow airport transfers from Nottingham?",
@@ -371,7 +371,8 @@ export default function AirportTransfers() {
             </div>
 
             <p className="mt-5 text-sm text-muted-foreground">
-Prices shown are guide prices and include VAT. Your fixed price is
+Prices shown are guide prices. Airport parking or drop-off charges
+              are added at cost. Your fixed price is
               confirmed at the time of booking, before you travel.
             </p>
           </section>

@@ -226,7 +226,8 @@ export default function SevenSeater() {
             </div>
 
             <p className="text-sm text-muted-foreground mt-4">
-Prices shown are guide prices and include VAT. Your fixed price is
+Prices shown are guide prices. Airport parking or drop-off charges
+              are added at cost. Your fixed price is
               confirmed at the time of booking, before you travel.
             </p>
           </section>
