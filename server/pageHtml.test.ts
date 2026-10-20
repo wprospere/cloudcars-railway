@@ -32,6 +32,13 @@ describe("page titles in the served HTML", () => {
     }
   });
 
+  it("keeps every title short enough for Google to show in full", () => {
+    for (const p of INDEXABLE_PATHS) {
+      expect(PAGE_META[p].title.length, `${p}: ${PAGE_META[p].title}`).toBeLessThanOrEqual(60);
+      expect(PAGE_META[p].description.length, p).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("treats a trailing slash as the same page", () => {
     expect(injectPageMeta(indexHtml, "/faqs/")).toBe(
       injectPageMeta(indexHtml, "/faqs")

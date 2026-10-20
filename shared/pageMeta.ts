@@ -16,7 +16,7 @@ const areaPage = (area: string): PageMetaEntry => ({
 
 export const PAGE_META: Record<string, PageMetaEntry> = {
   "/": {
-    title: "Taxi Nottingham | Airport Transfers & Corporate Travel | Cloud Cars",
+    title: "Taxi Nottingham | Airport & Corporate Travel | Cloud Cars",
     description:
       "Reliable taxi services in Nottingham from Cloud Cars: airport transfers, executive cars, corporate travel, courier services and pre-booked journeys.",
   },
@@ -26,29 +26,27 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
       "Book a reliable taxi in Nottingham with Cloud Cars. Local journeys, airport transfers and pre-booked travel with professional drivers and clean vehicles.",
   },
   "/airport-transfers-nottingham": {
-    title: "Airport Transfers Nottingham | Nottingham Airport Taxi | Cloud Cars",
+    title: "Airport Transfers Nottingham | Fixed Fares | Cloud Cars",
     description:
       "Book reliable airport transfers from Nottingham with Cloud Cars. Fixed quotes to East Midlands, Birmingham, Manchester and Heathrow. 24/7 pre-booked service.",
   },
   "/east-midlands-airport-taxi": {
-    title:
-      "Taxi to East Midlands Airport | Nottingham Airport Transfers | Cloud Cars",
+    title: "East Midlands Airport Taxi | Cloud Cars Nottingham",
     description:
       "Taxi to East Midlands Airport from Nottingham with Cloud Cars. Reliable transfers, fixed prices and professional drivers for early and late flights.",
   },
   "/nottingham-to-east-midlands-airport": {
-    title:
-      `Taxi Nottingham to East Midlands Airport | ${EMA_FROM} | Cloud Cars`,
+    title: `Nottingham to East Midlands Airport | ${EMA_FROM} | Cloud Cars`,
     description:
       `Taxi from Nottingham to East Midlands Airport ${EMA_FROM.toLowerCase()}. Reliable 24/7 airport transfers covering Beeston, West Bridgford, Wollaton and Edwalton with Cloud Cars.`,
   },
   "/executive-car-nottingham": {
-    title: "Executive Car Service Nottingham | Executive Travel | Cloud Cars",
+    title: "Executive Car Service Nottingham | Cloud Cars",
     description:
       "Book an executive car in Nottingham with Cloud Cars. Premium vehicles for business travel, airport transfers and client collections with professional drivers.",
   },
   "/7-seater-taxi-nottingham": {
-    title: "7 Seater Taxi Nottingham | Group & Family Travel | Cloud Cars",
+    title: "7 Seater Taxi Nottingham | Group & Family | Cloud Cars",
     description:
       "Book a 7 seater taxi in Nottingham with Cloud Cars. Ideal for airport transfers, family travel, group bookings, business teams and journeys with extra luggage.",
   },
@@ -58,8 +56,7 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
       "Reliable same-day courier and parcel delivery in Nottingham with Cloud Cars. Business documents, hospital runs and urgent local deliveries.",
   },
   "/corporate-transport-nottingham": {
-    title:
-      "Corporate Transport Nottingham | Business Travel Services | Cloud Cars",
+    title: "Corporate Transport Nottingham | Cloud Cars",
     description:
       "Dependable corporate transport in Nottingham for staff travel, airport runs and business accounts. Professional drivers and one clear invoice from Cloud Cars.",
   },

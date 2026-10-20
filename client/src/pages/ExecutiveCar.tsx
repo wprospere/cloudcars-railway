@@ -197,7 +197,7 @@ export default function ExecutiveCar() {
             <p className="text-muted-foreground mb-6 max-w-3xl">
               Below are guide prices for some popular executive journeys from
               Nottingham. Final pricing may vary depending on pickup location,
-              waiting time, parking, route and booking requirements.
+              waiting time, route and booking requirements.
             </p>
 
             <div className="overflow-x-auto rounded-2xl border bg-card">
@@ -228,9 +228,7 @@ export default function ExecutiveCar() {
             </div>
 
             <p className="text-sm text-muted-foreground mt-4">
-Prices shown are guide prices. Airport parking or drop-off charges
-              are added at cost. Your fixed price is
-              confirmed at the time of booking, before you travel.
+Prices shown are guide prices. Airport pickup and drop-off fees are built into the price you see when you book. Your fixed price is confirmed at the time of booking, before you travel.
             </p>
           </section>
 

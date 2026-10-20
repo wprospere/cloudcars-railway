@@ -101,7 +101,7 @@ const services = [
       "Mercedes & BMW fleet",
       "Bottled water & phone chargers",
       "Professional chauffeurs",
-      "Book-ahead guarantee",
+      "Book ahead",
       "Business-ready travel",
     ],
     popular: false,
