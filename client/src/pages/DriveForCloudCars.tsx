@@ -772,8 +772,7 @@ export default function DriveForCloudCars() {
                     </span>
                     <span className="ml-6 text-xs text-muted-foreground">
                       We are currently onboarding drivers licensed with
-                      Nottingham City Council, Rushcliffe Borough Council and
-                      City of Wolverhampton Council.
+                      Nottingham City Council and Rushcliffe Borough Council.
                     </span>
                   </li>
                   <li className="flex flex-col gap-1">
