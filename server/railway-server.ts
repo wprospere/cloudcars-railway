@@ -318,8 +318,45 @@ app.get("/api/admin/contact-messages", async (_req, res) => {
 // CMS image upload -> S3 (recommended)
 // --------------------
 
-// In-memory upload (no disk)
-const upload = multer({ storage: multer.memoryStorage() });
+// In-memory upload (no disk), capped at 10 MB and images only
+const CMS_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+const CMS_IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+};
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: CMS_UPLOAD_MAX_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (CMS_IMAGE_EXTENSIONS[file.mimetype]) return cb(null, true);
+    cb(new Error("UNSUPPORTED_FILE_TYPE"));
+  },
+});
+
+// Wraps upload.single so size/type problems return a clear JSON error
+function singleImageUpload(field: string): express.RequestHandler {
+  const handler = upload.single(field);
+  return (req, res, next) => {
+    handler(req, res, (err: any) => {
+      if (!err) return next();
+      if (err?.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(413)
+          .json({ ok: false, error: "File too large (max 10 MB)" });
+      }
+      if (err?.message === "UNSUPPORTED_FILE_TYPE") {
+        return res.status(400).json({
+          ok: false,
+          error: "Only JPEG, PNG, WebP, GIF or AVIF images are allowed",
+        });
+      }
+      return res.status(400).json({ ok: false, error: "Upload failed" });
+    });
+  };
+}
 
 function requiredEnv(name: string) {
   const v = process.env[name];
@@ -354,7 +391,7 @@ const S3_PUBLIC_BASE = isS3Configured()
   : "";
 
 // Upload endpoint (admin-only via the /api/admin guard above)
-app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
+app.post("/api/admin/cms-upload", singleImageUpload("file"), async (req, res) => {
   try {
     if (!isS3Configured() || !s3) {
       return res.status(500).json({
@@ -368,7 +405,7 @@ app.post("/api/admin/cms-upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ ok: false, error: "No file uploaded" });
     }
 
-    const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase();
+    const ext = CMS_IMAGE_EXTENSIONS[req.file.mimetype] || "bin";
     const key = `cms/${new Date().toISOString().slice(0, 10)}/${nanoid()}.${ext}`;
 
     await s3.send(
