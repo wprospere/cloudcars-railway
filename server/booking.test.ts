@@ -3,11 +3,22 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 // Mock the database functions
-vi.mock("./db", () => ({
+vi.mock("./db", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./db")>()),
   createBooking: vi.fn().mockResolvedValue({ id: 1 }),
   createDriverApplication: vi.fn().mockResolvedValue({ id: 1 }),
   createCorporateInquiry: vi.fn().mockResolvedValue({ id: 1 }),
   createContactMessage: vi.fn().mockResolvedValue({ id: 1 }),
+}));
+
+// Pretend the Cloudflare Turnstile check passed, and never send real email
+vi.mock("./security/turnstile.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./security/turnstile.js")>()),
+  verifyTurnstile: vi.fn().mockResolvedValue(true),
+}));
+vi.mock("./railway-email", () => ({
+  sendEmail: vi.fn().mockResolvedValue(true),
+  notifyOwner: vi.fn().mockResolvedValue(true),
 }));
 
 function createPublicContext(): TrpcContext {
@@ -85,6 +96,7 @@ describe("booking.create", () => {
       pickupDate: "2024-12-15",
       pickupTime: "14:00",
       passengers: 2,
+      turnstileToken: "test-token",
     });
 
     expect(result.success).toBe(true);
@@ -106,6 +118,7 @@ describe("driver.submit", () => {
       vehicleOwner: true,
       vehicleType: "Toyota Prius 2022",
       availability: "fulltime",
+      turnstileToken: "test-token",
     });
 
     expect(result.success).toBe(true);
@@ -125,6 +138,7 @@ describe("corporate.inquire", () => {
       phone: "0115 123 4567",
       estimatedMonthlyTrips: "50-100",
       requirements: "Airport transfers and client meetings",
+      turnstileToken: "test-token",
     });
 
     expect(result.success).toBe(true);
@@ -143,6 +157,7 @@ describe("contact.send", () => {
       phone: "0115 987 6543",
       subject: "General Enquiry",
       message: "I would like to know more about your services.",
+      turnstileToken: "test-token",
     });
 
     expect(result.success).toBe(true);

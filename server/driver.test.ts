@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { createDriverApplication } from "./db";
 
-describe("Driver Application", () => {
+// Needs a real MySQL database, so it only runs when asked for
+// (RUN_DB_TESTS=1 with DATABASE_URL pointing at a throwaway test database).
+describe.skipIf(!process.env.RUN_DB_TESTS)("Driver Application", () => {
   it("should successfully create a driver application with all required fields", async () => {
     const application = {
       fullName: "Test Driver",

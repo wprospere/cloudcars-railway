@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { sendEmail } from "./_core/emailService";
+import { sendEmail } from "./railway-email";
 
-describe("Mailgun Email Service", () => {
+// Live test: sends a real email through Mailgun, so it only runs when asked for
+// (RUN_LIVE_TESTS=1 with the real MAILGUN_* variables set).
+describe.skipIf(!process.env.RUN_LIVE_TESTS)("Mailgun Email Service", () => {
   it("should have valid Mailgun credentials configured", async () => {
     // Check environment variables are set
     expect(process.env.MAILGUN_API_KEY).toBeDefined();
