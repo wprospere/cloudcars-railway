@@ -9,9 +9,9 @@ export const SITE_URL = "https://cloudcarsltd.com";
 
 export type PageMetaEntry = { title: string; description: string };
 
-const areaPage = (area: string): PageMetaEntry => ({
-  title: `Taxi ${area} | Cloud Cars`,
-  description: `Reliable taxi service in ${area} with Cloud Cars. Local journeys, airport transfers and business travel from ${area} to Nottingham and beyond.`,
+const areaPage = (area: string, description: string): PageMetaEntry => ({
+  title: `Taxi ${area} | Local & Airport Transfers | Cloud Cars`,
+  description,
 });
 
 export const PAGE_META: Record<string, PageMetaEntry> = {
@@ -60,10 +60,22 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
     description:
       "Dependable corporate transport in Nottingham for staff travel, airport runs and business accounts. Professional drivers and one clear invoice from Cloud Cars.",
   },
-  "/taxi-beeston": areaPage("Beeston"),
-  "/taxi-west-bridgford": areaPage("West Bridgford"),
-  "/taxi-wollaton": areaPage("Wollaton"),
-  "/taxi-edwalton": areaPage("Edwalton"),
+  "/taxi-beeston": areaPage(
+    "Beeston",
+    "Pre-booked taxis from Beeston with Cloud Cars. Fixed fares for the station, University of Nottingham, the QMC and East Midlands Airport. Available 24/7."
+  ),
+  "/taxi-west-bridgford": areaPage(
+    "West Bridgford",
+    "Pre-booked taxis from West Bridgford with Cloud Cars. Fixed fares to the city centre, Trent Bridge, East Midlands Airport and beyond. Available 24/7."
+  ),
+  "/taxi-wollaton": areaPage(
+    "Wollaton",
+    "Pre-booked taxis from Wollaton with Cloud Cars. Fixed fares for Wollaton Hall, Beeston station, the city centre and East Midlands Airport. Available 24/7."
+  ),
+  "/taxi-edwalton": areaPage(
+    "Edwalton",
+    "Pre-booked taxis from Edwalton with Cloud Cars. Fixed fares to West Bridgford, Nottingham, East Midlands Airport and beyond. Available 24/7."
+  ),
   "/drive-for-cloud-cars": {
     title: "Drive for Cloud Cars | Private Hire Jobs in Nottingham",
     description:
