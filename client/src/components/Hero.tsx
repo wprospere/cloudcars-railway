@@ -72,7 +72,7 @@ export default function Hero() {
 
           <p className="flex items-center gap-2 text-base sm:text-lg font-medium text-foreground max-w-2xl">
             <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-            Know your fare before you travel. Know your driver when you arrive.
+            Technology makes booking easy. People make the journey better.
           </p>
 
           {/* CTA Buttons */}
@@ -103,7 +103,7 @@ export default function Hero() {
             >
               <a href="tel:01158244244">
                 <Phone className="w-5 h-5 mr-2" />
-                0115 8 244 244
+                Call 0115 8 244 244
               </a>
             </Button>
           </div>

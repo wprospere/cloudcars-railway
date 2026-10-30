@@ -9,10 +9,10 @@ const defaultContent: Record<string, {
   buttonLink?: string;
 }> = {
   hero: {
-    title: "Getting You There,",
-    subtitle: "Every Time",
-    description: "Cloud Cars has been moving Nottingham since 2012. From quick city trips to airport runs, our local drivers know the best routes to get you where you need to be.",
-    buttonText: "Book Your Ride",
+    title: "Nottingham Taxis, Airport Transfers",
+    subtitle: "& Business Travel",
+    description: "From everyday journeys across Nottingham to airport transfers and corporate travel, Cloud Cars brings together professional drivers, local knowledge and modern booking technology.",
+    buttonText: "Get a Quote & Book",
     buttonLink: "#booking",
   },
   services: {

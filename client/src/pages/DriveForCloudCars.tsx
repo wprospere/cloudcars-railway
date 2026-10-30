@@ -324,6 +324,18 @@ export default function DriveForCloudCars() {
 
                 <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
                   <h2 className="text-lg font-semibold text-foreground">
+                    Fair, transparent commission
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    New drivers start on an introductory commission of 10% for
+                    their first 10 jobs or two weeks, then our standard 15%, as
+                    set out in your driver agreement. Completed work is paid
+                    weekly, direct to your bank.
+                  </p>
+                </div>
+
+                <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-foreground">
                     Typical weekly opportunity
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">

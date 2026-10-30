@@ -98,7 +98,7 @@ const services = [
     price: "Premium Service",
     priceNote: "luxury travel",
     features: [
-      "Mercedes & BMW fleet",
+      "Executive vehicles, subject to availability",
       "Bottled water & phone chargers",
       "Professional chauffeurs",
       "Book ahead",
@@ -134,7 +134,7 @@ const largerVehicles = {
   title: "Larger Vehicles",
   subtitle: "7 to 16 Seaters",
   description:
-    "Need transport for a group? We offer larger vehicles from 7 to 16 seats for airport runs, events, corporate outings, family travel, school trips and more.",
+    "Need transport for a group? We offer larger vehicles from 7 to 16 seats for airport runs, events, corporate outings, family travel, school trips and more, subject to availability.",
   features: [
     "7, 8, 12 and 16 seater options",
     "Ideal for airport groups",

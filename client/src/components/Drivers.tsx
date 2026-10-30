@@ -90,6 +90,11 @@ export default function Drivers() {
                 your time in traffic is worth something. Pre-booked account and
                 airport work, with regular customers who ask for you by name.
               </p>
+              <p className="text-sm text-muted-foreground leading-6 mt-3">
+                Our commission is 10% for new drivers at the start (your first
+                10 jobs or two weeks), then our standard 15%, as set out in your
+                driver agreement.
+              </p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-6 mb-10">
