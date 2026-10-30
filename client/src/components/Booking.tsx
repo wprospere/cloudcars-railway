@@ -49,7 +49,9 @@ function track(eventName: string, props: Record<string, string | number | boolea
 }
 
 export default function Booking() {
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(
+    () => typeof window !== "undefined" && (window as any).cloudcarsLoadBooking === true
+  );
 
   // Allow parent components (e.g. Hero CTA) to trigger the iframe load
   // without requiring a second click once the user has scrolled here.
@@ -96,6 +98,8 @@ export default function Booking() {
             </p>
           </div>
 
+          {/* On phones and tablets the form comes first; the explanatory blocks follow it. */}
+          <div className="flex flex-col">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             {serviceTypes.map((service) => (
               <div
@@ -195,7 +199,7 @@ export default function Booking() {
 
           <div
             id="quickbooker"
-            className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5 scroll-mt-28"
+            className="max-lg:order-first max-lg:mb-8 overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-lg shadow-primary/5 scroll-mt-28"
           >
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 px-6 py-3 bg-primary/5 border-b border-primary/10 text-sm">
               <span className="flex items-center gap-1.5 font-medium text-foreground">
@@ -259,6 +263,8 @@ export default function Booking() {
                 </p>
               </div>
             )}
+          </div>
+
           </div>
 
           <div className="mt-8 text-center">
