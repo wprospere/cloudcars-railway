@@ -234,6 +234,18 @@ export default function AirportRoutePage({ airport }: { airport: string }) {
             </div>
           </section>
 
+          <section className="mb-14 rounded-2xl border border-primary/20 bg-primary/5 p-8">
+            <h2 className="mb-3 text-xl font-semibold text-foreground">
+              Book your return journey too
+            </h2>
+            <p className="max-w-3xl text-muted-foreground">
+              You can book your outward and return journeys together. Tell us
+              your flight details, pickup address and number of passengers, and
+              your arrival pickup is arranged in advance, so there is a driver
+              waiting when you land.
+            </p>
+          </section>
+
           <section className="mb-14 rounded-2xl border border-border bg-card p-8">
             <h2 className="mb-4 text-xl font-semibold text-foreground">
               Where we collect from

@@ -63,7 +63,7 @@ export const AIRPORT_PAGES: Record<string, AirportContent> = {
       },
       {
         q: "Can you collect me from Heathrow when I land?",
-        a: "Yes. Pre-book your return with your flight number. We track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
+        a: "Yes. You can book your outward and return journeys together. Give us your return flight number and we track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
       },
     ],
   },
@@ -104,7 +104,7 @@ export const AIRPORT_PAGES: Record<string, AirportContent> = {
       },
       {
         q: "Can you collect me from Birmingham Airport when I land?",
-        a: "Yes. Pre-book your return with your flight number. We track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
+        a: "Yes. You can book your outward and return journeys together. Give us your return flight number and we track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
       },
       {
         q: "Can you take me to the NEC as well?",
@@ -154,7 +154,7 @@ export const AIRPORT_PAGES: Record<string, AirportContent> = {
       },
       {
         q: "Can you collect me from Manchester Airport when I land?",
-        a: "Yes. Pre-book your return with your flight number. We track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
+        a: "Yes. You can book your outward and return journeys together. Give us your return flight number and we track the flight, meet you in arrivals and include 30 minutes' waiting on every airport pickup.",
       },
     ],
   },

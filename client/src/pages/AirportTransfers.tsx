@@ -49,6 +49,11 @@ const faqs = [
       "Yes. Cloud Cars provides pre-booked airport transfers from Nottingham to Heathrow Airport, as well as Birmingham, Manchester and East Midlands Airport.",
   },
   {
+    question: "Can I book my return airport journey at the same time?",
+    answer:
+      "Yes. You can book your outward and return journeys together. Give us your flight details and passenger numbers, and your arrival pickup is arranged in advance.",
+  },
+  {
     question: "Can I pre-book an early morning airport transfer?",
     answer:
       "Yes. We recommend pre-booking early morning and late-night airport journeys so your driver and vehicle are arranged in advance.",
@@ -113,6 +118,7 @@ const idealFor = [
 
 const whyChoose = [
   "Pre-booked airport journeys from Nottingham",
+  "Book your outward and return journeys together",
   "Your fare is fixed at booking, so you know the price before you travel",
   "We meet you in arrivals, help with your bags and wait if your flight is late. Thirty minutes' waiting is included on every airport pickup",
   "Airport fees are built into your price. If your pickup runs beyond the 30 minutes included, extra waiting and parking are added at the rates shown when you book",
