@@ -92,8 +92,8 @@ export default function Drivers() {
               </p>
               <p className="text-sm text-muted-foreground leading-6 mt-3">
                 Our commission is 10% for new drivers at the start (your first
-                10 jobs or two weeks), then our standard 15%, as set out in your
-                driver agreement.
+                10 jobs or two weeks), then our standard 15%, including VAT, as set out
+                in your driver agreement.
               </p>
             </div>
 
