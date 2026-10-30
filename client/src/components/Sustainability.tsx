@@ -3,13 +3,13 @@ import { Leaf, Car, TreePine, Zap } from "lucide-react";
 const sustainabilityFeatures = [
   {
     icon: Car,
-    title: "100% Hybrid Fleet",
-    description: "Every vehicle in our fleet is a hybrid, combining efficiency with reliability for cleaner journeys across Nottingham.",
+    title: "Hybrid-Led Fleet",
+    description: "Most of our cars are hybrids, combining efficiency with reliability for cleaner journeys across Nottingham.",
   },
   {
     icon: Leaf,
     title: "Lower Emissions",
-    description: "Our hybrid vehicles produce significantly fewer emissions than traditional taxis, helping keep Nottingham's air cleaner.",
+    description: "Our hybrid cars produce fewer emissions than traditional taxis, helping keep Nottingham's air cleaner.",
   },
   {
     icon: Zap,
@@ -41,7 +41,7 @@ export default function Sustainability() {
             <span className="text-gradient-green font-['Playfair_Display',serif] italic">One Mile at a Time</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Cloud Cars is proud to operate a 100% hybrid fleet. We're committed to reducing 
+            Cloud Cars is proud to run a hybrid-led fleet. We're committed to reducing 
             our environmental impact while providing reliable, comfortable transport across Nottingham.
           </p>
         </div>
@@ -84,26 +84,26 @@ export default function Sustainability() {
               
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div className="text-center p-4 rounded-xl bg-background/50">
-                  <div className="text-3xl font-bold text-primary mb-1">100%</div>
-                  <div className="text-sm text-muted-foreground">Hybrid Fleet</div>
+                  <div className="text-3xl font-bold text-primary mb-1">Hybrid-Led</div>
+                  <div className="text-sm text-muted-foreground">Fleet</div>
                 </div>
                 <div className="text-center p-4 rounded-xl bg-background/50">
-                  <div className="text-3xl font-bold text-primary mb-1">30%</div>
-                  <div className="text-sm text-muted-foreground">Less CO₂</div>
+                  <div className="text-3xl font-bold text-primary mb-1">Lower</div>
+                  <div className="text-sm text-muted-foreground">Emissions</div>
                 </div>
               </div>
 
               <p className="text-muted-foreground text-sm leading-relaxed">
                 By choosing Cloud Cars, you're not just getting a reliable taxi service – 
-                you're making a conscious choice for the environment. Our hybrid vehicles 
-                produce up to 30% less CO₂ than conventional taxis.
+                you're making a conscious choice for the environment. Our hybrid cars 
+                produce lower emissions than conventional taxis.
               </p>
             </div>
 
             <div className="p-6 rounded-xl bg-card border border-border">
-              <h3 className="text-base font-semibold text-foreground mb-3">Nottingham's eco-conscious taxi firm</h3>
+              <h3 className="text-base font-semibold text-foreground mb-3">An eco-conscious Nottingham taxi firm</h3>
               <p className="text-sm text-muted-foreground leading-6">
-                We switched to a fully hybrid fleet before it was the norm — not because it was a trend, but because it was the right thing to do for Nottingham. Every journey with Cloud Cars produces up to 30% less CO₂ than a conventional taxi.
+                We run a hybrid-led fleet because it is the right thing to do for Nottingham. Choosing a hybrid car means lower emissions on every journey than a conventional taxi.
               </p>
             </div>
           </div>

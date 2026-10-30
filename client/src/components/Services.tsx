@@ -189,8 +189,8 @@ export default function Services() {
             </h2>
 
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Nottingham's local private hire firm since 2012. We run a 100%
-              hybrid fleet, our drivers know the city inside out, and you'll
+              Nottingham's local private hire firm since 2012. We run a
+              hybrid-led fleet, our drivers know the city inside out, and you'll
               know your fare before you set off. Whatever the journey, from a
               quick local taxi to an airport run, an executive car, a courier
               delivery or a company account, we do it properly.
@@ -232,7 +232,7 @@ export default function Services() {
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-foreground/90">
               {[
                 "Serving Nottingham since 2012",
-                "100% hybrid fleet",
+                "Hybrid-led fleet",
                 "Fixed fare before you travel",
                 "Available 24/7",
               ].map((item) => (

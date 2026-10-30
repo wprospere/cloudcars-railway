@@ -41,21 +41,21 @@ import { toast } from "sonner";
  *  - journey visibility for account clients
  *  - book-on-behalf-of staff/guests
  *  - DBS-checked, licensed drivers
- *  - owned fleet
+ *  - consistent, accountable drivers
  *  - hybrid/eco fleet (ESG)
  */
 const benefits = [
   {
     icon: Building2,
-    title: "A Fleet We Own & Run",
+    title: "Consistent, Accountable Drivers",
     description:
-      "One of the few Nottingham firms to own its own fleet — that means consistency, accountability, and a single point of contact, not a rota of strangers.",
+      "The same vetted drivers, a named account and a single point of contact. That means consistency and accountability, not a rota of strangers.",
   },
   {
     icon: ShieldCheck,
     title: "Vetted, Licensed Drivers",
     description:
-      "Every driver is DBS-checked, licensed by Nottingham City Council, and fully insured — duty of care covered when you put a colleague or client in one of our vehicles.",
+      "Every driver is DBS-checked, licensed by Nottingham City Council or Rushcliffe Borough Council, and fully insured — duty of care covered when you put a colleague or client in one of our vehicles.",
   },
   {
     icon: Users,
@@ -77,9 +77,9 @@ const benefits = [
   },
   {
     icon: Leaf,
-    title: "Eco-Friendly Hybrid Fleet",
+    title: "Hybrid-Led Fleet",
     description:
-      "Nottingham's first environmentally conscious taxi company. Lower-emission journeys that support your organisation's sustainability reporting.",
+      "Most of our cars are hybrid, so journeys produce lower emissions and support your organisation's sustainability reporting.",
   },
 ];
 
@@ -106,7 +106,7 @@ const faqs = [
   },
   {
     q: "Are your drivers vetted?",
-    a: "Yes. Every driver is DBS-checked, licensed by Nottingham City Council, and carries full liability insurance — so your duty of care obligations are covered whenever you put a colleague or client in one of our vehicles.",
+    a: "Yes. Every driver is DBS-checked, licensed by Nottingham City Council or Rushcliffe Borough Council, and carries full liability insurance — so your duty of care obligations are covered whenever you put a colleague or client in one of our vehicles.",
   },
 ];
 
@@ -339,8 +339,8 @@ export default function Corporate() {
               <p className="text-sm text-muted-foreground leading-6 mt-3">
                 One account, one invoice, and a regular report of your journeys
                 and spend. Book direct with the people who actually drive you.
-                Our longest-standing corporate client has been with us for five
-                years.
+                Some of our corporate clients have been with us since we started in
+                2012.
               </p>
             </div>
 
@@ -383,7 +383,7 @@ export default function Corporate() {
                 <CheckCircle2 className="w-4 h-4 text-primary" /> DBS-checked drivers
               </span>
               <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" /> Owned & operated fleet
+                <CheckCircle2 className="w-4 h-4 text-primary" /> One point of contact
               </span>
             </div>
 

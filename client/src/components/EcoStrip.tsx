@@ -1,8 +1,8 @@
 import { Leaf, Zap, TreePine } from "lucide-react";
 
 const items = [
-  { icon: Leaf, stat: "100% Hybrid", label: "Every vehicle in our fleet" },
-  { icon: Zap, stat: "30% Less CO₂", label: "vs. conventional taxis" },
+  { icon: Leaf, stat: "Hybrid-Led", label: "Most of our cars are hybrid" },
+  { icon: Zap, stat: "Lower Emissions", label: "vs. conventional taxis" },
   { icon: TreePine, stat: "Carbon Conscious", label: "Greener Nottingham" },
 ];
 

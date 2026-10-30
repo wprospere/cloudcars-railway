@@ -18,7 +18,7 @@ const trustItems = [
     icon: Shield,
     title: "Licensed & Fully Covered",
     description:
-      "Every driver holds a Nottingham City Council licence and full insurance. Enhanced DBS checks are standard, because safety always comes first.",
+      "Every driver is licensed by Nottingham City Council or Rushcliffe Borough Council and fully insured. Enhanced DBS checks are standard, because safety always comes first.",
   },
   {
     icon: Award,
@@ -148,7 +148,7 @@ export default function Trust() {
               example by adding a stop or keeping the driver waiting.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              No surprise surge. Busy-time pricing is already in the fare
+              Any busy-time pricing is already included in the fare
               you&apos;re shown before you book.
             </p>
           </div>
