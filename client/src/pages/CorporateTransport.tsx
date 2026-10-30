@@ -90,6 +90,16 @@ export default function CorporateTransport() {
                 account work, Cloud Cars helps businesses move people
                 efficiently.
               </p>
+
+              <p className="font-medium text-foreground">
+                One account. One invoice. One number to call.
+              </p>
+
+              <p>
+                We're not trying to be the biggest transport company in
+                Nottingham. We want to be one of the very best: great service,
+                fair prices and a team you can rely on.
+              </p>
             </div>
           </section>
 
