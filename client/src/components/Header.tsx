@@ -110,20 +110,40 @@ export default function Header() {
             </Button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            className="lg:hidden p-2 text-foreground"
-            aria-label="Toggle menu"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-navigation"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          {/* Phones and tablets: call and book are always one tap away */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <a
+              href="tel:01158244244"
+              aria-label="Call Cloud Cars on 0115 8 244 244"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <Phone className="h-5 w-5" />
+            </a>
+
+            <a
+              href="https://book.cloudcarsltd.com/portal/#/booking"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              Book Now
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="p-2 text-foreground"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
