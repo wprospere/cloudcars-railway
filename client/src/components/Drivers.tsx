@@ -91,9 +91,9 @@ export default function Drivers() {
                 airport work, with regular customers who ask for you by name.
               </p>
               <p className="text-sm text-muted-foreground leading-6 mt-3">
-                Our commission is 10% for new drivers at the start (your first
-                10 jobs or two weeks), then our standard 15%, including VAT, as set out
-                in your driver agreement.
+                Our commission is 10% for new drivers for their first two
+                weeks, then our standard 15%, including VAT, as set out in your
+                driver agreement.
               </p>
             </div>
 

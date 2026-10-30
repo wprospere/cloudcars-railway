@@ -328,9 +328,10 @@ export default function DriveForCloudCars() {
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
                     New drivers start on an introductory commission of 10% for
-                    their first 10 jobs or two weeks, then our standard 15%
-                    (including VAT), as set out in your driver agreement. Completed work is paid
-                    weekly, direct to your bank.
+                    their first two weeks, then our standard 15% (including
+                    VAT), as set out in your driver agreement. Commission is
+                    charged on the fare and any waiting charges. Completed work
+                    is paid weekly, direct to your bank.
                   </p>
                 </div>
 
