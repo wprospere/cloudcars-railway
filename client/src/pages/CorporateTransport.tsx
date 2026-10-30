@@ -112,7 +112,13 @@ export default function CorporateTransport() {
               <ul className="space-y-3 text-muted-foreground">
                 <li>Staff transport</li>
                 <li>Airport transfers</li>
-                <li>Hotel and hospitality transport</li>
+                <li>
+                  <Link href="/hotel-transport-nottingham">
+                    <a className="text-primary hover:underline">
+                      Hotel and hospitality transport
+                    </a>
+                  </Link>
+                </li>
                 <li>Account and invoice-based bookings</li>
                 <li>Scheduled shuttle services</li>
               </ul>

@@ -36,6 +36,7 @@ const footerLinks = {
     { label: "7 Seater Taxi", href: "/7-seater-taxi-nottingham" },
     { label: "Courier Services", href: "/courier-services-nottingham" },
     { label: "Corporate Transport", href: "/corporate-transport-nottingham" },
+    { label: "Hotel Guest Transport", href: "/hotel-transport-nottingham" },
   ],
   company: [
     { label: "About Us", href: "/#about" },

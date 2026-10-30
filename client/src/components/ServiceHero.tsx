@@ -86,7 +86,12 @@ export default function ServiceHero({
               size="lg"
               className="group bg-primary px-8 py-6 text-lg font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
             >
-              <a href={ctaHref} target="_blank" rel="noopener noreferrer">
+              <a
+                href={ctaHref}
+                {...(/^https?:/.test(ctaHref)
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+              >
                 {ctaLabel}
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </a>
