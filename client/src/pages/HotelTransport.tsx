@@ -117,7 +117,7 @@ export default function HotelTransport() {
         tagline="Your guests' journeys, handled."
         description="Reliable airport transfers and local transport for hotel guests, booked through one account with one invoice and a team you can call."
         ctaLabel="Open a Hotel Account"
-        ctaHref="/#corporate"
+        ctaHref="/#corporate-enquiry"
         // TODO: add a hotel photo here, e.g. image="/hotel-guest-transport.webp"
         reassurances={[
           "One account, one invoice",
@@ -257,7 +257,7 @@ export default function HotelTransport() {
                 size="lg"
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <a href="/#corporate">Open a Hotel Account</a>
+                <a href="/#corporate-enquiry">Open a Hotel Account</a>
               </Button>
               <Button asChild size="lg" variant="outline">
                 <a href="tel:01158244244">
