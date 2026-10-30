@@ -352,6 +352,19 @@ export default function DriveForCloudCars() {
                 </div>
 
                 <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Fair fares. Fair to drivers.
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                    Growth should never come at the expense of the people who
+                    make it possible. We won't build Cloud Cars by squeezing
+                    drivers or cutting corners on service. Fairness,
+                    reliability and respect are the three values we run on, and
+                    they apply to our drivers as much as to our customers.
+                  </p>
+                </div>
+
+                <div className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                     <Quote className="h-5 w-5 text-primary" />
                   </div>

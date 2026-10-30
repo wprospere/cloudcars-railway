@@ -233,6 +233,11 @@ export default function About() {
                   school, or regular airport trips for your business, we've got
                   you covered.
                 </p>
+                <p className="font-medium text-foreground">
+                  Fair fares. Fair to drivers. Better journeys for everyone.
+                  Fairness, reliability and respect are the three values we run
+                  on.
+                </p>
               </div>
             </FadeInUp>
 
