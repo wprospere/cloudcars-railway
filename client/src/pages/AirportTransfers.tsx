@@ -22,8 +22,16 @@ import { AIRPORT_FARES, EMA_FROM, fromPrice } from "@shared/airportFares";
 
 const BOOKING_URL = "https://book.cloudcarsltd.com/portal/#/booking";
 
+const ROUTE_PAGES: Record<string, string> = {
+  "East Midlands Airport": "/nottingham-to-east-midlands-airport",
+  "Birmingham Airport": "/nottingham-to-birmingham-airport",
+  "Manchester Airport": "/nottingham-to-manchester-airport",
+  "Heathrow Airport": "/nottingham-to-heathrow-airport",
+};
+
 const airportRoutes = AIRPORT_FARES.map((fare) => ({
   airport: fare.airport,
+  href: ROUTE_PAGES[fare.airport],
   standard: fromPrice(fare.standard),
   executive: fromPrice(fare.executive),
   xl: fromPrice(fare.xl),
@@ -344,7 +352,11 @@ export default function AirportTransfers() {
                     <PlaneTakeoff className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-bold text-foreground">
-                    {route.airport}
+                    <Link href={route.href}>
+                      <a className="hover:text-primary hover:underline">
+                        {route.airport}
+                      </a>
+                    </Link>
                   </h3>
                   <p className="mt-3 text-sm text-muted-foreground">
                     Standard

@@ -34,6 +34,15 @@ const EastMidlandsAirportTaxi = lazy(
   () => import("./pages/EastMidlandsAirportTaxi")
 );
 const NottinghamToEMATaxi = lazy(() => import("./pages/NottinghamToEMATaxi"));
+const NottinghamToHeathrowTaxi = lazy(
+  () => import("./pages/NottinghamToHeathrowTaxi")
+);
+const NottinghamToBirminghamTaxi = lazy(
+  () => import("./pages/NottinghamToBirminghamTaxi")
+);
+const NottinghamToManchesterTaxi = lazy(
+  () => import("./pages/NottinghamToManchesterTaxi")
+);
 
 const TaxiNottingham = lazy(() => import("./pages/TaxiNottingham"));
 const AirportTransfers = lazy(() => import("./pages/AirportTransfers"));
@@ -85,6 +94,18 @@ function Router() {
       <Route
         path="/nottingham-to-east-midlands-airport"
         component={NottinghamToEMATaxi}
+      />
+      <Route
+        path="/nottingham-to-heathrow-airport"
+        component={NottinghamToHeathrowTaxi}
+      />
+      <Route
+        path="/nottingham-to-birmingham-airport"
+        component={NottinghamToBirminghamTaxi}
+      />
+      <Route
+        path="/nottingham-to-manchester-airport"
+        component={NottinghamToManchesterTaxi}
       />
 
       {/* Service pages */}

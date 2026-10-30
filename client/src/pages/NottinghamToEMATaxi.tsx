@@ -31,6 +31,9 @@ const areas = [
 
 const related = [
   { label: "Airport Transfers Nottingham", href: "/airport-transfers-nottingham" },
+  { label: "Nottingham to Heathrow Airport", href: "/nottingham-to-heathrow-airport" },
+  { label: "Nottingham to Birmingham Airport", href: "/nottingham-to-birmingham-airport" },
+  { label: "Nottingham to Manchester Airport", href: "/nottingham-to-manchester-airport" },
   { label: "Taxi Nottingham", href: "/taxi-nottingham" },
   { label: "7 Seater Airport Taxi", href: "/7-seater-taxi-nottingham" },
 ];

@@ -3,11 +3,19 @@
 // that don't run scripts see the right page), and <PageMeta> uses the same
 // entries in the browser.
 
-import { EMA_FROM } from "./airportFares";
+import { AIRPORT_FARES, EMA_FROM, fromPrice } from "./airportFares";
 
 export const SITE_URL = "https://cloudcarsltd.com";
 
 export type PageMetaEntry = { title: string; description: string };
+
+const fareFor = (airport: string) =>
+  fromPrice(AIRPORT_FARES.find((f) => f.airport === airport)!.standard);
+
+const airportRoutePage = (airport: string): PageMetaEntry => ({
+  title: `Nottingham to ${airport} | ${fareFor(airport)} | Cloud Cars`,
+  description: `Taxi from Nottingham to ${airport}. Pre-booked, fixed price agreed at booking, 30 minutes' waiting included and flight tracking. Guide price ${fareFor(airport).toLowerCase()}.`,
+});
 
 const areaPage = (area: string, description: string): PageMetaEntry => ({
   title: `Taxi ${area} | Local & Airport Transfers | Cloud Cars`,
@@ -76,6 +84,9 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
     "Edwalton",
     "Pre-booked taxis from Edwalton with Cloud Cars. Fixed fares to West Bridgford, Nottingham, East Midlands Airport and beyond. Available 24/7."
   ),
+  "/nottingham-to-heathrow-airport": airportRoutePage("Heathrow Airport"),
+  "/nottingham-to-birmingham-airport": airportRoutePage("Birmingham Airport"),
+  "/nottingham-to-manchester-airport": airportRoutePage("Manchester Airport"),
   "/drive-for-cloud-cars": {
     title: "Drive for Cloud Cars | Private Hire Jobs in Nottingham",
     description:

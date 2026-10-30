@@ -20,6 +20,18 @@ const footerLinks = {
       label: "Taxi to East Midlands Airport",
       href: "/nottingham-to-east-midlands-airport",
     },
+    {
+      label: "Taxi to Heathrow Airport",
+      href: "/nottingham-to-heathrow-airport",
+    },
+    {
+      label: "Taxi to Birmingham Airport",
+      href: "/nottingham-to-birmingham-airport",
+    },
+    {
+      label: "Taxi to Manchester Airport",
+      href: "/nottingham-to-manchester-airport",
+    },
     { label: "Executive Cars", href: "/executive-car-nottingham" },
     { label: "7 Seater Taxi", href: "/7-seater-taxi-nottingham" },
     { label: "Courier Services", href: "/courier-services-nottingham" },
