@@ -34,9 +34,9 @@ const faqs = [
       "Yes. Someone else can make the booking for you. Give us the passenger's name, the pickup and destination addresses, the time, and a contact number for the day.",
   },
   {
-    question: "Do you have wheelchair-accessible vehicles?",
+    question: "Can you take passengers who use a wheelchair?",
     answer:
-      "Not every vehicle suits every need, so please call us on 0115 8 244 244 before you book. Tell us what you need and we will tell you honestly what we can provide.",
+      "We can take passengers who use a collapsible wheelchair. You transfer to a car seat and we carry the folded chair in the boot. We do not currently have wheelchair-accessible vehicles with a ramp or lift, so we cannot carry someone who needs to stay in their wheelchair. Tell us when you book so we can send a car with room for your chair.",
   },
   {
     question: "Can a surgery, clinic or care provider open an account?",
@@ -149,6 +149,10 @@ export default function HealthcareTransport() {
                 carers across Nottingham. Book ahead, tell us the time of your
                 appointment, and we will take care of the rest.
               </p>
+              <p className="font-medium text-foreground">
+                We hold a contract with Nottinghamshire Healthcare NHS
+                Foundation Trust.
+              </p>
             </div>
           </section>
 
@@ -188,8 +192,8 @@ export default function HealthcareTransport() {
                 <li>How many people are travelling</li>
                 <li>Any help you need getting in and out of the car</li>
                 <li>
-                  Whether you use a wheelchair or other mobility aid, so we can
-                  tell you what we can provide before the day
+                  Whether you use a collapsible wheelchair or other mobility
+                  aid, so we can send a car with room for it
                 </li>
               </ul>
             </div>
