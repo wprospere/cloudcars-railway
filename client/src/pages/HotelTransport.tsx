@@ -118,7 +118,8 @@ export default function HotelTransport() {
         description="Reliable airport transfers and local transport for hotel guests, booked through one account with one invoice and a team you can call."
         ctaLabel="Open a Hotel Account"
         ctaHref="/#corporate-enquiry"
-        // TODO: add a hotel photo here, e.g. image="/hotel-guest-transport.webp"
+        image="/hotel-guest-transport.webp"
+        imageClassName="object-[50%_70%]"
         reassurances={[
           "One account, one invoice",
           "Fixed price agreed at booking",
