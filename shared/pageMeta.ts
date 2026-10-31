@@ -78,6 +78,11 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
     description:
       "Pre-booked taxis to hospital, clinic and surgery appointments in Nottingham. DBS-checked drivers, help to the door and a fixed price agreed at booking.",
   },
+  "/taxi-to-queens-medical-centre": {
+    title: "Taxi to Queen's Medical Centre Nottingham | Cloud Cars",
+    description:
+      "Pre-booked taxis to the Queen's Medical Centre in Nottingham for appointments and visits. Fixed price at booking, DBS-checked drivers, help to the door. 24/7.",
+  },
   "/taxi-beeston": areaPage(
     "Beeston",
     "Pre-booked taxis from Beeston with Cloud Cars. Fixed fares for the station, University of Nottingham, the QMC and East Midlands Airport. Available 24/7."

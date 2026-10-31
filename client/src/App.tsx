@@ -49,6 +49,7 @@ const AirportTransfers = lazy(() => import("./pages/AirportTransfers"));
 const ExecutiveCar = lazy(() => import("./pages/ExecutiveCar"));
 const HotelTransport = lazy(() => import("./pages/HotelTransport"));
 const HealthcareTransport = lazy(() => import("./pages/HealthcareTransport"));
+const QueensMedicalCentreTaxi = lazy(() => import("./pages/QueensMedicalCentreTaxi"));
 const SevenSeater = lazy(() => import("./pages/SevenSeater"));
 const CourierServices = lazy(() => import("./pages/CourierServices"));
 const CorporateTransport = lazy(() => import("./pages/CorporateTransport"));
@@ -119,6 +120,7 @@ function Router() {
       <Route path="/executive-car-nottingham" component={ExecutiveCar} />
       <Route path="/hotel-transport-nottingham" component={HotelTransport} />
       <Route path="/healthcare-transport-nottingham" component={HealthcareTransport} />
+      <Route path="/taxi-to-queens-medical-centre" component={QueensMedicalCentreTaxi} />
       <Route path="/7-seater-taxi-nottingham" component={SevenSeater} />
       <Route
         path="/courier-services-nottingham"

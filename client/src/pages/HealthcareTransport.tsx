@@ -149,6 +149,15 @@ export default function HealthcareTransport() {
                 carers across Nottingham. Book ahead, tell us the time of your
                 appointment, and we will take care of the rest.
               </p>
+              <p>
+                Going to the Queen's Medical Centre? See our page on{" "}
+                <Link href="/taxi-to-queens-medical-centre">
+                  <a className="text-primary hover:underline">
+                    taxis to the QMC
+                  </a>
+                </Link>
+                .
+              </p>
               <p className="font-medium text-foreground">
                 We hold a contract with Nottinghamshire Healthcare NHS
                 Foundation Trust.
