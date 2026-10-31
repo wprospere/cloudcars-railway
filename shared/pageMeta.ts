@@ -73,6 +73,11 @@ export const PAGE_META: Record<string, PageMetaEntry> = {
     description:
       "Guest airport transfers and local transport for Nottingham hotels. One account, one invoice, fixed prices and flight tracking from Cloud Cars. Available 24/7.",
   },
+  "/healthcare-transport-nottingham": {
+    title: "Hospital & Appointment Taxis Nottingham | Cloud Cars",
+    description:
+      "Pre-booked taxis to hospital, clinic and surgery appointments in Nottingham. DBS-checked drivers, help to the door and a fixed price agreed at booking.",
+  },
   "/taxi-beeston": areaPage(
     "Beeston",
     "Pre-booked taxis from Beeston with Cloud Cars. Fixed fares for the station, University of Nottingham, the QMC and East Midlands Airport. Available 24/7."

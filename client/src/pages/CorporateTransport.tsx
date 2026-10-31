@@ -119,6 +119,13 @@ export default function CorporateTransport() {
                     </a>
                   </Link>
                 </li>
+                <li>
+                  <Link href="/healthcare-transport-nottingham">
+                    <a className="text-primary hover:underline">
+                      Appointment and care journeys
+                    </a>
+                  </Link>
+                </li>
                 <li>Account and invoice-based bookings</li>
                 <li>Scheduled shuttle services</li>
               </ul>

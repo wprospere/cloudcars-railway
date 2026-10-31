@@ -37,6 +37,7 @@ const footerLinks = {
     { label: "Courier Services", href: "/courier-services-nottingham" },
     { label: "Corporate Transport", href: "/corporate-transport-nottingham" },
     { label: "Hotel Guest Transport", href: "/hotel-transport-nottingham" },
+    { label: "Hospital & Appointment Taxis", href: "/healthcare-transport-nottingham" },
   ],
   company: [
     { label: "About Us", href: "/#about" },
