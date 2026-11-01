@@ -20,6 +20,7 @@ export const INDEXABLE_PATHS = [
   "/hotel-transport-nottingham",
   "/healthcare-transport-nottingham",
   "/taxi-to-queens-medical-centre",
+  "/nottingham-station-taxi",
   "/taxi-beeston",
   "/taxi-west-bridgford",
   "/taxi-wollaton",

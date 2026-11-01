@@ -39,6 +39,7 @@ const footerLinks = {
     { label: "Hotel Guest Transport", href: "/hotel-transport-nottingham" },
     { label: "Hospital & Appointment Taxis", href: "/healthcare-transport-nottingham" },
     { label: "Taxi to the QMC", href: "/taxi-to-queens-medical-centre" },
+    { label: "Nottingham Station Taxi", href: "/nottingham-station-taxi" },
   ],
   company: [
     { label: "About Us", href: "/#about" },
