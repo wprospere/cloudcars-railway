@@ -12,6 +12,7 @@ const Services = lazy(() => import("@/components/Services"));
 const Booking = lazy(() => import("@/components/Booking"));
 const Corporate = lazy(() => import("@/components/Corporate"));
 const Trust = lazy(() => import("@/components/Trust"));
+const LocalFirm = lazy(() => import("@/components/LocalFirm"));
 const Awards = lazy(() => import("@/components/Awards"));
 const Sustainability = lazy(() => import("@/components/Sustainability"));
 const Areas = lazy(() => import("@/components/Areas"));
@@ -117,6 +118,10 @@ export default function Home() {
             <Trust />
           </Suspense>
         </section>
+
+        <Suspense fallback={<div className="min-h-[400px]" />}>
+          <LocalFirm />
+        </Suspense>
 
         <Suspense fallback={<div className="min-h-[400px]" />}>
           <Awards />
